@@ -134,7 +134,11 @@ export function TradingIntelligence() {
             <div className="rounded-lg bg-black/40 p-4 border border-glass-border">
               <div className="text-[10px] font-bold text-aura-ruby uppercase tracking-tighter">Action Required</div>
               <p className="mt-1 text-xs text-aura-platinum/80 leading-relaxed">
-                Margin calls are accelerating in the XAU/USD pairs due to unexpected volatility spikes. <strong>42 VIP clients</strong> are currently below 80% margin level.
+                Margin calls are accelerating in the XAU/USD pairs due to unexpected volatility spikes.{' '}
+                <strong>{pendingKyc > 0 ? `${pendingKyc} clients` : 'Multiple clients'}</strong>{' '}
+                {pendingKyc > 0
+                  ? 'are pending KYC verification and may be exposed to margin risk'
+                  : 'may be below 80% margin level — all accounts currently verified'}.
               </p>
               <div className="mt-3 flex gap-2">
                 <button className="bg-aura-gold text-black text-[9px] font-bold px-3 py-1 rounded uppercase">Initiate Auto-Close</button>

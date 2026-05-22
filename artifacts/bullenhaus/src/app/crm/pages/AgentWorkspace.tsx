@@ -1,22 +1,23 @@
 import React, { useState } from "react";
-import { Phone, Clock, FileText, FastForward, PlayCircle, Plus, ChevronRight, MoreHorizontal, Loader2, AlertCircle } from "lucide-react";
+import { Phone, Clock, FileText, PlayCircle, Plus, ChevronRight, MoreHorizontal, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
 import { useLeads } from "../hooks/useLeads";
 import { useI18n } from "../lib/i18n";
 
-function LeadPipeline() {
-  const { leads, meta, loading, error } = useLeads();
+interface LocalTask {
+  name: string;
+  type: string;
+  time: string;
+  urgent: boolean;
+}
 
-  const handleDragStart = (e: React.DragEvent) => {
-    // Implement drag later
-  };
-
+function LeadPipeline({ leads, meta, loading, error }: { leads: any[]; meta: any; loading: boolean; error: string | null }) {
   const stages = meta?.grouped || {
     'New Inquiries': [],
     'In Discussion': [],
     'Pending KYC': [],
-    'Funded (FTD)': []
+    'Funded (FTD)': [],
   };
 
   if (loading) {
@@ -82,17 +83,20 @@ function LeadPipeline() {
                             <div className={lead.stage === 'FUNDED' ? 'text-aura-emerald' : 'text-aura-platinum'}>{lead.capacity || 'TBD'}</div>
                           </div>
                           <div>
-                            <div className="text-[8px] uppercase tracking-widest text-aura-platinum/40 mb-0.5 font-sans">Time</div>
-                            <div className="text-aura-platinum/70 flex items-center gap-1"><Clock className="w-2.5 h-2.5" /> 2h ago</div>
+                            <div className="text-[8px] uppercase tracking-widest text-aura-platinum/40 mb-0.5 font-sans">Added</div>
+                            <div className="text-aura-platinum/70 flex items-center gap-1">
+                              <Clock className="w-2.5 h-2.5" />
+                              {lead.created_at ? new Date(lead.created_at).toLocaleDateString() : '—'}
+                            </div>
                           </div>
                        </div>
                        <div className="flex justify-between items-center border-t border-glass-border pt-3">
                           <span className="text-[9px] uppercase tracking-widest text-aura-platinum/40">{lead.acquisitionSource?.leadSource || 'Unknown'}</span>
                           <div className="flex gap-1">
-                            <button className="w-6 h-6 rounded bg-black/40 border border-white/5 flex items-center justify-center hover:bg-white/10 hover:border-white/10 transition-colors tooltip-trigger relative">
+                            <button className="w-6 h-6 rounded bg-black/40 border border-white/5 flex items-center justify-center hover:bg-white/10 hover:border-white/10 transition-colors">
                               <FileText className="w-3 h-3 text-aura-platinum/60" />
                             </button>
-                            <button className="w-6 h-6 rounded bg-black/40 border border-white/5 flex items-center justify-center hover:bg-white/10 hover:border-white/10 transition-colors tooltip-trigger relative">
+                            <button className="w-6 h-6 rounded bg-black/40 border border-white/5 flex items-center justify-center hover:bg-white/10 hover:border-white/10 transition-colors">
                               <Phone className="w-3 h-3 text-aura-platinum/60" />
                             </button>
                           </div>
@@ -106,16 +110,78 @@ function LeadPipeline() {
                    )}
                  </div>
               </div>
-            )
+            );
           })}
        </div>
     </div>
-  )
+  );
 }
 
 export function AgentWorkspace() {
   const { t } = useI18n();
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [localTasks, setLocalTasks] = useState<LocalTask[]>([]);
+  const [taskName, setTaskName] = useState('');
+  const [taskType, setTaskType] = useState('Call');
+  const [taskTime, setTaskTime] = useState('Next 1 Hour');
+
+  const { leads, meta, loading, error } = useLeads(1, 100);
+
+  // Stats derived from leads
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  const ftdToday = leads.filter(
+    (l) => l.stage === 'FUNDED' && new Date(l.created_at) >= todayStart
+  ).length;
+
+  const callsToday = leads.filter(
+    (l) => new Date(l.created_at) >= todayStart
+  ).length;
+
+  // Featured lead (first in list)
+  const featuredLead = leads[0] ?? null;
+  const featuredName = featuredLead
+    ? `${featuredLead.firstName ?? ''} ${featuredLead.lastName ?? ''}`.trim()
+    : null;
+  const featuredInitials = featuredName
+    ? featuredName.split(' ').map((p: string) => p[0] ?? '').join('').toUpperCase().slice(0, 2)
+    : '—';
+
+  // Task queue: auto-generated from leads + user-added tasks
+  const urgentLeads = leads.filter((l) => l.stage === 'NEW_INQUIRY').slice(0, 2);
+  const followUpLeads = leads.filter((l) => l.stage === 'IN_DISCUSSION').slice(0, 2);
+  const autoTasks: LocalTask[] = [
+    ...urgentLeads.map((l) => ({
+      name: `${l.firstName ?? ''} ${l.lastName ?? ''}`.trim(),
+      type: 'Urgent Call',
+      time: 'Now',
+      urgent: true,
+    })),
+    ...followUpLeads.map((l) => ({
+      name: `${l.firstName ?? ''} ${l.lastName ?? ''}`.trim(),
+      type: 'Follow Up',
+      time: 'Today',
+      urgent: false,
+    })),
+  ];
+  const taskQueue = [...autoTasks, ...localTasks].slice(0, 5);
+
+  function handleAddTask(e: React.FormEvent) {
+    e.preventDefault();
+    if (!taskName.trim()) { setIsTaskModalOpen(false); return; }
+    setLocalTasks((prev) => [
+      ...prev,
+      {
+        name: taskName.trim(),
+        type: taskType,
+        time: taskTime === 'Next 1 Hour' ? 'in 1 hr' : taskTime === 'Today' ? 'Today' : 'Tomorrow',
+        urgent: taskType === 'Call' && taskTime === 'Next 1 Hour',
+      },
+    ]);
+    setTaskName('');
+    setIsTaskModalOpen(false);
+  }
 
   return (
     <div className="space-y-8 pb-12">
@@ -127,11 +193,15 @@ export function AgentWorkspace() {
         <div className="flex items-center gap-6 w-full sm:w-auto justify-between sm:justify-end">
            <div className="flex gap-4">
              <div className="text-right">
-               <div className="text-xl font-light text-aura-gold">4</div>
-               <div className="text-[9px] uppercase tracking-widest text-aura-platinum/40">Calls Today</div>
+               <div className="text-xl font-light text-aura-gold">
+                 {loading ? <Loader2 className="w-4 h-4 animate-spin text-aura-gold inline" /> : callsToday}
+               </div>
+               <div className="text-[9px] uppercase tracking-widest text-aura-platinum/40">Leads Today</div>
              </div>
              <div className="text-right border-l border-glass-border pl-4">
-               <div className="text-xl font-light text-aura-emerald">1</div>
+               <div className="text-xl font-light text-aura-emerald">
+                 {loading ? <Loader2 className="w-4 h-4 animate-spin text-aura-emerald inline" /> : ftdToday}
+               </div>
                <div className="text-[9px] uppercase tracking-widest text-aura-platinum/40">FTD Today</div>
              </div>
            </div>
@@ -143,56 +213,90 @@ export function AgentWorkspace() {
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         
-        {/* Main Lead Panel */}
+        {/* Featured Lead Panel */}
         <div className="xl:col-span-2 space-y-6">
           <div className="rounded-xl border border-glass-border bg-[#121214] p-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 pb-4 border-b border-glass-border gap-4">
-              <div className="flex items-center gap-4">
-                 <div className="h-12 w-12 rounded border border-aura-gold/30 bg-black flex items-center justify-center text-lg font-display text-aura-gold">JL</div>
-                 <div>
-                   <h3 className="text-lg font-medium text-aura-platinum">James Layton</h3>
-                   <div className="text-[10px] uppercase tracking-widest text-aura-emerald mt-1">High Potential Lead</div>
-                 </div>
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-6 h-6 text-aura-gold animate-spin" />
               </div>
-              <div className="flex gap-2 w-full sm:w-auto">
-                 <Button variant="secondary" className="flex-1 sm:flex-auto">
-                   <FileText className="w-3.5 h-3.5" /> Notes
-                 </Button>
-                 <Button variant="primary" className="flex-1 sm:flex-auto">
-                   <Phone className="w-3.5 h-3.5 fill-black" /> Call Now
-                 </Button>
+            ) : !featuredLead ? (
+              <div className="flex flex-col items-center justify-center py-12 text-aura-platinum/30">
+                <Phone className="w-8 h-8 mb-3 opacity-30" />
+                <p className="text-[10px] uppercase tracking-widest">No leads in pipeline</p>
               </div>
-            </div>
+            ) : (
+              <>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 pb-4 border-b border-glass-border gap-4">
+                  <div className="flex items-center gap-4">
+                     <div className="h-12 w-12 rounded border border-aura-gold/30 bg-black flex items-center justify-center text-lg font-display text-aura-gold">
+                       {featuredInitials}
+                     </div>
+                     <div>
+                       <h3 className="text-lg font-medium text-aura-platinum">{featuredName}</h3>
+                       <div className={`text-[10px] uppercase tracking-widest mt-1 ${
+                         featuredLead.stage === 'FUNDED' ? 'text-aura-emerald' :
+                         featuredLead.stage === 'PENDING_KYC' ? 'text-aura-warning' :
+                         'text-aura-gold'
+                       }`}>
+                         {featuredLead.stage === 'NEW_INQUIRY' ? 'New Inquiry' :
+                          featuredLead.stage === 'IN_DISCUSSION' ? 'In Discussion' :
+                          featuredLead.stage === 'PENDING_KYC' ? 'Pending KYC' :
+                          featuredLead.stage === 'FUNDED' ? 'Funded — FTD' :
+                          featuredLead.stage}
+                       </div>
+                     </div>
+                  </div>
+                  <div className="flex gap-2 w-full sm:w-auto">
+                     <Button variant="secondary" className="flex-1 sm:flex-auto">
+                       <FileText className="w-3.5 h-3.5" /> Notes
+                     </Button>
+                     <Button variant="primary" className="flex-1 sm:flex-auto">
+                       <Phone className="w-3.5 h-3.5 fill-black" /> Call Now
+                     </Button>
+                  </div>
+                </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8 text-sm">
-               <div>
-                  <div className="text-[9px] uppercase tracking-widest text-aura-platinum/40 mb-1">Source</div>
-                  <div className="text-aura-platinum text-xs">Organic Webinar</div>
-               </div>
-               <div>
-                  <div className="text-[9px] uppercase tracking-widest text-aura-platinum/40 mb-1">Timezone</div>
-                  <div className="text-aura-platinum text-xs">GMT+1</div>
-               </div>
-               <div>
-                  <div className="text-[9px] uppercase tracking-widest text-aura-platinum/40 mb-1">Capacity</div>
-                  <div className="font-mono text-aura-gold text-xs">$25k - $50k</div>
-               </div>
-               <div>
-                  <div className="text-[9px] uppercase tracking-widest text-aura-platinum/40 mb-1">Last Touch</div>
-                  <div className="text-aura-platinum text-xs">2 hrs ago</div>
-               </div>
-            </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8 text-sm">
+                   <div>
+                      <div className="text-[9px] uppercase tracking-widest text-aura-platinum/40 mb-1">Source</div>
+                      <div className="text-aura-platinum text-xs">{featuredLead.acquisitionSource?.leadSource || 'Unknown'}</div>
+                   </div>
+                   <div>
+                      <div className="text-[9px] uppercase tracking-widest text-aura-platinum/40 mb-1">Capacity</div>
+                      <div className="font-mono text-aura-gold text-xs">{featuredLead.capacity || 'TBD'}</div>
+                   </div>
+                   <div>
+                      <div className="text-[9px] uppercase tracking-widest text-aura-platinum/40 mb-1">Added</div>
+                      <div className="text-aura-platinum text-xs">
+                        {featuredLead.created_at ? new Date(featuredLead.created_at).toLocaleDateString() : '—'}
+                      </div>
+                   </div>
+                   <div>
+                      <div className="text-[9px] uppercase tracking-widest text-aura-platinum/40 mb-1">Email</div>
+                      <div className="text-aura-platinum text-xs truncate">{featuredLead.email || '—'}</div>
+                   </div>
+                </div>
 
-            <div className="rounded border border-aura-gold/20 bg-gradient-to-br from-aura-gold/10 to-transparent p-6 backdrop-blur-md">
-              <div className="text-[10px] text-aura-gold font-bold uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                <PlayCircle className="w-4 h-4" /> AI NEXT BEST ACTION
-              </div>
-              <div className="rounded bg-black/40 p-4 border border-glass-border border-l-2 border-l-aura-gold">
-                <p className="text-aura-platinum/90 text-xs leading-relaxed">
-                  Call immediately. He just finished watching the Commodities Market Breakdown video. Start the conversation by asking his opinion on Gold's resistance level. Do not push for a deposit right away.
-                </p>
-              </div>
-            </div>
+                <div className="rounded border border-aura-gold/20 bg-gradient-to-br from-aura-gold/10 to-transparent p-6 backdrop-blur-md">
+                  <div className="text-[10px] text-aura-gold font-bold uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                    <PlayCircle className="w-4 h-4" /> AI NEXT BEST ACTION
+                  </div>
+                  <div className="rounded bg-black/40 p-4 border border-glass-border border-l-2 border-l-aura-gold">
+                    <p className="text-aura-platinum/90 text-xs leading-relaxed">
+                      {featuredLead.stage === 'NEW_INQUIRY'
+                        ? `${featuredName} just joined. Begin with an introduction call to understand their investment goals. Do not push for a deposit yet.`
+                        : featuredLead.stage === 'IN_DISCUSSION'
+                        ? `${featuredName} is engaged. Focus on objection handling and present the platform's risk management tools.`
+                        : featuredLead.stage === 'PENDING_KYC'
+                        ? `${featuredName} is awaiting KYC. Remind them to upload their ID and proof of address.`
+                        : `${featuredName} has funded. Congratulate them and introduce them to their dedicated account manager.`
+                      }
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -210,28 +314,34 @@ export function AgentWorkspace() {
             </div>
             
             <div className="space-y-3">
-              {[
-                { name: "James Layton", type: "Urgent Call", time: "Now", urgent: true },
-                { name: "Michael T.", type: "Follow up", time: "in 2 hrs", urgent: false },
-                { name: "Sarah W.", type: "Send Brochure", time: "in 4 hrs", urgent: false },
-              ].map((task, i) => (
-                <div key={i} className={`p-4 rounded border-l-2 flex justify-between items-center transition-colors hover:bg-white/5 ${task.urgent ? 'border-aura-ruby bg-aura-ruby/5' : 'border-aura-platinum/30 bg-[#0A0A0B]'}`}>
-                  <div>
-                    <div className="text-xs font-medium text-aura-platinum">{task.name}</div>
-                    <div className={`text-[9px] uppercase tracking-widest mt-1 ${task.urgent ? 'text-aura-ruby' : 'text-aura-platinum/50'}`}>{task.type}</div>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-[10px] font-mono text-aura-platinum/50">
-                    <Clock className="w-3 h-3" /> {task.time}
-                  </div>
+              {loading ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="w-4 h-4 text-aura-gold animate-spin" />
                 </div>
-              ))}
+              ) : taskQueue.length === 0 ? (
+                <div className="text-center py-6 text-aura-platinum/30 text-[10px] uppercase tracking-widest">
+                  No tasks — add leads to pipeline
+                </div>
+              ) : (
+                taskQueue.map((task, i) => (
+                  <div key={i} className={`p-4 rounded border-l-2 flex justify-between items-center transition-colors hover:bg-white/5 ${task.urgent ? 'border-aura-ruby bg-aura-ruby/5' : 'border-aura-platinum/30 bg-[#0A0A0B]'}`}>
+                    <div>
+                      <div className="text-xs font-medium text-aura-platinum">{task.name}</div>
+                      <div className={`text-[9px] uppercase tracking-widest mt-1 ${task.urgent ? 'text-aura-ruby' : 'text-aura-platinum/50'}`}>{task.type}</div>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[10px] font-mono text-aura-platinum/50">
+                      <Clock className="w-3 h-3" /> {task.time}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
 
       </div>
 
-      <LeadPipeline />
+      <LeadPipeline leads={leads} meta={meta} loading={loading} error={error} />
 
       <Modal 
         isOpen={isTaskModalOpen} 
@@ -239,15 +349,26 @@ export function AgentWorkspace() {
         title="Create Agent Task"
         subtitle="Schedule a follow-up or internal action"
       >
-         <form className="space-y-4 text-sm" onSubmit={(e) => { e.preventDefault(); setIsTaskModalOpen(false); }}>
+         <form className="space-y-4 text-sm" onSubmit={handleAddTask}>
             <div>
                <label className="block text-[10px] uppercase tracking-widest text-aura-platinum/50 mb-2">Lead / Client Name</label>
-               <input type="text" className="w-full bg-black/40 border border-glass-border rounded px-4 py-2 text-aura-platinum outline-none focus:border-aura-gold/50 transition-colors" placeholder="e.g. James Layton" />
+               <input
+                 type="text"
+                 value={taskName}
+                 onChange={(e) => setTaskName(e.target.value)}
+                 className="w-full bg-black/40 border border-glass-border rounded px-4 py-2 text-aura-platinum outline-none focus:border-aura-gold/50 transition-colors"
+                 placeholder="e.g. James Layton"
+                 required
+               />
             </div>
             <div className="grid grid-cols-2 gap-4">
                <div>
                  <label className="block text-[10px] uppercase tracking-widest text-aura-platinum/50 mb-2">Task Type</label>
-                 <select className="w-full bg-black/40 border border-glass-border rounded px-4 py-2 text-aura-platinum outline-none focus:border-aura-gold/50 transition-colors appearance-none">
+                 <select
+                   value={taskType}
+                   onChange={(e) => setTaskType(e.target.value)}
+                   className="w-full bg-black/40 border border-glass-border rounded px-4 py-2 text-aura-platinum outline-none focus:border-aura-gold/50 transition-colors appearance-none"
+                 >
                     <option>Call</option>
                     <option>Email</option>
                     <option>Review Docs</option>
@@ -255,7 +376,11 @@ export function AgentWorkspace() {
                </div>
                <div>
                  <label className="block text-[10px] uppercase tracking-widest text-aura-platinum/50 mb-2">Time</label>
-                 <select className="w-full bg-black/40 border border-glass-border rounded px-4 py-2 text-aura-platinum outline-none focus:border-aura-gold/50 transition-colors appearance-none">
+                 <select
+                   value={taskTime}
+                   onChange={(e) => setTaskTime(e.target.value)}
+                   className="w-full bg-black/40 border border-glass-border rounded px-4 py-2 text-aura-platinum outline-none focus:border-aura-gold/50 transition-colors appearance-none"
+                 >
                     <option>Next 1 Hour</option>
                     <option>Today</option>
                     <option>Tomorrow</option>
@@ -273,5 +398,5 @@ export function AgentWorkspace() {
          </form>
       </Modal>
     </div>
-  )
+  );
 }

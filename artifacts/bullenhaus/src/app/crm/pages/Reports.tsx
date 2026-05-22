@@ -1,18 +1,10 @@
-import React, { useState } from "react";
-import { BarChart2, PieChart, TrendingUp, DownloadCloud, Users, DollarSign, Activity, ChevronRight } from "lucide-react";
-import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, Tooltip, BarChart, Bar, Cell, PieChart as RechartsPie, Pie } from "recharts";
+import React, { useState, useEffect } from "react";
+import { BarChart2, PieChart, TrendingUp, DownloadCloud, Users, DollarSign, Activity, ChevronRight, Loader2 } from "lucide-react";
+import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, Tooltip, PieChart as RechartsPie, Pie, Cell } from "recharts";
+import { supabase } from "../../../lib/supabase/browserClient";
 import { useI18n } from "../lib/i18n";
 
-// FIX: Reports page was completely empty - now has actual content
-
-const revenueData = [
-  { month: "Jan", deposits: 2800000, withdrawals: 900000 },
-  { month: "Feb", deposits: 3200000, withdrawals: 1100000 },
-  { month: "Mar", deposits: 4100000, withdrawals: 1300000 },
-  { month: "Apr", deposits: 3700000, withdrawals: 1050000 },
-  { month: "May", deposits: 5200000, withdrawals: 1800000 },
-  { month: "Jun", deposits: 4800000, withdrawals: 1400000 },
-];
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const agentData = [
   { name: "Alexander M.", calls: 142, conversions: 28, volume: 1240000 },
@@ -32,9 +24,104 @@ const churnReasons = [
 
 type ReportType = 'revenue' | 'agents' | 'churn' | null;
 
+function fmt(n: number) {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+  return `$${n.toFixed(0)}`;
+}
+
 export function Reports() {
   const { t } = useI18n();
   const [activeReport, setActiveReport] = useState<ReportType>(null);
+
+  const [kpiLoading, setKpiLoading] = useState(true);
+  const [depositsMtd, setDepositsMtd] = useState(0);
+  const [revenueMtd, setRevenueMtd] = useState(0);
+  const [activeUsers, setActiveUsers] = useState(0);
+  const [revenueData, setRevenueData] = useState<{ month: string; deposits: number; withdrawals: number }[]>([]);
+
+  useEffect(() => {
+    async function fetchReports() {
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString();
+
+      const [usersRes, txnRes] = await Promise.all([
+        supabase
+          .from('users')
+          .select('*', { count: 'exact', head: true })
+          .eq('role', 'client'),
+        supabase
+          .from('transactions')
+          .select('type, amount, created_at, status')
+          .gte('created_at', sixMonthsAgo),
+      ]);
+
+      setActiveUsers(usersRes.count ?? 0);
+
+      const txns = txnRes.data ?? [];
+
+      // Build monthly chart data
+      const monthMap: Record<string, { deposits: number; withdrawals: number }> = {};
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        monthMap[MONTH_NAMES[d.getMonth()]] = { deposits: 0, withdrawals: 0 };
+      }
+      txns.forEach((tx) => {
+        const mo = MONTH_NAMES[new Date(tx.created_at).getMonth()];
+        if (monthMap[mo] === undefined) return;
+        const amt = Math.abs(Number(tx.amount) || 0);
+        if (tx.type === 'deposit') monthMap[mo].deposits += amt;
+        else if (tx.type === 'withdrawal') monthMap[mo].withdrawals += amt;
+      });
+      setRevenueData(Object.entries(monthMap).map(([month, v]) => ({ month, ...v })));
+
+      // MTD KPIs
+      const mtd = txns.filter((tx) => tx.created_at >= startOfMonth);
+      const mtdDep = mtd
+        .filter((tx) => tx.type === 'deposit')
+        .reduce((s, tx) => s + Math.abs(Number(tx.amount) || 0), 0);
+      const mtdWith = mtd
+        .filter((tx) => tx.type === 'withdrawal')
+        .reduce((s, tx) => s + Math.abs(Number(tx.amount) || 0), 0);
+      setDepositsMtd(mtdDep);
+      setRevenueMtd(mtdDep - mtdWith);
+
+      setKpiLoading(false);
+    }
+    fetchReports().catch(() => setKpiLoading(false));
+  }, []);
+
+  const kpis = [
+    {
+      label: "Total Deposits MTD",
+      value: kpiLoading ? '…' : fmt(depositsMtd),
+      change: depositsMtd > 0 ? 'Live from transactions' : 'No deposits this month',
+      icon: <DollarSign className="w-4 h-4" />,
+      up: true,
+    },
+    {
+      label: "Net Revenue MTD",
+      value: kpiLoading ? '…' : fmt(Math.max(0, revenueMtd)),
+      change: revenueMtd >= 0 ? 'Deposits minus withdrawals' : 'Net outflow this month',
+      icon: <TrendingUp className="w-4 h-4" />,
+      up: revenueMtd >= 0,
+    },
+    {
+      label: "Active Clients",
+      value: kpiLoading ? '…' : activeUsers.toLocaleString(),
+      change: 'Registered on platform',
+      icon: <Users className="w-4 h-4" />,
+      up: true,
+    },
+    {
+      label: "Agent Data",
+      value: "Demo",
+      change: "No call tracking yet",
+      icon: <Activity className="w-4 h-4" />,
+      up: false,
+    },
+  ];
 
   return (
     <div className="space-y-8 pb-12">
@@ -50,17 +137,18 @@ export function Reports() {
 
       {/* Summary KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: "Total Deposits MTD", value: "$5.2M", change: "+18%", icon: <DollarSign className="w-4 h-4" />, up: true },
-          { label: "Net Revenue MTD", value: "$842K", change: "+11%", icon: <TrendingUp className="w-4 h-4" />, up: true },
-          { label: "Active Users", value: "1,248", change: "+5.2%", icon: <Users className="w-4 h-4" />, up: true },
-          { label: "Churn Rate", value: "4.2%", change: "+0.8%", icon: <Activity className="w-4 h-4" />, up: false },
-        ].map((kpi) => (
+        {kpis.map((kpi) => (
           <div key={kpi.label} className="rounded-xl border border-glass-border bg-gradient-to-b from-white/5 to-transparent p-5">
             <div className="text-aura-platinum/40 mb-2">{kpi.icon}</div>
             <div className="text-[9px] uppercase tracking-widest text-aura-platinum/40 mb-1">{kpi.label}</div>
-            <div className="text-xl font-light text-aura-gold">{kpi.value}</div>
-            <div className={`text-[10px] mt-1 ${kpi.up ? 'text-aura-emerald' : 'text-aura-ruby'}`}>{kpi.change}</div>
+            <div className="text-xl font-light text-aura-gold flex items-center gap-2">
+              {kpiLoading && kpi.value === '…' ? (
+                <Loader2 className="w-4 h-4 animate-spin text-aura-gold/60" />
+              ) : (
+                kpi.value
+              )}
+            </div>
+            <div className={`text-[10px] mt-1 ${kpi.up ? 'text-aura-emerald' : 'text-aura-platinum/40'}`}>{kpi.change}</div>
           </div>
         ))}
       </div>
@@ -93,38 +181,52 @@ export function Reports() {
       {/* Dynamic Report Detail */}
       {activeReport === 'revenue' && (
         <div className="rounded-xl border border-aura-gold/20 bg-[#121214] p-8 animate-in fade-in">
-          <h3 className="text-xs font-bold tracking-[0.2em] text-aura-platinum/60 uppercase mb-6">Capital Flow — 6 Months</h3>
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={revenueData} margin={{ top: 10, right: 0, left: -10, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorDep" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#048A81" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#048A81" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="colorWith" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#FB7185" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#FB7185" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="month" stroke="rgba(255,255,255,0.2)" fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis stroke="rgba(255,255,255,0.2)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v / 1000000}M`} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#121214', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                  itemStyle={{ color: '#E5E5E5' }}
-                  formatter={(v: any) => [`$${(v / 1000000).toFixed(2)}M`]}
-                />
-                <Area type="monotone" dataKey="deposits" name="Deposits" stroke="#048A81" strokeWidth={2} fillOpacity={1} fill="url(#colorDep)" />
-                <Area type="monotone" dataKey="withdrawals" name="Withdrawals" stroke="#FB7185" strokeWidth={2} fillOpacity={1} fill="url(#colorWith)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+          <h3 className="text-xs font-bold tracking-[0.2em] text-aura-platinum/60 uppercase mb-6">
+            Capital Flow — 6 Months
+          </h3>
+          {kpiLoading ? (
+            <div className="h-64 flex items-center justify-center">
+              <Loader2 className="w-6 h-6 text-aura-gold animate-spin" />
+            </div>
+          ) : revenueData.every((d) => d.deposits === 0 && d.withdrawals === 0) ? (
+            <div className="h-64 flex flex-col items-center justify-center gap-2 text-aura-platinum/30">
+              <BarChart2 className="w-8 h-8 opacity-30" />
+              <span className="text-[10px] uppercase tracking-widest">No transaction history available</span>
+            </div>
+          ) : (
+            <div className="h-64 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={revenueData} margin={{ top: 10, right: 0, left: -10, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorDep" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#048A81" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#048A81" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="colorWith" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#FB7185" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#FB7185" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="month" stroke="rgba(255,255,255,0.2)" fontSize={11} tickLine={false} axisLine={false} />
+                  <YAxis stroke="rgba(255,255,255,0.2)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v / 1000}K`} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#121214', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                    itemStyle={{ color: '#E5E5E5' }}
+                    formatter={(v: any) => [`$${(Number(v) / 1000).toFixed(1)}K`]}
+                  />
+                  <Area type="monotone" dataKey="deposits" name="Deposits" stroke="#048A81" strokeWidth={2} fillOpacity={1} fill="url(#colorDep)" />
+                  <Area type="monotone" dataKey="withdrawals" name="Withdrawals" stroke="#FB7185" strokeWidth={2} fillOpacity={1} fill="url(#colorWith)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
       )}
 
       {activeReport === 'agents' && (
         <div className="rounded-xl border border-aura-gold/20 bg-[#121214] p-8 animate-in fade-in overflow-x-auto">
-          <h3 className="text-xs font-bold tracking-[0.2em] text-aura-platinum/60 uppercase mb-6">Agent Performance — Current Month</h3>
+          <h3 className="text-xs font-bold tracking-[0.2em] text-aura-platinum/60 uppercase mb-2">Agent Performance — Current Month</h3>
+          <p className="text-[10px] text-aura-platinum/30 mb-6 uppercase tracking-widest">Demo data — call tracking not yet configured</p>
           <table className="w-full text-left min-w-[500px]">
             <thead>
               <tr className="border-b border-glass-border text-[10px] font-bold tracking-widest text-aura-platinum/40 uppercase">

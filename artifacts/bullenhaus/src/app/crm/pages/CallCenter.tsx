@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from "react";
-import { Phone, PhoneOutgoing, PhoneIncoming, Clock, Mic, MicOff, Settings2, PlayCircle, BarChart2, Sparkles } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { Phone, MicOff, Settings2, PlayCircle, BarChart2, Sparkles } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
 import { Modal } from "../components/ui/Modal";
 import { Button } from "../components/ui/Button";
+import { useLeads } from "../hooks/useLeads";
+import { supabase } from "../../../lib/supabase/browserClient";
 import { useI18n } from "../lib/i18n";
 
 const callVolume = [
@@ -16,21 +18,72 @@ const callVolume = [
   { time: "15:00", volume: 90 },
 ];
 
+// Outcome → next stage mapping
+const OUTCOME_STAGE: Record<string, string> = {
+  ftd:          'FUNDED',
+  callback:     'IN_DISCUSSION',
+  notinterested:'NEW_INQUIRY',
+  noanswer:     'NEW_INQUIRY',
+};
+
 export function CallCenter() {
   const { t } = useI18n();
+  const { leads, loading: leadsLoading, refetch } = useLeads(1, 20);
   const [isEndCallModalOpen, setIsEndCallModalOpen] = useState(false);
   const [isAiProcessing, setIsAiProcessing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [outcome, setOutcome] = useState<string>('ftd');
+  const notesRef = useRef<HTMLTextAreaElement>(null);
+
+  // Timer state (running demo clock)
+  const [seconds, setSeconds] = useState(262); // start at 04:22
+  useEffect(() => {
+    const id = setInterval(() => setSeconds((s) => s + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const timerStr = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
     if (isEndCallModalOpen) {
       setIsAiProcessing(true);
-      timer = setTimeout(() => {
-        setIsAiProcessing(false);
-      }, 1500);
+      timer = setTimeout(() => setIsAiProcessing(false), 1500);
     }
     return () => clearTimeout(timer);
   }, [isEndCallModalOpen]);
+
+  // Queue: leads that are NEW_INQUIRY or IN_DISCUSSION
+  const queueLeads = leads.filter(
+    (l) => l.stage === 'NEW_INQUIRY' || l.stage === 'IN_DISCUSSION'
+  );
+
+  // First queued lead becomes the target of the "save" action
+  const activeQueueLead = queueLeads[0] ?? null;
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!activeQueueLead) {
+      setIsEndCallModalOpen(false);
+      return;
+    }
+    setSaving(true);
+    const newStage = OUTCOME_STAGE[outcome] ?? 'IN_DISCUSSION';
+    const notes = notesRef.current?.value ?? '';
+    await supabase
+      .from('leads')
+      .update({ stage: newStage, ...(notes ? { notes } : {}) })
+      .eq('id', activeQueueLead.id);
+    await refetch();
+    setSaving(false);
+    setIsEndCallModalOpen(false);
+  }
+
+  const activeLeadName = activeQueueLead
+    ? `${activeQueueLead.firstName ?? ''} ${activeQueueLead.lastName ?? ''}`.trim()
+    : 'Victor Lebedev';
+  const activeLeadInitials = activeQueueLead
+    ? `${(activeQueueLead.firstName ?? '')[0] ?? ''}${(activeQueueLead.lastName ?? '')[0] ?? ''}`.toUpperCase()
+    : 'VL';
 
   return (
     <div className="space-y-6 pb-12">
@@ -43,7 +96,7 @@ export function CallCenter() {
              {t('readyDialer')}
            </div>
            <div className="text-aura-platinum/30 text-[10px] font-bold uppercase tracking-widest">
-             {t('queueLeads')}
+             {leadsLoading ? 'Loading…' : `${queueLeads.length} ${t('queueLeads')}`}
            </div>
         </div>
 
@@ -56,9 +109,8 @@ export function CallCenter() {
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         
-        {/* Active Call Workspace (Agent View) */}
+        {/* Active Call Workspace */}
         <div className="xl:col-span-2 rounded-xl border border-glass-border bg-[#121214] p-8 flex flex-col justify-between relative overflow-hidden min-h-[500px]">
-          {/* subtle glow in corner */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-aura-gold/5 blur-[80px] pointer-events-none rounded-full" />
 
           <div>
@@ -66,20 +118,27 @@ export function CallCenter() {
                <h3 className="text-xs font-bold tracking-[0.2em] text-aura-platinum/60">{t('activeCall').toUpperCase()}</h3>
                <div className="flex items-center gap-2 text-aura-platinum/60 font-mono text-sm">
                   <span className="w-1.5 h-1.5 rounded-full bg-aura-ruby animate-pulse mr-1"></span>
-                  04:22
+                  {timerStr}
                </div>
              </div>
 
              <div className="flex flex-col sm:flex-row sm:items-center gap-6 mb-10">
                <div className="w-20 h-20 shrink-0 rounded-full bg-black/40 border-2 border-aura-gold flex items-center justify-center text-2xl font-display text-aura-gold shadow-[0_0_20px_rgba(212,175,55,0.15)]">
-                 VL
+                 {activeLeadInitials}
                </div>
                <div>
-                  <h2 className="text-2xl sm:text-3xl font-medium text-aura-platinum mb-2">Victor Lebedev</h2>
+                  <h2 className="text-2xl sm:text-3xl font-medium text-aura-platinum mb-2">{activeLeadName}</h2>
                   <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm font-medium uppercase tracking-wider">
-                    <span className="text-aura-gold-light tracking-widest">Platinum VIP</span>
+                    <span className="text-aura-gold-light tracking-widest">
+                      {activeQueueLead
+                        ? activeQueueLead.stage === 'NEW_INQUIRY' ? 'New Inquiry' : 'In Discussion'
+                        : 'Platinum VIP'}
+                    </span>
                     <span className="text-aura-platinum/30 hidden sm:inline">•</span>
-                    <span className="text-aura-platinum/70 flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> +41 79 123 45 67</span>
+                    <span className="text-aura-platinum/70 flex items-center gap-1.5">
+                      <Phone className="w-3.5 h-3.5" />
+                      {activeQueueLead?.phone ?? activeQueueLead?.email ?? '+41 79 123 45 67'}
+                    </span>
                   </div>
                </div>
              </div>
@@ -91,16 +150,14 @@ export function CallCenter() {
                 </div>
                 <div className="rounded bg-black/40 p-4 border border-glass-border">
                   <p className="text-aura-platinum/90 text-xs sm:text-sm leading-relaxed mb-4">
-                    Victor responded poorly to aggressive sales last week. <strong>Focus on security and market stability.</strong> Propose the new Swiss algorithmic index.
-                    Mention the recent 4% drop in tech stocks as a transition opportunity.
+                    {activeQueueLead?.stage === 'IN_DISCUSSION'
+                      ? `${activeLeadName} is already in discussion. Focus on next steps — KYC documents, funding capacity, and risk profile. Do not restart the introduction.`
+                      : `${activeLeadName} is a new inquiry. Begin with rapport-building. Ask about their trading experience and investment goals before presenting any product.`
+                    }
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    <Button variant="primary" size="sm">
-                      Send Index Brochure
-                    </Button>
-                    <Button variant="secondary" size="sm">
-                      Offer Analyst Call
-                    </Button>
+                    <Button variant="primary" size="sm">Send Index Brochure</Button>
+                    <Button variant="secondary" size="sm">Offer Analyst Call</Button>
                   </div>
                 </div>
              </div>
@@ -123,15 +180,31 @@ export function CallCenter() {
           </div>
         </div>
 
-        {/* Manager/Queue Sidebar */}
+        {/* Queue Sidebar */}
         <div className="space-y-6">
            <div className="rounded-xl border border-glass-border bg-[#121214] p-6">
              <h3 className="text-xs font-bold tracking-[0.2em] text-aura-platinum/60 mb-4 uppercase">{t('callQueue')}</h3>
              <div className="space-y-3">
-               <QueueItem name="Sarah Jenkins" time="15:00" type="Follow-up" />
-               <QueueItem name="Mikhail I." time="15:15" type="Margin Call" alert />
-               <QueueItem name="David Wu" time="15:30" type="Welcome Call" />
-               <QueueItem name="Emma Schmidt" time="16:00" type="Risk Alert" alert />
+               {leadsLoading ? (
+                 <div className="text-[10px] text-aura-platinum/30 uppercase tracking-widest text-center py-4">Loading leads…</div>
+               ) : queueLeads.length === 0 ? (
+                 <div className="text-[10px] text-aura-platinum/30 uppercase tracking-widest text-center py-4">Queue empty</div>
+               ) : (
+                 queueLeads.slice(0, 6).map((lead, i) => {
+                   const name = `${lead.firstName ?? ''} ${lead.lastName ?? ''}`.trim() || 'Unknown';
+                   const isAlert = lead.stage === 'IN_DISCUSSION';
+                   const typeLabel = lead.stage === 'IN_DISCUSSION' ? 'Follow-up' : 'New Inquiry';
+                   return (
+                     <QueueItem
+                       key={lead.id}
+                       name={name}
+                       index={i + 1}
+                       type={typeLabel}
+                       alert={isAlert}
+                     />
+                   );
+                 })
+               )}
              </div>
            </div>
 
@@ -161,28 +234,30 @@ export function CallCenter() {
         isOpen={isEndCallModalOpen}
         onClose={() => setIsEndCallModalOpen(false)}
         title={t('wrapUpCall')}
-        subtitle="Victor Lebedev (04:25)"
+        subtitle={`${activeLeadName} (${timerStr})`}
       >
-        <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); setIsEndCallModalOpen(false); }}>
+        <form className="space-y-6" onSubmit={handleSave}>
           <div>
             <label className="block text-[10px] uppercase tracking-widest text-aura-platinum/50 mb-2">{t('callOutcome')}</label>
             <div className="grid grid-cols-2 gap-3">
-              <label className="border border-glass-border bg-black/40 hover:bg-white/5 p-3 rounded cursor-pointer transition-colors flex items-center gap-2">
-                 <input type="radio" name="outcome" className="accent-aura-gold" defaultChecked />
-                 <span className="text-sm">Interested / FTD</span>
-              </label>
-              <label className="border border-glass-border bg-black/40 hover:bg-white/5 p-3 rounded cursor-pointer transition-colors flex items-center gap-2">
-                 <input type="radio" name="outcome" className="accent-aura-gold" />
-                 <span className="text-sm">Call Back</span>
-              </label>
-              <label className="border border-glass-border bg-black/40 hover:bg-white/5 p-3 rounded cursor-pointer transition-colors flex items-center gap-2">
-                 <input type="radio" name="outcome" className="accent-aura-gold" />
-                 <span className="text-sm">Not Interested</span>
-              </label>
-              <label className="border border-glass-border bg-black/40 hover:bg-white/5 p-3 rounded cursor-pointer transition-colors flex items-center gap-2">
-                 <input type="radio" name="outcome" className="accent-aura-gold" />
-                 <span className="text-sm">No Answer</span>
-              </label>
+              {[
+                { value: 'ftd',          label: 'Interested / FTD' },
+                { value: 'callback',     label: 'Call Back' },
+                { value: 'notinterested', label: 'Not Interested' },
+                { value: 'noanswer',     label: 'No Answer' },
+              ].map((opt) => (
+                <label key={opt.value} className="border border-glass-border bg-black/40 hover:bg-white/5 p-3 rounded cursor-pointer transition-colors flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="outcome"
+                    value={opt.value}
+                    checked={outcome === opt.value}
+                    onChange={() => setOutcome(opt.value)}
+                    className="accent-aura-gold"
+                  />
+                  <span className="text-sm">{opt.label}</span>
+                </label>
+              ))}
             </div>
           </div>
 
@@ -195,16 +270,19 @@ export function CallCenter() {
                  <span className="text-[10px] uppercase tracking-widest text-aura-platinum/60 font-mono animate-pulse">AI processing transcript...</span>
                </div>
              ) : (
-               <textarea 
-                 className="w-full bg-black/40 border border-glass-border rounded px-4 py-3 text-sm text-aura-platinum outline-none focus:border-aura-gold/50 transition-colors h-24 shadow-inner" 
-                 defaultValue="Victor showed interest in the Swiss algorithmic index. Wants a follow-up email with the brochure and historical performance docs. Advised to call back next Tuesday."
+               <textarea
+                 ref={notesRef}
+                 className="w-full bg-black/40 border border-glass-border rounded px-4 py-3 text-sm text-aura-platinum outline-none focus:border-aura-gold/50 transition-colors h-24 shadow-inner"
+                 defaultValue={`Called ${activeLeadName}. ${outcome === 'ftd' ? 'Client showed strong interest in funding.' : outcome === 'callback' ? 'Client requested a callback.' : 'No commitment at this stage.'}`}
                />
              )}
           </div>
 
           <div className="pt-4 border-t border-glass-border flex justify-end gap-3 flex-col sm:flex-row">
             <Button type="button" variant="ghost" onClick={() => setIsEndCallModalOpen(false)}>{t('cancel')}</Button>
-            <Button type="submit" variant="primary" disabled={isAiProcessing}>{t('saveNextLead')}</Button>
+            <Button type="submit" variant="primary" disabled={isAiProcessing || saving}>
+              {saving ? 'Saving…' : t('saveNextLead')}
+            </Button>
           </div>
         </form>
       </Modal>
@@ -213,7 +291,7 @@ export function CallCenter() {
   );
 }
 
-function QueueItem({ name, time, type, alert }: any) {
+function QueueItem({ name, index, type, alert }: { name: string; index: number; type: string; alert: boolean }) {
   return (
     <div className={`p-3 rounded bg-black/40 border-l-2 flex items-center justify-between transition-colors hover:bg-white/5 ${alert ? 'border-aura-ruby' : 'border-aura-emerald'}`}>
       <div>
@@ -223,8 +301,8 @@ function QueueItem({ name, time, type, alert }: any) {
         </div>
       </div>
       <div className="text-[10px] font-mono font-bold text-aura-platinum/70">
-         {time}
+        #{index}
       </div>
     </div>
-  )
+  );
 }
