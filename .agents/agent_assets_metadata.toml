@@ -6,3 +6,9 @@ id = "p-TaWSlpj23UXFctBHCjW"
 uri = "file://03_seed_crm_workers.txt"
 type = "text"
 title = "03_seed_crm_workers.sql"
+
+[[outputs]]
+id = "glTGPdlR-gscNOdMaDnah"
+uri = "file://bullenhaus_full_migration.txt"
+type = "text"
+title = "bullenhaus_full_migration.sql"
