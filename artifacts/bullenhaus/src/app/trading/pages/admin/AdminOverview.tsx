@@ -1,105 +1,220 @@
-import React from 'react';
-import { Users, Activity, ShieldAlert, Server, Globe2, AlertTriangle, Database, Zap, Bell, CheckCircle2 } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { useTransactionStore } from '../../stores/transactionStore';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Users, Activity, ShieldAlert, Server, Globe2, AlertTriangle, Zap, Bell, CheckCircle2, ArrowDownRight, ArrowUpRight, Clock, XCircle, RefreshCw } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
-const crmLogs: any[] = [];
+interface Metrics {
+  totalUsers: number;
+  pendingDeposits: number;
+  pendingWithdrawals: number;
+  volumeToday: number;
+  pendingKyc: number;
+}
+
+interface TxEvent {
+  id: string;
+  type: string;
+  status: string;
+  amount: number;
+  user_name: string | null;
+  user_email: string | null;
+  created_at: string;
+}
+
+const statusIcon = (s: string) => {
+  if (s === 'Completed' || s === 'Approved') return <CheckCircle2 size={11} className="text-emerald-400" />;
+  if (s === 'Rejected') return <XCircle size={11} className="text-rose-400" />;
+  return <Clock size={11} className="text-orange-400" />;
+};
+
+const statusColor = (s: string) =>
+  s === 'Completed' || s === 'Approved' ? 'text-emerald-400' :
+  s === 'Rejected' ? 'text-rose-400' :
+  s === 'Pending'  ? 'text-orange-400' : 'text-blue-400';
 
 export const AdminOverview = () => {
-  const { notifications, markNotificationRead, requests } = useTransactionStore();
-  
-  const pendingDeposits = requests.filter(r => r.type === 'Deposit' && r.status === 'Pending').length;
-  const pendingWithdrawals = requests.filter(r => r.type === 'Withdrawal' && r.status === 'Pending').length;
+  const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [events,  setEvents]  = useState<TxEvent[]>([]);
+  const [alerts,  setAlerts]  = useState<{ label: string; count: number }[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [usersRes, pendingKycRes, txRes] = await Promise.all([
+        supabase.from('users').select('id', { count: 'exact', head: true }),
+        supabase.from('users').select('id', { count: 'exact', head: true }).eq('kyc_status', 'PENDING'),
+        supabase.from('transactions').select('*').order('created_at', { ascending: false }).limit(50),
+      ]);
+
+      const allTx: TxEvent[] = txRes.data || [];
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+
+      const volumeToday = allTx
+        .filter(t => new Date(t.created_at) >= todayStart && (t.status === 'Completed' || t.status === 'Approved'))
+        .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+
+      const pendingDeposits    = allTx.filter(t => t.type === 'Deposit'    && t.status === 'Pending').length;
+      const pendingWithdrawals = allTx.filter(t => t.type === 'Withdrawal' && t.status === 'Pending').length;
+
+      setMetrics({ totalUsers: usersRes.count ?? 0, pendingDeposits, pendingWithdrawals, volumeToday, pendingKyc: pendingKycRes.count ?? 0 });
+      setEvents(allTx.slice(0, 15));
+
+      const newAlerts: { label: string; count: number }[] = [];
+      if ((pendingKycRes.count ?? 0) > 0)
+        newAlerts.push({ label: 'Pending KYC verifications',   count: pendingKycRes.count! });
+      if (pendingDeposits > 0)
+        newAlerts.push({ label: 'Pending deposit requests',    count: pendingDeposits });
+      if (pendingWithdrawals > 0)
+        newAlerts.push({ label: 'Pending withdrawal requests', count: pendingWithdrawals });
+      setAlerts(newAlerts);
+    } catch {
+      // keep previous state on error
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+    const iv = window.setInterval(fetchData, 20000);
+    return () => window.clearInterval(iv);
+  }, [fetchData]);
+
+  const metricCards = [
+    { label: 'Total Users',         value: metrics?.totalUsers?.toLocaleString() ?? '…', sub: 'Registered accounts', icon: Users,      color: 'text-blue-400' },
+    { label: 'Volume Today',        value: metrics ? `$${metrics.volumeToday.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : '…', sub: 'Completed transfers', icon: Activity, color: 'text-accent-primary' },
+    { label: 'Pending Deposits',    value: metrics?.pendingDeposits?.toString()    ?? '…', sub: 'Action Required', icon: ShieldAlert, color: metrics?.pendingDeposits    ? 'text-orange-400' : 'text-emerald-500' },
+    { label: 'Pending Withdrawals', value: metrics?.pendingWithdrawals?.toString() ?? '…', sub: 'Action Required', icon: Server,      color: metrics?.pendingWithdrawals ? 'text-rose-400'   : 'text-emerald-500' },
+  ];
 
   return (
     <div className="p-8 space-y-8 max-w-[1600px] mx-auto animate-in fade-in duration-200">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <div className="flex items-center justify-between">
         <div>
           <h2 className="font-serif text-2xl font-light italic tracking-tight text-text">System Overview</h2>
           <p className="text-sm text-text-dim font-mono flex items-center gap-2 mt-1">
-             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-             NODE_STATUS: STABLE | 0 ERRORS DETECTED
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            NODE_STATUS: STABLE | LIVE DATA
           </p>
         </div>
+        <button onClick={fetchData} className="p-2 border border-border rounded-xl text-text-muted hover:text-text transition-all">
+          <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+        </button>
       </div>
 
+      {/* Metric cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {[
-          { label: 'Active Sessions', value: '1', change: 'Current user', icon: Users, color: 'text-blue-400' },
-          { label: 'Pending Deposits', value: pendingDeposits.toString(), change: 'Action Required', icon: Activity, color: 'text-accent-primary' },
-          { label: 'Pending Withdrawals', value: pendingWithdrawals.toString(), change: 'Action Required', icon: ShieldAlert, color: 'text-orange-500' },
-          { label: 'Server Load', value: 'Normal', change: 'Nominal', icon: Server, color: 'text-emerald-500' }
-        ].map((metric, i) => (
+        {metricCards.map((m, i) => (
           <div key={i} className="glass-card p-6 border-white/5 group hover:border-white/10 transition-all">
-            <div className="flex justify-between items-start mb-4">
-              <div className={`p-2 rounded-xl bg-white/5 ${metric.color}`}>
-                <metric.icon size={20} />
+            <div className="mb-4">
+              <div className={`p-2 rounded-xl bg-white/5 ${m.color} w-fit`}>
+                <m.icon size={20} />
               </div>
             </div>
-            <h4 className="text-[10px] font-bold text-text-dim uppercase tracking-widest mb-1">{metric.label}</h4>
-            <p className="text-2xl font-bold font-mono text-white mb-2">{metric.value}</p>
-            <p className="text-[10px] font-bold text-text-muted">{metric.change}</p>
+            <h4 className="text-[10px] font-bold text-text-dim uppercase tracking-widest mb-1">{m.label}</h4>
+            <p className="text-2xl font-bold font-mono text-white mb-1">{m.value}</p>
+            <p className="text-[10px] font-bold text-text-muted">{m.sub}</p>
           </div>
         ))}
       </div>
 
       <div className="grid grid-cols-12 gap-6">
+        {/* Live event stream */}
         <div className="col-span-12 xl:col-span-8 space-y-6">
-          <div className="glass-card p-6 min-h-[300px] flex flex-col justify-center items-center text-center">
-             <CheckCircle2 size={48} className="text-emerald-500/20 mb-4" />
-             <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-2">Systems Nominal</h3>
-             <p className="text-[10px] text-text-muted">All infrastructure systems operating within normal parameters.</p>
+          <div className="glass-card flex flex-col h-[420px]">
+            <div className="p-5 border-b border-white/5 flex items-center justify-between">
+              <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2">
+                <Zap size={16} className="text-rose-500" /> Live Transaction Feed
+              </h3>
+              <span className="text-[10px] text-text-dim font-mono">{events.length} events</span>
+            </div>
+            <div className="flex-1 overflow-y-auto custom-scrollbar divide-y divide-white/5">
+              {events.length === 0 ? (
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-sm text-text-dim">No transactions yet</p>
+                </div>
+              ) : events.map(ev => (
+                <div key={ev.id} className="flex items-center gap-3 px-5 py-3 hover:bg-white/[0.02] transition-colors">
+                  <div className={`shrink-0 p-1.5 rounded-lg ${ev.type === 'Deposit' ? 'bg-emerald-500/10' : 'bg-rose-500/10'}`}>
+                    {ev.type === 'Deposit'
+                      ? <ArrowDownRight size={12} className="text-emerald-400" />
+                      : <ArrowUpRight   size={12} className="text-rose-400" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-white truncate">{ev.user_name || ev.user_email || 'Unknown'}</p>
+                    <p className="text-[10px] text-text-dim font-mono">{ev.type} · ${Number(ev.amount || 0).toLocaleString()}</p>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {statusIcon(ev.status)}
+                    <span className={`text-[10px] font-bold ${statusColor(ev.status)}`}>{ev.status}</span>
+                  </div>
+                  <span className="text-[9px] text-text-dim font-mono shrink-0 w-20 text-right">
+                    {new Date(ev.created_at).toLocaleTimeString()}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="glass-card p-6 min-h-[300px] relative overflow-hidden flex flex-col justify-center items-center">
-             <Globe2 size={120} className="text-white/5 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-             <div className="relative z-10 w-full">
-                <h3 className="text-sm font-bold text-white uppercase tracking-widest text-left mb-6">Global Node Activity</h3>
-                <div className="grid grid-cols-3 gap-4">
-                   {['EU_WEST_1', 'US_EAST_2', 'AP_SOUTHEAST_1'].map((node, i) => (
-                      <div key={i} className="p-4 bg-white/5 rounded-xl border border-white/10">
-                         <p className="text-[10px] text-text-dim font-bold uppercase tracking-widest mb-1">{node}</p>
-                         <p className="text-emerald-500 text-sm font-mono font-bold">STABLE</p>
-                      </div>
-                   ))}
-                </div>
-             </div>
+          <div className="glass-card p-6 relative overflow-hidden min-h-[150px] flex flex-col justify-center">
+            <Globe2 size={80} className="text-white/5 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+            <div className="relative z-10 w-full">
+              <h3 className="text-sm font-bold text-white uppercase tracking-widest text-left mb-4">Global Node Activity</h3>
+              <div className="grid grid-cols-3 gap-4">
+                {['EU_WEST_1', 'US_EAST_2', 'AP_SOUTHEAST_1'].map(node => (
+                  <div key={node} className="p-3 bg-white/5 rounded-xl border border-white/10">
+                    <p className="text-[10px] text-text-dim font-bold uppercase tracking-widest mb-1">{node}</p>
+                    <p className="text-emerald-500 text-xs font-mono font-bold">STABLE</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
+        {/* Right: alerts + KYC summary */}
         <div className="col-span-12 xl:col-span-4 space-y-6">
-           <div className="glass-card p-6 border-blue-500/20">
-              <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-4 flex items-center gap-2">
-                 <Bell size={18} className="text-blue-500" /> Admin Notifications ({notifications.filter(n => !n.read).length})
-              </h3>
-              <div className="space-y-3 max-h-[300px] overflow-y-auto">
-                 {notifications.length === 0 ? (
-                    <p className="text-xs text-text-dim">No new notifications</p>
-                 ) : notifications.map(notif => (
-                    <div key={notif.id} className={`p-4 border rounded-xl cursor-pointer transition-colors ${notif.read ? 'bg-white/5 border-white/10' : 'bg-blue-500/10 border-blue-500/20'}`} onClick={() => markNotificationRead(notif.id)}>
-                       <p className="text-xs font-bold text-white mb-1">{notif.message}</p>
-                       <p className="text-[10px] text-text-muted font-mono">{new Date(notif.date).toLocaleString()}</p>
-                    </div>
-                 ))}
-              </div>
-           </div>
+          <div className="glass-card p-6 border-orange-500/20">
+            <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-4 flex items-center gap-2">
+              <AlertTriangle size={16} className="text-orange-500" /> Active Alerts
+            </h3>
+            <div className="space-y-3">
+              {alerts.length === 0 ? (
+                <div className="p-5 text-center border border-white/5 rounded-xl">
+                  <CheckCircle2 size={20} className="mx-auto mb-2 text-emerald-500" />
+                  <p className="text-xs text-text-dim">All clear — no pending actions</p>
+                </div>
+              ) : alerts.map((al, i) => (
+                <div key={i} className="flex items-center gap-3 p-3 rounded-xl border border-orange-500/20 bg-orange-500/5">
+                  <div className="w-7 h-7 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-400 shrink-0">
+                    <AlertTriangle size={13} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs font-bold text-white">{al.label}</p>
+                    <p className="text-[10px] text-orange-400">{al.count} item{al.count !== 1 ? 's' : ''} need attention</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
 
-           <div className="glass-card flex flex-col h-[400px]">
-              <div className="p-6 border-b border-white/5">
-                 <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2">
-                    <Zap size={18} className="text-rose-500" /> Event Stream
-                 </h3>
-              </div>
-              <div className="flex-1 overflow-y-auto p-4 font-mono text-[10px] space-y-2">
-                 {crmLogs.map(log => (
-                    <div key={log.id} className="p-2 hover:bg-white/5 transition-colors border-b border-white/5">
-                       <span className="text-text-dim">{log.time}</span>
-                       <p className={`font-bold ${log.status === 'OK' ? 'text-emerald-500' : 'text-rose-500'}`}>[{log.event}]</p>
-                       <p className="text-text-muted mt-1">{log.details}</p>
-                    </div>
-                 ))}
-              </div>
-           </div>
+          <div className="glass-card p-6 border-blue-500/20">
+            <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-4 flex items-center gap-2">
+              <Bell size={16} className="text-blue-500" /> KYC Summary
+            </h3>
+            <div className="space-y-2">
+              {[
+                { label: 'Pending KYC', value: metrics?.pendingKyc ?? '…', color: metrics?.pendingKyc ? 'text-orange-400' : 'text-emerald-400' },
+                { label: 'Total Users', value: metrics?.totalUsers ?? '…', color: 'text-white' },
+              ].map(row => (
+                <div key={row.label} className="flex justify-between items-center py-2 border-b border-white/5 last:border-0">
+                  <span className="text-[10px] text-text-dim uppercase tracking-wider">{row.label}</span>
+                  <span className={`text-sm font-bold font-mono ${row.color}`}>{row.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>

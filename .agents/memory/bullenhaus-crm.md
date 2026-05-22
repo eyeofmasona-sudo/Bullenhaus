@@ -47,5 +47,12 @@ description: Supabase project details, account roster, DB tables, and key decisi
 - `user_metadata.role` sync via: `PUT {SUPABASE_URL}/auth/v1/admin/users/{uid}` with `{"user_metadata": {"role": "<role>"}}`
 - Run after creating any new CRM worker to ensure role is in JWT claims
 
+## Stub-enabling decisions
+- `support_tickets` table: id, user_id, user_email, category, message, status (default 'open'), created_at — RLS: any auth can insert, users can select own, admins all
+- `AdminOverview.tsx` (at `/admin/dashboard`) is the real admin landing page; `AdminDashboard.tsx` is an orphaned file not routed anywhere
+- Admin notification paths in MainLayout: `/admin/kyc` and `/admin/deposits` (NOT `/trade/admin/*`)
+- `Transactions.tsx` now queries Supabase directly (removed legacy `safeLegacyApiFetch`); shows expandable `payment_details` via `PaymentDetailsDisplay`
+- `ProfileSettings.tsx` saves to both `supabase.auth.updateUser` AND `public.users` table in a single flow
+
 ## Pre-existing TS errors (do not fix)
 - `useWalletSync.ts`, `ProtectedRoute.tsx` (components/layout), `chart.tsx` — known issues, not introduced by us
