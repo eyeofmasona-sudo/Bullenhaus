@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchTable } from '../../../lib/supabase/frontendData';
+import { supabase } from '../../../lib/supabase/browserClient';
+
+const LEADS_SELECT = 'id, firstName, lastName, email, phone, stage, capacity, acquisitionSource, notes, created_at';
 
 export function useLeads(page = 1, limit = 50, search = '') {
   const [data, setData]       = useState<any[]>([]);
@@ -11,20 +13,29 @@ export function useLeads(page = 1, limit = 50, search = '') {
     setLoading(true);
     setError(null);
     try {
-      const { data: leads, error: dbError } = await fetchTable<any>('leads', (q) =>
-        q.select('*').ilike('name', `%${search}%`).order('created_at', { ascending: false }).range((page - 1) * limit, page * limit - 1)
-      );
-      if (dbError) throw new Error(dbError);
+      let q = supabase
+        .from('leads')
+        .select(LEADS_SELECT)
+        .order('created_at', { ascending: false })
+        .range((page - 1) * limit, page * limit - 1);
 
+      if (search) {
+        q = q.or(`firstName.ilike.%${search}%,lastName.ilike.%${search}%,email.ilike.%${search}%`);
+      }
+
+      const { data: leads, error: dbError } = await q;
+      if (dbError) throw new Error(dbError.message);
+
+      const rows = leads ?? [];
       const grouped = {
-        'New Inquiries': leads.filter(l => l.stage === 'NEW_INQUIRY'),
-        'In Discussion': leads.filter(l => l.stage === 'IN_DISCUSSION'),
-        'Pending KYC':   leads.filter(l => l.stage === 'PENDING_KYC'),
-        'Funded (FTD)':  leads.filter(l => l.stage === 'FUNDED'),
+        'New Inquiries': rows.filter((l: any) => l.stage === 'NEW_INQUIRY'),
+        'In Discussion': rows.filter((l: any) => l.stage === 'IN_DISCUSSION'),
+        'Pending KYC':   rows.filter((l: any) => l.stage === 'PENDING_KYC'),
+        'Funded (FTD)':  rows.filter((l: any) => l.stage === 'FUNDED'),
       };
 
-      setData(leads);
-      setMeta({ page, limit, total: leads.length, grouped });
+      setData(rows);
+      setMeta({ page, limit, total: rows.length, grouped });
     } catch (err: any) {
       setError(err.message || 'Failed to load leads');
     } finally {

@@ -29,7 +29,7 @@ const AdminMarketControl = React.lazy(() => import('./pages/admin/AdminMarketCon
 const AdminKYC = React.lazy(() => import('./pages/admin/AdminKYC').then(m => ({ default: m.AdminKYC })));
 const AdminTransactions = React.lazy(() => import('./pages/admin/AdminTransactions').then(m => ({ default: m.AdminTransactions })));
 const AdminSettings = React.lazy(() => import('./pages/admin/AdminSettings').then(m => ({ default: m.AdminSettings })));
-const CRMSyncPanel = React.lazy(() => import('./pages/admin/CRMSyncPanel').then(m => ({ default: m.CRMSyncPanel })));
+
 const AdminDeposits = React.lazy(() => import('./pages/admin/AdminDeposits').then(m => ({ default: m.AdminDeposits })));
 const AdminWithdrawals = React.lazy(() => import('./pages/admin/AdminWithdrawals').then(m => ({ default: m.AdminWithdrawals })));
 
@@ -79,7 +79,7 @@ const AppContent = () => {
               <Route path="/admin/withdrawals" element={<AdminWithdrawals />} />
               <Route path="/admin/market-control" element={<AdminMarketControl />} />
               <Route path="/admin/transactions" element={<AdminTransactions />} />
-              <Route path="/admin/crm-sync" element={<div className="p-8"><CRMSyncPanel /></div>} />
+
               <Route path="/admin/settings" element={<AdminSettings />} />
             </Route>
           </Route>
