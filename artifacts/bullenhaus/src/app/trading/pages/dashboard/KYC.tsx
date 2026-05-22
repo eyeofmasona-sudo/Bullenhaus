@@ -1,190 +1,193 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Upload, ShieldCheck, FileText, Camera, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Upload, ShieldCheck, FileText, Camera, CheckCircle2, AlertCircle, Clock, XCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { supabase } from '../../lib/supabase';
-import { crmService } from '../../services/crmService';
 import { toast } from 'sonner';
 import { useAuth } from '../../contexts/AuthContext';
-import { safeLegacyApiFetch, safeJson, BACKEND_MIGRATION_MESSAGE } from '../../../../lib/backendMigration';
+
+type DocKey = 'passport' | 'id_card' | 'selfie';
+
+const DOC_SLOTS: { key: DocKey; label: string; icon: React.ReactNode; hint: string }[] = [
+  { key: 'passport',  label: 'Passport',       icon: <FileText size={24} className="text-slate-400" />, hint: 'Photo page clearly visible' },
+  { key: 'id_card',   label: 'ID Card',         icon: <FileText size={24} className="text-slate-400" />, hint: 'Front & back if applicable' },
+  { key: 'selfie',    label: 'Selfie with ID',  icon: <Camera  size={24} className="text-slate-400" />, hint: 'Hold document next to your face' },
+];
 
 export const KYC = () => {
   const { t } = useTranslation('common');
-  const { refreshProfile } = useAuth();
-  const [status, setStatus] = useState<'IDLE' | 'PENDING' | 'VERIFIED'>('IDLE');
+  const { kycStatus, refreshProfile } = useAuth();
   const [submitting, setSubmitting] = useState(false);
-  const [files, setFiles] = useState<{ [key: string]: File | null }>({
-    passport: null,
-    id_card: null,
-    selfie: null
-  });
-
+  const [files, setFiles] = useState<Record<DocKey, File | null>>({ passport: null, id_card: null, selfie: null });
   const [user, setUser] = useState<any>(null);
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
   }, []);
 
-  const handleFile = (key: string, e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) {
-      setFiles(prev => ({ ...prev, [key]: e.target.files![0] }));
-    }
+  const handleFile = (key: DocKey, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    if (file && file.size > 10 * 1024 * 1024) { toast.error('File must be under 10 MB'); return; }
+    setFiles(prev => ({ ...prev, [key]: file }));
   };
 
   const handleSubmit = async () => {
-    if (!files.passport && !files.id_card && !files.selfie) {
-      toast.error('Upload at least one KYC document');
-      return;
-    }
+    const chosen = (Object.entries(files) as [DocKey, File | null][]).filter(([, f]) => f !== null);
+    if (chosen.length === 0) { toast.error('Upload at least one document'); return; }
+    if (!user) { toast.error('Please log in first'); return; }
+
     setSubmitting(true);
+    try {
+      const uploaded: { type: string; name: string; path: string; contentType: string }[] = [];
 
-    if (user) {
-      try {
-        const session = (await supabase.auth.getSession()).data.session;
-        if (!session?.access_token) throw new Error('Session expired. Please login again.');
-        const toPayload = async (type: string, file: File | null) => {
-          if (!file) return null;
-          const data = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(String(reader.result));
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-          });
-          return { type, fileName: file.name, contentType: file.type || 'application/octet-stream', data };
-        };
-        const documents = (await Promise.all([
-          toPayload('passport', files.passport),
-          toPayload('id_card', files.id_card),
-          toPayload('selfie', files.selfie),
-        ])).filter(Boolean);
-
-        const response = await safeLegacyApiFetch('/api/kyc', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-          body: JSON.stringify({ action: 'submit', documents }),
-        });
-        const result = await safeJson<any>(response, {});
-        if (!response.ok) throw new Error(result.message || BACKEND_MIGRATION_MESSAGE);
-        await refreshProfile();
-
-        await crmService.kycUpdate({
-          external_trader_id: user.id,
-          status: 'pending',
-          level: 'tier_2',
-          documents,
-          reviewed_at: new Date().toISOString()
-        }, session.access_token).catch(() => null);
-        setStatus('PENDING');
-        toast.success('KYC submitted for admin review');
-      } catch (err) {
-        console.error(err);
-        toast.error(err instanceof Error ? err.message : 'KYC submission failed');
-      } finally {
-        setSubmitting(false);
+      for (const [key, file] of chosen) {
+        if (!file) continue;
+        const ext  = file.name.split('.').pop() ?? 'bin';
+        const path = `${user.id}/${key}_${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from('kyc-documents')
+          .upload(path, file, { contentType: file.type, upsert: true });
+        if (upErr) throw new Error(`Upload failed for ${key}: ${upErr.message}`);
+        uploaded.push({ type: key, name: file.name, path, contentType: file.type });
       }
+
+      const { error: dbErr } = await supabase
+        .from('users')
+        .update({
+          kyc_status:    'PENDING',
+          kyc_documents: uploaded,
+        })
+        .eq('id', user.id);
+      if (dbErr) throw new Error(dbErr.message);
+
+      await refreshProfile();
+      toast.success('Documents submitted — awaiting admin review');
+    } catch (err: any) {
+      toast.error(err.message || 'Submission failed');
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  if (status === 'PENDING') {
+  // ── Status screens ────────────────────────────────────────────────────────
+  if (kycStatus === 'PENDING') {
     return (
       <div className="p-4 lg:p-8 flex items-center justify-center min-h-[60vh]">
         <div className="glass-card p-12 text-center max-w-lg">
           <div className="w-20 h-20 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-6 text-orange-500 animate-pulse">
-            <ShieldCheck size={40} />
+            <Clock size={40} />
           </div>
-          <h2 className="text-2xl font-bold text-white mb-4">{t('kycUnderReview')}</h2>
-          <p className="text-slate-400 mb-8">{t('kycUnderReviewDesc')}</p>
-          <button 
-            onClick={() => setStatus('IDLE')}
-            className="text-accent-primary hover:underline font-bold"
+          <h2 className="text-2xl font-bold text-white mb-3">{t('kycUnderReview', { defaultValue: 'Under Review' })}</h2>
+          <p className="text-slate-400 text-sm">{t('kycUnderReviewDesc', { defaultValue: 'Your documents have been submitted and are being reviewed by our compliance team. This usually takes 1–2 business days.' })}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (kycStatus === 'REJECTED') {
+    return (
+      <div className="p-4 lg:p-8 flex items-center justify-center min-h-[60vh]">
+        <div className="glass-card p-12 text-center max-w-lg">
+          <div className="w-20 h-20 bg-rose-500/20 rounded-full flex items-center justify-center mx-auto mb-6 text-rose-500">
+            <XCircle size={40} />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-3">Verification Rejected</h2>
+          <p className="text-slate-400 text-sm mb-8">Your documents did not meet our requirements. Please re-submit with clearer, valid documents.</p>
+          <button
+            onClick={() => setFiles({ passport: null, id_card: null, selfie: null })}
+            className="btn-gold px-8 py-3 rounded-xl"
           >
-            {t('goBack')}
+            Re-submit Documents
           </button>
         </div>
       </div>
     );
   }
 
+  if (kycStatus === 'VERIFIED') {
+    return (
+      <div className="p-4 lg:p-8 flex items-center justify-center min-h-[60vh]">
+        <div className="glass-card p-12 text-center max-w-lg">
+          <motion.div
+            initial={{ scale: 0 }} animate={{ scale: 1 }}
+            transition={{ type: 'spring', stiffness: 200, damping: 18 }}
+            className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6 text-emerald-400"
+          >
+            <ShieldCheck size={40} />
+          </motion.div>
+          <h2 className="text-2xl font-bold text-white mb-3">Identity Verified</h2>
+          <p className="text-slate-400 text-sm">Your account is fully verified. All trading features are unlocked.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Upload form ───────────────────────────────────────────────────────────
   return (
     <div className="p-4 lg:p-8 animate-in fade-in duration-500">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-3xl mx-auto">
         <div className="flex items-center gap-4 mb-8">
-           <div className="p-3 bg-accent-primary/10 rounded-2xl text-accent-primary shadow-neon-gold/20">
-              <ShieldCheck size={32} />
-           </div>
-           <div>
-              <h1 className="text-3xl font-bold text-white">{t('kyc')}</h1>
-              <p className="text-slate-400">{t('kycDesc')}</p>
-           </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-          <div className="glass-card p-6 border-white/5">
-             <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                   <FileText className="text-accent-primary" />
-                   <h3 className="font-bold text-white">1. {t('idDocument')}</h3>
-                </div>
-                {files.passport || files.id_card ? <CheckCircle2 className="text-accent-secondary" /> : null}
-             </div>
-             
-             <div className="grid grid-cols-2 gap-4">
-                <label className="flex flex-col items-center justify-center gap-3 border-2 border-dashed border-white/10 rounded-2xl p-6 cursor-pointer hover:border-accent-primary/50 transition-all bg-white/5">
-                   <Upload size={24} className="text-slate-500" />
-                   <span className="text-xs font-bold text-slate-400">{t('passport')}</span>
-                   <input type="file" className="hidden" onChange={(e) => handleFile('passport', e)} />
-                   {files.passport && <span className="text-[10px] text-accent-secondary">{files.passport.name}</span>}
-                </label>
-                <label className="flex flex-col items-center justify-center gap-3 border-2 border-dashed border-white/10 rounded-2xl p-6 cursor-pointer hover:border-accent-primary/50 transition-all bg-white/5">
-                   <Upload size={24} className="text-slate-500" />
-                   <span className="text-xs font-bold text-slate-400">{t('idCard')}</span>
-                   <input type="file" className="hidden" onChange={(e) => handleFile('id_card', e)} />
-                   {files.id_card && <span className="text-[10px] text-accent-secondary">{files.id_card.name}</span>}
-                </label>
-             </div>
+          <div className="p-3 bg-accent-primary/10 rounded-2xl text-accent-primary">
+            <ShieldCheck size={32} />
           </div>
-
-          <div className="glass-card p-6 border-white/5">
-             <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                   <Camera className="text-accent-primary" />
-                   <h3 className="font-bold text-white">2. {t('selfieVerification')}</h3>
-                </div>
-                {files.selfie ? <CheckCircle2 className="text-accent-secondary" /> : null}
-             </div>
-             
-             <label className="flex flex-col items-center justify-center gap-4 border-2 border-dashed border-white/10 rounded-2xl p-8 cursor-pointer hover:border-accent-primary/50 transition-all bg-white/5">
-                <div className="w-16 h-16 rounded-full bg-accent-primary/10 flex items-center justify-center text-accent-primary">
-                   <Camera size={32} />
-                </div>
-                <div className="text-center">
-                   <p className="text-sm font-bold text-white mb-1">{t('takeSelfie')}</p>
-                   <p className="text-[10px] text-slate-500">{t('selfieDesc')}</p>
-                </div>
-                <input type="file" className="hidden" onChange={(e) => handleFile('selfie', e)} />
-                {files.selfie && <span className="text-[10px] text-accent-secondary">{files.selfie.name}</span>}
-             </label>
+          <div>
+            <h1 className="text-3xl font-bold text-white">{t('kyc', { defaultValue: 'KYC Verification' })}</h1>
+            <p className="text-slate-400 text-sm mt-1">Upload your identity documents to unlock all platform features.</p>
           </div>
         </div>
 
-        <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-2xl p-6 flex gap-4 mb-8">
-           <AlertCircle className="text-yellow-500 flex-shrink-0" />
-           <div className="text-sm text-yellow-500/80">
-              <p className="font-bold text-yellow-500 mb-1">{t('importantNote')}</p>
-              <p>{t('kycNote')}</p>
-           </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {DOC_SLOTS.map(({ key, label, icon, hint }) => (
+            <label
+              key={key}
+              className={`flex flex-col items-center justify-center gap-3 border-2 border-dashed rounded-2xl p-6 cursor-pointer transition-all min-h-[160px] ${
+                files[key]
+                  ? 'border-accent-secondary/50 bg-accent-secondary/5'
+                  : 'border-white/10 bg-white/5 hover:border-accent-primary/50'
+              }`}
+            >
+              {files[key] ? (
+                <>
+                  <CheckCircle2 size={32} className="text-accent-secondary" />
+                  <span className="text-xs font-bold text-accent-secondary text-center">{files[key]!.name}</span>
+                  <span className="text-[10px] text-slate-500">Click to replace</span>
+                </>
+              ) : (
+                <>
+                  {icon}
+                  <div className="text-center">
+                    <p className="text-sm font-bold text-white mb-0.5">{label}</p>
+                    <p className="text-[10px] text-slate-500">{hint}</p>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    <Upload size={11} /> Upload file
+                  </div>
+                </>
+              )}
+              <input type="file" className="hidden" accept="image/*,.pdf" onChange={e => handleFile(key, e)} />
+            </label>
+          ))}
         </div>
 
-        <button 
+        <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-2xl p-5 flex gap-4 mb-6">
+          <AlertCircle className="text-yellow-500 flex-shrink-0 mt-0.5" size={18} />
+          <div className="text-sm text-yellow-500/80">
+            <p className="font-bold text-yellow-500 mb-1">{t('importantNote', { defaultValue: 'Important' })}</p>
+            <p className="text-xs">{t('kycNote', { defaultValue: 'Documents must be clear, unexpired, and match your registered name. Supported formats: JPG, PNG, PDF (max 10 MB each).' })}</p>
+          </div>
+        </div>
+
+        <button
           onClick={handleSubmit}
-          disabled={submitting}
-          className="btn-gold w-full py-4 rounded-2xl text-sm disabled:opacity-55 disabled:cursor-not-allowed"
+          disabled={submitting || Object.values(files).every(f => f === null)}
+          className="btn-gold w-full py-4 rounded-2xl text-sm disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {submitting ? (
             <span className="flex items-center justify-center gap-2">
               <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
-              Uploading...
+              Uploading documents...
             </span>
-          ) : t('submitVerification')}
+          ) : 'Submit for Verification'}
         </button>
       </div>
     </div>
