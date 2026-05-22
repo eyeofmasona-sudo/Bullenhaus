@@ -115,6 +115,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const newUser = session?.user ?? null;
       setUser(newUser);
       if (newUser) {
+        setLoading(true);
         fetchRoleAndKyc(newUser.id);
       } else {
         setRole(null);
