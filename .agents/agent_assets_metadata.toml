@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "p-TaWSlpj23UXFctBHCjW"
+uri = "file://03_seed_crm_workers.txt"
+type = "text"
+title = "03_seed_crm_workers.sql"
