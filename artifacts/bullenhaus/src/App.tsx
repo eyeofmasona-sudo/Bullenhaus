@@ -134,7 +134,7 @@ const AppContent = () => {
               TRADING CLIENT ZONE
              ========================================== */}
           <Route element={<AuthGuard />}>
-            <Route element={<RoleGuard allowedRoles={['client']} />}>
+            <Route element={<RoleGuard allowedRoles={['client', 'admin']} />}>
               <Route path="/trade" element={<Navigate to="/trade/dashboard" replace />} />
               <Route path="/trade" element={<TradeAppWrapper />}>
                 <Route path="dashboard" element={<TradeDashboard />} />
