@@ -11,11 +11,26 @@ import {
   Menu, 
   X,
   LayoutDashboard,
-  BarChart2
+  BarChart2,
+  Layers
 } from 'lucide-react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { cn } from '../../lib/utils';
+
+const AdminSignOutButton = () => {
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
+  return (
+    <button
+      onClick={async () => { await signOut(); navigate('/login'); }}
+      className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:text-white w-full transition-all hover:bg-white/5"
+    >
+      <LogOut size={18} />
+      <span className="text-xs font-bold uppercase tracking-widest">Sign Out</span>
+    </button>
+  );
+};
 
 const AdminSidebarItem = ({ icon: Icon, label, to, active }: any) => (
   <Link to={to}>
@@ -58,13 +73,24 @@ const AdminSidebar = ({ onClose }: any) => {
         <AdminSidebarItem icon={History} label="Transactions" to="/admin/transactions" active={currentPath === '/admin/transactions'} />
         <AdminSidebarItem icon={Globe} label="CRM Sync" to="/admin/crm-sync" active={currentPath === '/admin/crm-sync'} />
         <AdminSidebarItem icon={Settings} label="System Config" to="/admin/settings" active={currentPath === '/admin/settings'} />
+
+        {/* Zone switcher — visible for admin */}
+        <div className="pt-3 mt-3 border-t border-rose-500/10">
+          <p className="text-[9px] font-bold tracking-[0.2em] text-slate-600 uppercase px-4 mb-2">Switch Zone</p>
+          <Link to="/crm/dashboard">
+            <motion.div
+              whileHover={{ x: 4 }}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-200 text-amber-400/70 hover:text-amber-400 hover:bg-amber-400/10 border border-amber-400/0 hover:border-amber-400/20"
+            >
+              <Layers size={18} />
+              <span className="font-bold text-xs tracking-wider uppercase">CRM Platform</span>
+            </motion.div>
+          </Link>
+        </div>
       </nav>
 
       <div className="mt-auto border-t border-rose-500/10 pt-4">
-         <Link to="/admin/dashboard" className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:text-white transition-all">
-            <LogOut size={18} />
-            <span className="text-xs font-bold uppercase tracking-widest">Back to App</span>
-         </Link>
+        <AdminSignOutButton />
       </div>
     </div>
   );
@@ -74,7 +100,7 @@ export const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { role } = useAuth();
 
-  // Redundant check for safety, but App.tsx / ProtectedRoute should handle this
+  // Admin role only — App.tsx / ProtectedRoute also enforces this
   if (role !== 'admin') return null;
 
   return (

@@ -17,7 +17,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   Megaphone,
-  Database
+  Database,
+  Shield
 } from "lucide-react";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "motion/react";
@@ -135,6 +136,20 @@ export function Layout({ children, role, onLogout }: { children: ReactNode, role
             })}
           </nav>
         </div>
+
+        {/* Zone switcher — admin only */}
+        {role === 'admin' && (
+          <div>
+            <div className="mb-2 px-4 text-[10px] font-bold tracking-widest text-aura-platinum/30 uppercase">Switch Zone</div>
+            <Link
+              to="/admin"
+              className="flex items-center gap-4 px-4 py-3 rounded text-sm transition-colors text-rose-400/60 hover:bg-rose-500/10 hover:text-rose-400 border-l-2 border-transparent hover:border-rose-500/40"
+            >
+              <Shield className="w-4 h-4" />
+              Admin Panel
+            </Link>
+          </div>
+        )}
       </div>
 
       <div className="p-6 border-t border-glass-border">

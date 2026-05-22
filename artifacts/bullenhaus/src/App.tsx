@@ -156,7 +156,7 @@ const AppContent = () => {
               CRM WORKER ZONE
              ========================================== */}
           <Route element={<AuthGuard />}>
-            <Route element={<RoleGuard allowedRoles={['agent', 'manager', 'director']} />}>
+            <Route element={<RoleGuard allowedRoles={['agent', 'manager', 'director', 'admin']} />}>
               <Route path="/crm" element={<Navigate to="/crm/dashboard" replace />} />
               <Route path="/crm" element={<CRMAppWrapper />}>
                 <Route path="dashboard" element={<CRMDashboard />} />
