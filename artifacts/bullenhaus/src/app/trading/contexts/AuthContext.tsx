@@ -45,15 +45,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('id', userId)
         .single();
 
-      if (data) {
-        // Defensive: DB could return null if column added with nullable migration
-        setRole((data.role as UnifiedRole) || 'client');
+      if (data?.role) {
+        setRole((data.role as UnifiedRole));
         setKycStatus((data.kyc_status as any) || 'UNVERIFIED');
       } else {
-        setRole('client');
-        setKycStatus('UNVERIFIED');
+        // No row in public.users yet — check auth user_metadata as fallback
+        // (CRM workers may only exist in auth.users with metadata role)
+        const { data: { user } } = await supabase.auth.getUser();
+        const metaRole = user?.user_metadata?.role as UnifiedRole | undefined;
+        if (metaRole && ['client','agent','manager','director','admin'].includes(metaRole)) {
+          setRole(metaRole);
+          setKycStatus('VERIFIED');
+        } else {
+          setRole('client');
+          setKycStatus('UNVERIFIED');
+        }
       }
     } catch {
+      // On error also try metadata
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        const metaRole = user?.user_metadata?.role as UnifiedRole | undefined;
+        if (metaRole && ['client','agent','manager','director','admin'].includes(metaRole)) {
+          setRole(metaRole);
+          setKycStatus('VERIFIED');
+          return;
+        }
+      } catch { /* ignore */ }
       setRole('client');
       setKycStatus('UNVERIFIED');
     }

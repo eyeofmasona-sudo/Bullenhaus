@@ -1,4 +1,3 @@
-import { safeLegacyApiFetch } from "../backendMigration";
 /**
  * authClient.ts — Supabase Auth wrapper
  *
@@ -54,11 +53,13 @@ async function apiFetch<T>(
     (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
   }
 
-  const res = await safeLegacyApiFetch(`${getApiBase()}${path}`, {
-    ...options,
-    credentials: 'include', // send/receive HttpOnly cookies (refresh token)
-    headers,
-  });
+  const res = await fetch(path, { ...options, headers });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, body.message || res.statusText);
+  }
+  return res.json() as Promise<T>;
+}
 
 export const tokenStore = {
   /** Returns the current access token from the active Supabase session, or null. */

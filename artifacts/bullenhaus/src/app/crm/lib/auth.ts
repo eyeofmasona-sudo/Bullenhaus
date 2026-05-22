@@ -1,13 +1,10 @@
 // ============================================================================
 // CRM auth — Supabase-native implementation
-// Replaces the old Express /api/v1/auth/* calls.
-// Public API is kept identical so existing CRM code needs no changes.
 // ============================================================================
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl =
-  (import.meta as any).env?.VITE_SUPABASE_URL as string || '';
+const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL as string || '';
 const supabaseKey =
   ((import.meta as any).env?.VITE_SUPABASE_PUBLISHABLE_KEY as string) ||
   ((import.meta as any).env?.VITE_SUPABASE_ANON_KEY as string) ||
@@ -18,7 +15,7 @@ const supabase = createClient(
   supabaseKey || 'placeholder'
 );
 
-// ── Types ────────────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface AuthUser {
   id: string;
@@ -28,7 +25,7 @@ export interface AuthUser {
   roles: string[];
 }
 
-// ── localStorage keys (same as before — keeps Layout / AuthGuard compat) ────
+// ── localStorage keys ─────────────────────────────────────────────────────────
 
 const KEYS = {
   role:         'aura_role',
@@ -56,30 +53,23 @@ export const authStorage = {
   clear: () => Object.values(KEYS).forEach(k => localStorage.removeItem(k)),
 };
 
-// ── Real API login ───────────────────────────────────────────────────────────
-import { safeLegacyApiFetch } from "../../../lib/backendMigration";
+// ── Role mapping ──────────────────────────────────────────────────────────────
 
-export async function apiLogin(email: string, password: string): Promise<AuthUser> {
-  const res = await safeLegacyApiFetch("/api/v1/auth/login", {
-    method:  "POST",
-    headers: { "Content-Type": "application/json" },
-    body:    JSON.stringify({ email, password }),
-  });
+function mapRole(raw: string | undefined): string {
+  const r = (raw || '').toLowerCase();
+  if (['admin', 'director', 'manager', 'agent'].includes(r)) return r;
+  return 'agent';
+}
 
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.message || "Login failed");
-  }
-
-// ── Login ────────────────────────────────────────────────────────────────────
+// ── Login ─────────────────────────────────────────────────────────────────────
 
 export async function apiLogin(email: string, password: string): Promise<AuthUser> {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw new Error(error.message);
   if (!data.user || !data.session) throw new Error('Login failed — no session returned');
 
-  // Fetch role from `users` table; fall back to user_metadata
-  let role = 'agent';
+  // 1. Try public.users table first
+  let role = '';
   try {
     const { data: profile } = await supabase
       .from('users')
@@ -87,7 +77,10 @@ export async function apiLogin(email: string, password: string): Promise<AuthUse
       .eq('id', data.user.id)
       .single();
     if (profile?.role) role = mapRole(profile.role as string);
-  } catch {
+  } catch { /* ignore */ }
+
+  // 2. Fallback: user_metadata.role (set during user creation)
+  if (!role) {
     role = mapRole(data.user.user_metadata?.role as string | undefined);
   }
 
@@ -108,33 +101,19 @@ export async function apiLogin(email: string, password: string): Promise<AuthUse
   return user;
 }
 
-// ── Refresh ──────────────────────────────────────────────────────────────────
+// ── Refresh ───────────────────────────────────────────────────────────────────
 
-  try {
-    const res = await safeLegacyApiFetch("/api/v1/auth/refresh", {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ refreshToken }),
-    });
-    if (!res.ok) return null;
-    const { accessToken } = await res.json();
-    authStorage.setToken(accessToken);
-    return accessToken;
-  } catch {
-    return null;
-  }
+export async function refreshAccessToken(): Promise<string | null> {
+  const { data, error } = await supabase.auth.refreshSession();
+  if (error || !data.session) return null;
   const token = data.session.access_token;
   authStorage.setToken(token);
   return token;
 }
 
-// ── Authenticated fetch (passes Supabase session token) ──────────────────────
-// NOTE: The target API endpoints (/api/v1/*) require a backend.
-// Until Supabase Edge Functions or RPC is set up, these calls will fail
-// and the hooks will display graceful empty states.
+// ── Authenticated fetch ───────────────────────────────────────────────────────
 
 export async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
-  // Always prefer the live Supabase session token
   const { data: { session } } = await supabase.auth.getSession();
   const token = session?.access_token || authStorage.getToken();
 
@@ -144,30 +123,22 @@ export async function apiFetch(url: string, options: RequestInit = {}): Promise<
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 
-  let res = await safeLegacyApiFetch(url, { ...options, headers });
+  let res = await fetch(url, { ...options, headers });
 
   // Auto-refresh on 401
   if (res.status === 401) {
     const newToken = await refreshAccessToken();
     if (newToken) {
-      res = await safeLegacyApiFetch(url, { ...options, headers: { ...headers, Authorization: `Bearer ${newToken}` } });
+      res = await fetch(url, { ...options, headers: { ...headers, Authorization: `Bearer ${newToken}` } });
     }
   }
 
   return res;
 }
 
-// ── Logout ───────────────────────────────────────────────────────────────────
+// ── Logout ────────────────────────────────────────────────────────────────────
 
 export async function apiLogout(): Promise<void> {
-  const refreshToken = authStorage.getRefreshToken();
-  if (refreshToken) {
-    await safeLegacyApiFetch("/api/v1/auth/logout", {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ refreshToken }),
-    }).catch(() => {});
-  }
   authStorage.clear();
   await supabase.auth.signOut().catch(() => {});
 }

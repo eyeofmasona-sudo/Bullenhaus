@@ -55,8 +55,21 @@ export default function LoginPage() {
 
       let target = '/trade/dashboard';
       if (userSession?.access_token && userId) {
+        // First try public.users table
         const { data: profile } = await supabase.from('users').select('role').eq('id', userId).single();
-        const userRole = (profile?.role || 'client') as UnifiedRole;
+        let userRole = (profile?.role || null) as UnifiedRole;
+
+        // Fallback: read role from auth user_metadata (CRM workers may not have public.users row)
+        if (!userRole) {
+          const { data: { user: authUser } } = await supabase.auth.getUser();
+          const metaRole = authUser?.user_metadata?.role as string | undefined;
+          if (metaRole && ['client','agent','manager','director','admin'].includes(metaRole)) {
+            userRole = metaRole as UnifiedRole;
+          } else {
+            userRole = 'client';
+          }
+        }
+
         if (userRole === 'admin') target = '/admin/dashboard';
         else if (userRole === 'agent' || userRole === 'manager' || userRole === 'director') target = '/crm/dashboard';
       }
