@@ -92,11 +92,11 @@ export default function LoginPage() {
 
   return (
     <AuthShell
-      title="Operator Login"
+      title="User Login"
       subtitle="Enter your credentials for terminal access."
       footer={
         <>
-          New operator?{' '}
+          New user?{' '}
           <button
             onClick={() => navigate('/register')}
             className="font-bold text-gold hover:text-gold-light transition-colors ml-1"
@@ -127,7 +127,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="input-dark pl-11"
-              placeholder="operator@bullenhaus.com"
+              placeholder="user@bullenhaus.com"
               required
             />
           </div>
