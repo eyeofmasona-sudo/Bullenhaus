@@ -34,7 +34,7 @@ const getNavForRole = (role: string, t: (key: string) => string) => {
       ];
     case 'admin':
       return [
-        { name: t('navAdminPanel'), href: '/crm/dashboard', icon: Settings },
+        { name: t('navAdminPanel'), href: '/crm/admin', icon: Settings },
       ];
     case 'manager':
       return [

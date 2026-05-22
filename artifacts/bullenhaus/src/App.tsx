@@ -94,6 +94,13 @@ const CRMAppWrapper = () => {
 };
 
 
+// Smart redirect: admin → /crm/admin, others → /crm/dashboard
+const CRMRedirect = () => {
+  const { role } = useAuth();
+  if (role === 'admin') return <Navigate to="/crm/admin" replace />;
+  return <Navigate to="/crm/dashboard" replace />;
+};
+
 const NotFoundPage = () => (
   <div className="flex h-dvh w-full items-center justify-center bg-bg px-6">
     <div className="glass-card max-w-xl w-full p-10 text-center border border-accent-primary/20">
@@ -157,11 +164,12 @@ const AppContent = () => {
              ========================================== */}
           <Route element={<AuthGuard />}>
             <Route element={<RoleGuard allowedRoles={['agent', 'manager', 'director', 'admin']} />}>
-              <Route path="/crm" element={<Navigate to="/crm/dashboard" replace />} />
+              <Route path="/crm" element={<CRMRedirect />} />
               <Route path="/crm" element={<CRMAppWrapper />}>
                 <Route path="dashboard" element={<CRMDashboard />} />
                 <Route path="manager" element={<CRMManagerDashboard />} />
                 <Route path="workspace" element={<CRMAgentWorkspace />} />
+                <Route path="admin" element={<CRMAdminPanel />} />
               </Route>
             </Route>
           </Route>
