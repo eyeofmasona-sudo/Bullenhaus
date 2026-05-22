@@ -52,8 +52,8 @@ export function TradingIntelligence() {
   const { t } = useI18n();
   const { clients, loading, error, refetch } = useClients(1, 100, "");
 
-  // Filter clients that have an external trading ID (synced from trading platform)
-  const tradingClients = clients.filter(c => c.externalTradingId);
+  // All synced clients from the trading platform
+  const tradingClients = clients;
 
   // Sort by registration date descending to show newest first
   const sortedClients = [...tradingClients].sort(
@@ -63,7 +63,7 @@ export function TradingIntelligence() {
   // Dynamic metrics calculation
   const totalVolume = tradingClients.reduce((sum, c) => sum + Number(c.totalBalance || 0), 0);
   const totalTraders = tradingClients.length;
-  const pendingKyc = tradingClients.filter(c => c.kycStatus === "PENDING").length;
+  const pendingKyc = tradingClients.filter(c => c.kyc_status === "PENDING").length;
   const criticalRisk = tradingClients.filter(c => c.riskScore === "CRITICAL").length;
 
   const formattedVolume = new Intl.NumberFormat("en-US", {
@@ -204,9 +204,9 @@ export function TradingIntelligence() {
                 {sortedClients.map(vip => {
                   const clientName = `${vip.firstName} ${vip.lastName}`;
                   const balance = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(vip.totalBalance) || 0);
-                  const isPendingKyc = vip.kycStatus === 'PENDING';
-                  const isVerifiedKyc = vip.kycStatus === 'VERIFIED';
-                  const isRejectedKyc = vip.kycStatus === 'REJECTED';
+                  const isPendingKyc = vip.kyc_status === 'PENDING';
+                  const isVerifiedKyc = vip.kyc_status === 'VERIFIED';
+                  const isRejectedKyc = vip.kyc_status === 'REJECTED';
 
                   return (
                     <tr key={vip.id} className="hover:bg-white/3 transition-colors group">
@@ -215,7 +215,7 @@ export function TradingIntelligence() {
                         <div className="text-[10px] text-aura-platinum/40 font-mono mt-0.5">{vip.email}</div>
                       </td>
                       <td className="py-3.5 pr-4 font-mono text-[11px] text-aura-gold/80">
-                        {vip.externalTradingId || "N/A"}
+                        {vip.id.substring(0, 8).toUpperCase()}
                       </td>
                       <td className="py-3.5 pr-4 font-mono font-medium">
                         {balance}
@@ -234,7 +234,7 @@ export function TradingIntelligence() {
                           {isVerifiedKyc && <ShieldCheck className="w-3 h-3" />}
                           {isRejectedKyc && <XCircle className="w-3 h-3" />}
                           {isPendingKyc && <Clock className="w-3 h-3" />}
-                          {vip.kycStatus}
+                          {vip.kyc_status}
                         </span>
                       </td>
                       <td className="py-3.5 pr-4">
