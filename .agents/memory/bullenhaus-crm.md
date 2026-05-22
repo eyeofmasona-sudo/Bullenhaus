@@ -28,15 +28,11 @@ description: Supabase project details, account roster, DB tables, and key decisi
   - `"CRM workers can view client profiles"` on `users` (filters by `role='client'`)
   - `"CRM workers can view all transactions"` on `transactions` (migration 06)
 
-## Accounts & Role Matrix
-| Email | Password | DB role | CRM | Trading Admin |
-|---|---|---|---|---|
-| `superadmin@bullenhaus.io` | `Bullenhaus2025` | admin | ✓ | ✓ |
-| `trade.admin@bullenhaus.io` | `Bullenhaus2025` | trade_admin | ✗ blocked | ✓ |
-| `orion.voss@aurelius-desk.crm` | (original) | admin | ✓ | ✗ |
-- 2 directors, 2 managers, 10 agents all at `@aurelius-desk.crm`
-- 3 clients (galstyan@rrr.com, armenia@arm.com, atlas.admin@bullenhaus.trade)
-- All non-client accounts have `user_metadata.role` synced in auth.users
+## Account roster shape (no creds — see Supabase dashboard for current values)
+- Two superuser-style accounts under `@bullenhaus.io`: one with DB role `admin` (full CRM + Trade Admin), one with `trade_admin` (Trade Admin only, CRM blocked).
+- CRM workforce under `@aurelius-desk.crm`: 1 admin + 2 directors + 2 managers + 10 agents.
+- A handful of `client` accounts for end-to-end trade flow testing.
+- All non-client accounts must have `user_metadata.role` mirrored in `auth.users` for JWT claims to carry the role.
 
 ## Role separation: trade_admin vs admin
 - `trade_admin` role added to CHECK constraint on `public.users`
@@ -54,5 +50,11 @@ description: Supabase project details, account roster, DB tables, and key decisi
 - `Transactions.tsx` now queries Supabase directly (removed legacy `safeLegacyApiFetch`); shows expandable `payment_details` via `PaymentDetailsDisplay`
 - `ProfileSettings.tsx` saves to both `supabase.auth.updateUser` AND `public.users` table in a single flow
 
-## Pre-existing TS errors (do not fix)
-- `useWalletSync.ts`, `ProtectedRoute.tsx` (components/layout), `chart.tsx` — known issues, not introduced by us
+## CRM pages need LanguageProvider wrapper
+- Every CRM page (and the CRM `Layout` itself) calls `useI18n()` from `app/crm/lib/i18n.tsx`, which **throws** when no `LanguageProvider` is mounted.
+- The unified `src/App.tsx` is the only entry point now; the old `app/crm/main.tsx` is dead. The CRM wrapper in `App.tsx` MUST wrap its `<Outlet>` in `<LanguageProvider>`, otherwise every `/crm/*` route renders a black screen + React error boundary.
+- **Why:** standalone CRM entry used to mount the provider; when migrating to the unified router that wiring was easy to miss. Same pattern applies to any future hooks that throw without their provider — check provider mounting whenever adding a CRM page.
+
+## useWalletSync — read Supabase directly
+- `useWalletSync.ts` must query `supabase.from('users').select('balance, realized_pnl, margin_used')` directly (not via any `profile` variable). An earlier version referenced an undefined `profile` and silently caught the ReferenceError, leaving wallet stuck at 0.
+- **Why:** there's no in-scope `profile`/`useProfile` context in trading; the source of truth is the Supabase `users` row keyed by `auth.user.id`.
