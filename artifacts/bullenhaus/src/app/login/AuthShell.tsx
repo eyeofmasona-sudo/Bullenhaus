@@ -51,14 +51,12 @@ export const AuthShell: React.FC<AuthShellProps> = ({ title, subtitle, children,
         className="relative z-10 w-full max-w-[440px]"
       >
         {/* Brand */}
-        <div className="mb-8 text-center">
-          <h1 className="font-serif text-4xl sm:text-5xl font-bold tracking-[0.18em]">
-            <span className="gold-gradient-text">BULLEN</span>
-            <span className="text-text">HAUS</span>
-          </h1>
-          <p className="text-[10px] font-bold text-gold/80 tracking-[0.4em] mt-3 uppercase">
-            Trade · Invest · Grow
-          </p>
+        <div className="mb-8 text-center flex justify-center">
+          <img
+            src="/logo.png"
+            alt="Bullenhaus"
+            className="h-24 w-auto object-contain drop-shadow-[0_0_18px_rgba(212,175,55,0.35)]"
+          />
         </div>
 
         {/* Card */}
