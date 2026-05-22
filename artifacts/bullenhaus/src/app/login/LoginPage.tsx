@@ -62,7 +62,16 @@ export default function LoginPage() {
       }
       navigate(target, { replace: true });
     } catch (err: any) {
-      setError(err.message || 'An error occurred during sign in.');
+      const msg = err.message || '';
+      if (msg.includes('Email not confirmed') || msg.includes('email_not_confirmed')) {
+        setError('Email не подтверждён. Запустите SQL-скрипт подтверждения в Supabase Dashboard или отключите Email Confirmations в Authentication → Settings.');
+      } else if (msg.includes('Invalid login credentials')) {
+        setError('Неверный email или пароль.');
+      } else if (msg.includes('Too many requests')) {
+        setError('Слишком много попыток. Подождите несколько минут.');
+      } else {
+        setError(msg || 'Ошибка входа. Проверьте email и пароль.');
+      }
     } finally {
       setLoading(false);
     }

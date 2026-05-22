@@ -12,3 +12,9 @@ id = "glTGPdlR-gscNOdMaDnah"
 uri = "file://bullenhaus_full_migration.txt"
 type = "text"
 title = "bullenhaus_full_migration.sql"
+
+[[outputs]]
+id = "BEfXLRRQjyNaKUN02Uch3"
+uri = "file://confirm_all_users.txt"
+type = "text"
+title = "confirm_all_users.sql"
