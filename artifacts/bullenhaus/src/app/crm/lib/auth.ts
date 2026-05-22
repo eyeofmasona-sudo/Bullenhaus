@@ -55,10 +55,12 @@ export const authStorage = {
 
 // ── Role mapping ──────────────────────────────────────────────────────────────
 
+const CRM_ROLES = ['admin', 'director', 'manager', 'agent'] as const;
+
 function mapRole(raw: string | undefined): string {
   const r = (raw || '').toLowerCase();
-  if (['admin', 'director', 'manager', 'agent'].includes(r)) return r;
-  return 'agent';
+  if ((CRM_ROLES as readonly string[]).includes(r)) return r;
+  throw new Error('Нет доступа: этот аккаунт не является CRM-оператором');
 }
 
 // ── Login ─────────────────────────────────────────────────────────────────────
@@ -68,7 +70,7 @@ export async function apiLogin(email: string, password: string): Promise<AuthUse
   if (error) throw new Error(error.message);
   if (!data.user || !data.session) throw new Error('Login failed — no session returned');
 
-  // 1. Try public.users table first
+  // 1. Try public.users table first (authoritative source)
   let role = '';
   try {
     const { data: profile } = await supabase
@@ -77,7 +79,10 @@ export async function apiLogin(email: string, password: string): Promise<AuthUse
       .eq('id', data.user.id)
       .single();
     if (profile?.role) role = mapRole(profile.role as string);
-  } catch { /* ignore */ }
+  } catch (err: any) {
+    // Re-throw access-denied errors; ignore DB connectivity issues
+    if (err?.message?.includes('Access denied')) throw err;
+  }
 
   // 2. Fallback: user_metadata.role (set during user creation)
   if (!role) {
