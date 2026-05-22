@@ -29,7 +29,7 @@ description: Supabase project details, account roster, DB tables, and key decisi
   - `"CRM workers can view all transactions"` on `transactions` (migration 06)
 
 ## Accounts
-- Admins: `superadmin@bullenhaus.io` (BH$uper#Adm1n!2025), `trade.admin@bullenhaus.io` (BH@dmin#2025!Xq7), `orion.voss@aurelius-desk.crm`
+- Admins: `superadmin@bullenhaus.io` (**BHSuperAdmin2025!**), `trade.admin@bullenhaus.io` (**BHAdmin2025!**), `orion.voss@aurelius-desk.crm`
 - 2 directors, 2 managers, 10 agents all at `@aurelius-desk.crm`
 - 3 clients (galstyan@rrr.com, armenia@arm.com, atlas.admin@bullenhaus.trade)
 - All non-client accounts have `user_metadata.role` synced in auth.users
