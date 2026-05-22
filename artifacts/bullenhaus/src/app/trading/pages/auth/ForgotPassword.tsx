@@ -20,9 +20,17 @@ export const ForgotPassword: React.FC = () => {
         redirectTo: `${window.location.origin}/reset-password`,
       });
       if (error) throw error;
+      // Always show success (don't reveal if email exists)
       setSuccess(true);
     } catch (err: any) {
-      setError(err.message || 'An error occurred during password reset.');
+      const msg = err.message || '';
+      if (msg.includes('For security purposes')) {
+        setError('Слишком много запросов. Подождите минуту и попробуйте снова.');
+      } else if (msg.includes('Unable to validate')) {
+        setError('Введите корректный email адрес.');
+      } else {
+        setError(msg || 'Ошибка отправки. Проверьте email и попробуйте снова.');
+      }
     } finally {
       setLoading(false);
     }
@@ -34,11 +42,14 @@ export const ForgotPassword: React.FC = () => {
         <div className="w-14 h-14 mx-auto bg-success/10 rounded-full flex items-center justify-center mb-5">
           <ShieldCheck size={28} className="text-success" />
         </div>
-        <h2 className="font-serif text-2xl font-semibold text-text mb-2">Reset link sent</h2>
-        <p className="text-sm text-text-muted mb-6">
-          Check your email for a secure link to set a new passphrase.
+        <h2 className="font-serif text-2xl font-semibold text-text mb-2">Письмо отправлено</h2>
+        <p className="text-sm text-text-muted mb-2">
+          Если аккаунт с таким email существует — письмо со ссылкой уже в пути.
         </p>
-        <Link to="/login" className="btn-gold inline-flex">Return to login</Link>
+        <p className="text-xs text-text-dim mb-6">
+          Проверьте папку «Спам» если письмо не пришло в течение 2–3 минут.
+        </p>
+        <Link to="/login" className="btn-gold inline-flex">Вернуться ко входу</Link>
       </div>
     );
   }
@@ -46,8 +57,8 @@ export const ForgotPassword: React.FC = () => {
   return (
     <div className="p-8">
       <div className="mb-7">
-        <h2 className="font-serif text-2xl font-semibold text-text tracking-tight">Recover access</h2>
-        <p className="text-sm text-text-muted mt-1.5">We'll email you a secure reset link.</p>
+        <h2 className="font-serif text-2xl font-semibold text-text tracking-tight">Сброс пароля</h2>
+        <p className="text-sm text-text-muted mt-1.5">Введите email — пришлём ссылку для входа.</p>
       </div>
 
       {error && (
@@ -63,7 +74,7 @@ export const ForgotPassword: React.FC = () => {
 
       <form onSubmit={handleReset} className="space-y-4">
         <div>
-          <label className="label-eyebrow block mb-2">Verified email</label>
+          <label className="label-eyebrow block mb-2">Email аккаунта</label>
           <div className="relative">
             <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" />
             <input
@@ -81,13 +92,15 @@ export const ForgotPassword: React.FC = () => {
           {loading ? (
             <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
           ) : (
-            <>Send reset link <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" /></>
+            <>Отправить ссылку <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" /></>
           )}
         </button>
       </form>
 
       <div className="mt-7 pt-6 border-t border-border text-center">
-        <Link to="/login" className="text-sm text-text-muted hover:text-gold transition-colors">Cancel</Link>
+        <Link to="/login" className="text-sm text-text-muted hover:text-gold transition-colors">
+          ← Вернуться ко входу
+        </Link>
       </div>
     </div>
   );

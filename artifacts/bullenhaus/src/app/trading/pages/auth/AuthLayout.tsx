@@ -19,7 +19,11 @@ export const AuthLayout: React.FC = () => {
     );
   }
 
-  if (session) {
+  // Don't redirect if this is a password recovery flow — the hash contains type=recovery
+  const isRecovery = window.location.hash.includes('type=recovery') ||
+    window.location.hash.includes('type=signup');
+
+  if (session && !isRecovery) {
     return <Navigate to={role === 'admin' ? '/admin/dashboard' : '/trade/dashboard'} replace />;
   }
 
