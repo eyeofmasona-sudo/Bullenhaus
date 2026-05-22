@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useTradingStore } from '../stores/tradingStore';
-import { safeLegacyApiFetch, safeJson } from '../../../lib/backendMigration';
 
 export const useWalletSync = (pollMs = 30000) => {
   const setWallet = useTradingStore((state) => state.setWallet);
@@ -13,29 +12,31 @@ export const useWalletSync = (pollMs = 30000) => {
       setLoading(true);
       setError(null);
       const session = (await supabase.auth.getSession()).data.session;
-      if (!session?.access_token) {
+      if (!session?.user?.id) {
         setWallet({ balance: 0, realizedPnL: 0, marginUsed: 0 });
         return;
       }
 
-      const response = await safeLegacyApiFetch('/api/users?scope=wallet', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      const result = await safeJson<any>(response, {});
-      if (!response.ok) throw new Error(result.message || 'Кошелёк временно недоступен во время миграции backend.');
+      const { data: profile, error: dbError } = await supabase
+        .from('users')
+        .select('balance, realized_pnl, margin_used')
+        .eq('id', session.user.id)
+        .maybeSingle();
+
+      if (dbError) throw dbError;
 
       if (profile) {
         setWallet({
-          balance:      Number(profile.balance ?? 0),
-          realizedPnL:  Number(profile.realized_pnl ?? 0),
-          marginUsed:   Number(profile.margin_used ?? 0),
+          balance: Number(profile.balance ?? 0),
+          realizedPnL: Number(profile.realized_pnl ?? 0),
+          marginUsed: Number(profile.margin_used ?? 0),
         });
       } else {
         setWallet({ balance: 0, realizedPnL: 0, marginUsed: 0 });
       }
-    } catch {
-      // Silently keep current wallet state on error
-      setWallet({ balance: 0, realizedPnL: 0, marginUsed: 0 });
+    } catch (err: any) {
+      console.error('[useWalletSync] failed to load wallet:', err);
+      setError(err?.message || 'Failed to load wallet');
     } finally {
       setLoading(false);
     }
