@@ -18,3 +18,15 @@ id = "BEfXLRRQjyNaKUN02Uch3"
 uri = "file://confirm_all_users.txt"
 type = "text"
 title = "confirm_all_users.sql"
+
+[[outputs]]
+id = "GRtWUGvnCHvrXyf3qNs_x"
+uri = "file://docs/trading-admin-manual.md"
+type = "text"
+title = "Trading Platform Admin Panel Manual"
+
+[[outputs]]
+id = "kHBkur9g_xDGv7Rg3sPRY"
+uri = "file://docs/crm-manual.md"
+type = "text"
+title = "CRM Manual for All Roles"
