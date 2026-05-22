@@ -1,14 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { Upload, MessageSquare, RefreshCw, Users } from 'lucide-react';
+import { Upload, RefreshCw, Users, Send } from 'lucide-react';
 import { TxStatus } from '../../stores/transactionStore';
 import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase';
+import { PaymentDetailsForm, PaymentDetailsSentBadge } from '../../components/admin/PaymentDetailsForm';
+import type { PaymentDetails } from '../../components/admin/PaymentDetailsForm';
 
 export const AdminWithdrawals = () => {
-  const [requests, setRequests] = useState<any[]>([]);
+  const [requests, setRequests]     = useState<any[]>([]);
+  const [loading, setLoading]       = useState(false);
+  const [formOpen, setFormOpen]     = useState(false);
+  const [selectedTx, setSelectedTx] = useState<any>(null);
+
   const withdrawals = requests.filter(r => r.type === 'Withdrawal');
-  const [instructionTexts, setInstructionTexts] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(false);
 
   const fetchRequests = async () => {
     setLoading(true);
@@ -39,18 +43,9 @@ export const AdminWithdrawals = () => {
     }
   };
 
-  const handleSendInstructions = async (id: string) => {
-    const text = instructionTexts[id];
-    if (!text?.trim()) { toast.error('Instructions cannot be empty'); return; }
-    try {
-      const { error } = await supabase.from('transactions').update({ instructions: text }).eq('id', id);
-      if (error) throw error;
-      setRequests(prev => prev.map(req => req.id === id ? { ...req, instructions: text } : req));
-      toast.success('Instructions sent to client');
-      setInstructionTexts(prev => ({ ...prev, [id]: '' }));
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to send instructions');
-    }
+  const openForm = (req: any) => {
+    setSelectedTx(req);
+    setFormOpen(true);
   };
 
   return (
@@ -74,9 +69,9 @@ export const AdminWithdrawals = () => {
               <th className="px-6 py-4 font-bold">User</th>
               <th className="px-6 py-4 font-bold">Amount</th>
               <th className="px-6 py-4 font-bold">Method</th>
-              <th className="px-6 py-4 font-bold">Status / Instructions</th>
+              <th className="px-6 py-4 font-bold">Status</th>
+              <th className="px-6 py-4 font-bold">Payment Details</th>
               <th className="px-6 py-4 font-bold">Created</th>
-              <th className="px-6 py-4 font-bold">Updated</th>
               <th className="px-6 py-4 text-right font-bold">Actions</th>
             </tr>
           </thead>
@@ -110,38 +105,30 @@ export const AdminWithdrawals = () => {
                   </span>
                 </td>
                 <td className="px-6 py-4">
-                  <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter mb-2 inline-block ${
+                  <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter inline-block ${
                     req.status === 'Completed' || req.status === 'Approved' ? 'bg-success/10 text-success' :
-                    req.status === 'Pending' ? 'bg-warning/10 text-warning' :
-                    req.status === 'Rejected' ? 'bg-danger/10 text-danger' :
+                    req.status === 'Pending'   ? 'bg-warning/10 text-warning' :
+                    req.status === 'Rejected'  ? 'bg-danger/10 text-danger'  :
                     'bg-info/10 text-info'
                   }`}>{req.status}</span>
-                  {req.instructions ? (
-                    <p className="text-[10px] text-text-muted max-w-[200px] truncate">
-                      <span className="text-warning font-bold">Sent: </span>{req.instructions}
-                    </p>
+                </td>
+                <td className="px-6 py-4">
+                  {req.payment_details ? (
+                    <PaymentDetailsSentBadge
+                      details={req.payment_details as PaymentDetails}
+                      accentColor="text-warning"
+                    />
                   ) : (
-                    <div className="flex flex-col gap-1 w-[200px]">
-                      <input
-                        type="text"
-                        placeholder="Card, IBAN, or payment link..."
-                        value={instructionTexts[req.id] || ''}
-                        onChange={e => setInstructionTexts(p => ({ ...p, [req.id]: e.target.value }))}
-                        className="input-dark py-1 text-[10px]"
-                      />
-                      {instructionTexts[req.id] && (
-                        <button onClick={() => handleSendInstructions(req.id)} className="btn-gold py-1 text-[10px] flex items-center justify-center gap-1">
-                          <MessageSquare size={10} /> Send
-                        </button>
-                      )}
-                    </div>
+                    <button
+                      onClick={() => openForm(req)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-warning/10 border border-warning/20 text-warning hover:bg-warning/20 font-bold text-[10px] uppercase tracking-wider transition-all"
+                    >
+                      <Send size={10} /> Send Details
+                    </button>
                   )}
                 </td>
                 <td className="px-6 py-4 text-text-dim">
                   {req.created_at ? new Date(req.created_at).toLocaleString() : '—'}
-                </td>
-                <td className="px-6 py-4 text-text-dim">
-                  {req.updated_at ? new Date(req.updated_at).toLocaleString() : '—'}
                 </td>
                 <td className="px-6 py-4 text-right space-x-2">
                   <button onClick={() => handleAction(req.id, 'Completed')} className="px-3 py-1 rounded bg-success/10 text-success hover:bg-success/20 font-bold text-[10px] uppercase transition-all">
@@ -156,6 +143,18 @@ export const AdminWithdrawals = () => {
           </tbody>
         </table>
       </div>
+
+      {selectedTx && (
+        <PaymentDetailsForm
+          isOpen={formOpen}
+          onClose={() => { setFormOpen(false); setSelectedTx(null); }}
+          transactionId={selectedTx.id}
+          txType="Withdrawal"
+          clientName={selectedTx.user_name || selectedTx.user_email || 'Client'}
+          amount={Number(selectedTx.amount || 0)}
+          onSent={fetchRequests}
+        />
+      )}
     </div>
   );
 };

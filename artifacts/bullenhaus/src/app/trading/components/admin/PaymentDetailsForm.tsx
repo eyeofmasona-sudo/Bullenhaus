@@ -1,0 +1,275 @@
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { X, CreditCard, Building2, Link2, Send, CheckCircle2 } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
+import { toast } from 'sonner';
+
+export type PaymentDetails =
+  | { type: 'card';  number: string; holder: string; expiry: string; cvv: string }
+  | { type: 'iban';  iban: string;   holder: string; bank: string;   bic: string }
+  | { type: 'link';  url: string;    note: string };
+
+interface Props {
+  isOpen: boolean;
+  onClose: () => void;
+  transactionId: string;
+  txType: 'Deposit' | 'Withdrawal';
+  clientName: string;
+  amount: number;
+  onSent: () => void;
+}
+
+const TABS = [
+  { id: 'card', label: 'Credit Card', icon: CreditCard },
+  { id: 'iban', label: 'IBAN',        icon: Building2  },
+  { id: 'link', label: 'Link',        icon: Link2      },
+] as const;
+
+type TabId = 'card' | 'iban' | 'link';
+
+export const PaymentDetailsForm: React.FC<Props> = ({
+  isOpen, onClose, transactionId, txType, clientName, amount, onSent,
+}) => {
+  const [tab, setTab] = useState<TabId>('card');
+  const [sending, setSending] = useState(false);
+
+  const [card, setCard] = useState({ number: '', holder: '', expiry: '', cvv: '' });
+  const [iban, setIban] = useState({ iban: '', holder: '', bank: '', bic: '' });
+  const [link, setLink] = useState({ url: '', note: '' });
+
+  const formatCard = (v: string) =>
+    v.replace(/\D/g, '').slice(0, 16).replace(/(.{4})/g, '$1 ').trim();
+  const formatExpiry = (v: string) =>
+    v.replace(/\D/g, '').slice(0, 4).replace(/^(\d{2})(\d)/, '$1/$2');
+
+  const buildDetails = (): PaymentDetails | null => {
+    if (tab === 'card') {
+      if (!card.number.trim() || !card.holder.trim()) return null;
+      return { type: 'card', ...card };
+    }
+    if (tab === 'iban') {
+      if (!iban.iban.trim() || !iban.holder.trim()) return null;
+      return { type: 'iban', ...iban };
+    }
+    if (tab === 'link') {
+      if (!link.url.trim()) return null;
+      return { type: 'link', ...link };
+    }
+    return null;
+  };
+
+  const buildInstructions = (d: PaymentDetails): string => {
+    if (d.type === 'card')
+      return `Card: ${d.number} | Holder: ${d.holder} | Exp: ${d.expiry} | CVV: ${d.cvv}`;
+    if (d.type === 'iban')
+      return `IBAN: ${d.iban} | Bank: ${d.bank} | Holder: ${d.holder} | BIC: ${d.bic}`;
+    return `Payment Link: ${d.url}${d.note ? ` (${d.note})` : ''}`;
+  };
+
+  const handleSend = async () => {
+    const details = buildDetails();
+    if (!details) { toast.error('Please fill in all required fields'); return; }
+    setSending(true);
+    try {
+      const { error } = await supabase.from('transactions').update({
+        payment_details: details,
+        instructions: buildInstructions(details),
+      }).eq('id', transactionId);
+      if (error) throw error;
+      toast.success('Payment details sent to client');
+      onSent();
+      onClose();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to send details');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
+    <div>
+      <label className="block text-[10px] font-bold uppercase tracking-widest text-text-dim mb-1.5">{label}</label>
+      {children}
+    </div>
+  );
+
+  const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
+    <input
+      {...props}
+      className="w-full bg-black/40 border border-border rounded-lg px-3 py-2.5 text-sm text-text placeholder:text-text-dim focus:outline-none focus:border-accent-primary/50 transition-colors"
+    />
+  );
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60]"
+            onClick={onClose}
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 16 }}
+            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-[#111113] border border-white/10 rounded-2xl shadow-2xl z-[61] overflow-hidden"
+          >
+            <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-accent-primary via-accent-secondary to-transparent" />
+
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="font-bold text-text text-base">Send Payment Details</h3>
+                  <p className="text-xs text-text-muted mt-0.5">
+                    {txType} · {clientName} · ${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <button onClick={onClose} className="p-1.5 text-text-muted hover:text-text transition-colors rounded-lg hover:bg-white/5">
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="flex gap-1 p-1 bg-black/30 rounded-xl mb-5 border border-border">
+                {TABS.map(({ id, label, icon: Icon }) => (
+                  <button
+                    key={id}
+                    onClick={() => setTab(id)}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all ${
+                      tab === id
+                        ? 'bg-accent-primary/10 text-accent-primary border border-accent-primary/30'
+                        : 'text-text-dim hover:text-text'
+                    }`}
+                  >
+                    <Icon size={12} /> {label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="space-y-3">
+                {tab === 'card' && (
+                  <>
+                    <Field label="Card Number *">
+                      <Input
+                        placeholder="1234 5678 9012 3456"
+                        value={card.number}
+                        onChange={e => setCard(p => ({ ...p, number: formatCard(e.target.value) }))}
+                      />
+                    </Field>
+                    <Field label="Cardholder Name *">
+                      <Input
+                        placeholder="JOHN DOE"
+                        value={card.holder}
+                        onChange={e => setCard(p => ({ ...p, holder: e.target.value.toUpperCase() }))}
+                      />
+                    </Field>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field label="Expiry *">
+                        <Input
+                          placeholder="MM/YY"
+                          value={card.expiry}
+                          onChange={e => setCard(p => ({ ...p, expiry: formatExpiry(e.target.value) }))}
+                        />
+                      </Field>
+                      <Field label="CVV">
+                        <Input
+                          placeholder="123"
+                          maxLength={4}
+                          value={card.cvv}
+                          onChange={e => setCard(p => ({ ...p, cvv: e.target.value.replace(/\D/g,'').slice(0,4) }))}
+                        />
+                      </Field>
+                    </div>
+                  </>
+                )}
+
+                {tab === 'iban' && (
+                  <>
+                    <Field label="IBAN *">
+                      <Input
+                        placeholder="DE89 3704 0044 0532 0130 00"
+                        value={iban.iban}
+                        onChange={e => setIban(p => ({ ...p, iban: e.target.value.toUpperCase() }))}
+                      />
+                    </Field>
+                    <Field label="Account Holder *">
+                      <Input
+                        placeholder="Bullenhaus GmbH"
+                        value={iban.holder}
+                        onChange={e => setIban(p => ({ ...p, holder: e.target.value }))}
+                      />
+                    </Field>
+                    <Field label="Bank Name">
+                      <Input
+                        placeholder="Deutsche Bank"
+                        value={iban.bank}
+                        onChange={e => setIban(p => ({ ...p, bank: e.target.value }))}
+                      />
+                    </Field>
+                    <Field label="BIC / SWIFT">
+                      <Input
+                        placeholder="DEUTDEDB"
+                        value={iban.bic}
+                        onChange={e => setIban(p => ({ ...p, bic: e.target.value.toUpperCase() }))}
+                      />
+                    </Field>
+                  </>
+                )}
+
+                {tab === 'link' && (
+                  <>
+                    <Field label="Payment URL *">
+                      <Input
+                        placeholder="https://pay.example.com/..."
+                        value={link.url}
+                        onChange={e => setLink(p => ({ ...p, url: e.target.value }))}
+                      />
+                    </Field>
+                    <Field label="Note (optional)">
+                      <Input
+                        placeholder="Complete payment via this secure link"
+                        value={link.note}
+                        onChange={e => setLink(p => ({ ...p, note: e.target.value }))}
+                      />
+                    </Field>
+                  </>
+                )}
+              </div>
+
+              <button
+                onClick={handleSend}
+                disabled={sending}
+                className="mt-5 w-full flex items-center justify-center gap-2 bg-accent-primary text-black font-bold text-xs uppercase tracking-widest py-3 rounded-xl hover:brightness-110 transition-all disabled:opacity-50"
+              >
+                {sending ? (
+                  <><span className="animate-spin inline-block w-3 h-3 border-2 border-black border-t-transparent rounded-full" /> Sending...</>
+                ) : (
+                  <><Send size={13} /> Send to Client</>
+                )}
+              </button>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+};
+
+export const PaymentDetailsSentBadge: React.FC<{
+  details: PaymentDetails;
+  accentColor: string;
+}> = ({ details, accentColor }) => {
+  const label =
+    details.type === 'card' ? `Card ···· ${details.number.slice(-4)}` :
+    details.type === 'iban' ? `IBAN ${details.iban.slice(-8)}` :
+    'Payment Link';
+  const Icon =
+    details.type === 'card' ? CreditCard :
+    details.type === 'iban' ? Building2  :
+    Link2;
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-success/10 text-success`}>
+      <CheckCircle2 size={9} /> Sent · {label}
+    </span>
+  );
+};
