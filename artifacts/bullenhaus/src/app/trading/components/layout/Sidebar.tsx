@@ -125,7 +125,7 @@ export const Sidebar = ({ onClose }: { onClose?: () => void }) => {
         <SidebarItem icon={Settings} label={t('settings')} to="/trade/settings" active={currentPath === '/trade/settings'} onClick={onClose} />
         <SidebarItem icon={LifeBuoy} label={t('help')} to="/trade/support" active={currentPath === '/trade/support'} onClick={onClose} />
 
-        {role === 'admin' && (
+        {(role === 'admin' || role === 'trade_admin') && (
           <>
             <div className="pt-4 pb-2 px-4 text-[10px] font-bold text-danger uppercase tracking-widest">System</div>
             <SidebarItem icon={Terminal} label={t('admin')} to="/admin/dashboard" active={currentPath.startsWith('/admin')} onClick={onClose} />

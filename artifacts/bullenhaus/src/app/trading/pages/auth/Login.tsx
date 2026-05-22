@@ -30,7 +30,7 @@ export const Login: React.FC = () => {
           .select('role')
           .eq('id', data.user.id)
           .single();
-        if (profile?.role === 'ADMIN' || profile?.role === 'admin') target = '/admin';
+        if (profile?.role === 'ADMIN' || profile?.role === 'admin' || profile?.role === 'trade_admin') target = '/admin';
       }
       navigate(target, { replace: true });
     } catch (err: any) {

@@ -28,11 +28,20 @@ description: Supabase project details, account roster, DB tables, and key decisi
   - `"CRM workers can view client profiles"` on `users` (filters by `role='client'`)
   - `"CRM workers can view all transactions"` on `transactions` (migration 06)
 
-## Accounts
-- Admins: `superadmin@bullenhaus.io` (**BHSuperAdmin2025!**), `trade.admin@bullenhaus.io` (**BHAdmin2025!**), `orion.voss@aurelius-desk.crm`
+## Accounts & Role Matrix
+| Email | Password | DB role | CRM | Trading Admin |
+|---|---|---|---|---|
+| `superadmin@bullenhaus.io` | `Bullenhaus2025` | admin | ✓ | ✓ |
+| `trade.admin@bullenhaus.io` | `Bullenhaus2025` | trade_admin | ✗ blocked | ✓ |
+| `orion.voss@aurelius-desk.crm` | (original) | admin | ✓ | ✗ |
 - 2 directors, 2 managers, 10 agents all at `@aurelius-desk.crm`
 - 3 clients (galstyan@rrr.com, armenia@arm.com, atlas.admin@bullenhaus.trade)
 - All non-client accounts have `user_metadata.role` synced in auth.users
+
+## Role separation: trade_admin vs admin
+- `trade_admin` role added to CHECK constraint on `public.users`
+- Trading platform (`AuthContext`, `AdminProtectedRoute`, `AdminLayout`, `Sidebar`, `Login`, `AuthLayout`) treats `trade_admin` same as `admin` — full access to `/admin/*`
+- CRM `auth.ts` `mapRole()` throws "Нет доступа" for any role not in `['admin','director','manager','agent']` — blocks `trade_admin`
 
 ## Role sync
 - `user_metadata.role` sync via: `PUT {SUPABASE_URL}/auth/v1/admin/users/{uid}` with `{"user_metadata": {"role": "<role>"}}`

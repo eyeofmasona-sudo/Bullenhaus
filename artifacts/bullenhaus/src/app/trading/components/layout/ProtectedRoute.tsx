@@ -50,7 +50,7 @@ export const AdminProtectedRoute: React.FC = () => {
     return <Navigate to="/login" replace />;
   }
 
-  if (role !== 'admin') {
+  if (role !== 'admin' && role !== 'trade_admin') {
     return <Navigate to="/unauthorized" replace />;
   }
 

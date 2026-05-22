@@ -110,7 +110,7 @@ export const AdminLayout = () => {
   const { role } = useAuth();
 
   // Admin role only — App.tsx / ProtectedRoute also enforces this
-  if (role !== 'admin') return null;
+  if (role !== 'admin' && role !== 'trade_admin') return null;
 
   return (
     <div className="min-h-screen bg-[#020202] text-slate-300 font-sans selection:bg-rose-500/30">

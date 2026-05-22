@@ -24,7 +24,7 @@ export const AuthLayout: React.FC = () => {
     window.location.hash.includes('type=signup');
 
   if (session && !isRecovery) {
-    return <Navigate to={role === 'admin' ? '/admin/dashboard' : '/trade/dashboard'} replace />;
+    return <Navigate to={role === 'admin' || role === 'trade_admin' ? '/admin/dashboard' : '/trade/dashboard'} replace />;
   }
 
   return (
