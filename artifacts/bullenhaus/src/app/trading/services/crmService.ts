@@ -1,12 +1,11 @@
 import { supabase } from '../lib/supabase';
-import { safeLegacyApiFetch } from '../../../lib/backendMigration';
 
 const SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL as string || '';
 const CRM_SYNC_URL = SUPABASE_URL ? `${SUPABASE_URL}/functions/v1/crm-sync` : '';
 
 const proxyFetch = async (action: string, payload: any, explicitToken?: string) => {
   if (!CRM_SYNC_URL) {
-    console.warn(`[Client] VITE_SUPABASE_URL not set — skipping CRM sync for ${action}`);
+    console.warn(`[crmService] VITE_SUPABASE_URL not set — skipping CRM sync for ${action}`);
     return null;
   }
 
@@ -18,25 +17,28 @@ const proxyFetch = async (action: string, payload: any, explicitToken?: string) 
     }
 
     if (!token) {
-      console.warn(`[Client] No active session for CRM sync (${action})`);
+      console.warn(`[crmService] No active session for CRM sync (${action})`);
       return null;
     }
 
-    const response = await safeLegacyApiFetch('/api/crm', {
+    const response = await fetch(CRM_SYNC_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${token}`,
+        'apikey': (import.meta as any).env?.VITE_SUPABASE_PUBLISHABLE_KEY ?? '',
       },
-      body: JSON.stringify({ action, payload })
+      body: JSON.stringify({ action, payload }),
     });
+
     if (!response.ok) {
-      console.warn(`[Client] CRM Sync warning for ${action} (${response.status})`);
+      console.warn(`[crmService] crm-sync warning for ${action} (${response.status})`);
       return null;
     }
+
     return await response.json();
   } catch (err) {
-    console.warn(`[Client] Network error during CRM sync for ${action}`);
+    console.warn(`[crmService] Network error during CRM sync for ${action}`, err);
     return null;
   }
 };
@@ -66,12 +68,10 @@ export const crmService = {
   async transaction(data: any, token?: string) {
     const normalizedData = {
       ...data,
-      // method/instructions are passed through unchanged so Aura sees the same values
-      // the admin/client see in Trade-V2.
       method: data.method || 'Other',
       instructions: data.instructions || '',
       status: data.status.toLowerCase(),
-      processed_at: data.processed_at || new Date().toISOString()
+      processed_at: data.processed_at || new Date().toISOString(),
     };
     return proxyFetch('transaction', normalizedData, token);
   },
@@ -81,7 +81,7 @@ export const crmService = {
       ...data,
       side: data.side ? data.side.toLowerCase() : undefined,
       opened_at: data.opened_at || new Date().toISOString(),
-      volume: Number(data.volume) || 0.01
+      volume: Number(data.volume) || 0.01,
     };
     return proxyFetch('activity', normalizedData, token);
   },
@@ -90,8 +90,8 @@ export const crmService = {
     const normalizedData = {
       ...data,
       status: data.status.toLowerCase(),
-      reviewed_at: data.reviewed_at || new Date().toISOString()
+      reviewed_at: data.reviewed_at || new Date().toISOString(),
     };
     return proxyFetch('kycUpdate', normalizedData, token);
-  }
+  },
 };

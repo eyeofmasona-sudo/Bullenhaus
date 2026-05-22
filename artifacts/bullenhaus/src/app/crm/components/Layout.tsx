@@ -83,10 +83,9 @@ export function Layout({ children, role, onLogout }: { children: ReactNode, role
   }, []);
 
   useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 5000);
-      return () => clearTimeout(timer);
-    }
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 5000);
+    return () => clearTimeout(timer);
   }, [toast]);
 
   const SidebarContent = () => (
