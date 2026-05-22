@@ -30,7 +30,7 @@ export const AuthShell: React.FC<AuthShellProps> = ({ title, subtitle, children,
         className="absolute inset-0 pointer-events-none opacity-[0.08] mix-blend-luminosity"
         style={{
           backgroundImage: "url('/images/golden_bull_bg.png')",
-          backgroundSize: 'contain',
+          backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
         }}
