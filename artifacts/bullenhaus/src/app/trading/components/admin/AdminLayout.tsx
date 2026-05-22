@@ -6,13 +6,11 @@ import {
   Activity, 
   History, 
   Settings, 
-  Globe, 
   LogOut, 
   Menu, 
   X,
   LayoutDashboard,
-  BarChart2,
-  Layers
+  BarChart2
 } from 'lucide-react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -71,7 +69,6 @@ const AdminSidebar = ({ onClose }: any) => {
         <AdminSidebarItem icon={History} label="Withdrawals" to="/admin/withdrawals" active={currentPath === '/admin/withdrawals'} />
         <AdminSidebarItem icon={BarChart2} label="Market Control" to="/admin/market-control" active={currentPath === '/admin/market-control'} />
         <AdminSidebarItem icon={History} label="Transactions" to="/admin/transactions" active={currentPath === '/admin/transactions'} />
-        <AdminSidebarItem icon={Globe} label="CRM Sync" to="/admin/crm-sync" active={currentPath === '/admin/crm-sync'} />
         <AdminSidebarItem icon={Settings} label="System Config" to="/admin/settings" active={currentPath === '/admin/settings'} />
 
         {/* Zone switcher — visible for admin */}
@@ -84,15 +81,6 @@ const AdminSidebar = ({ onClose }: any) => {
             >
               <BarChart2 size={18} />
               <span className="font-bold text-xs tracking-wider uppercase">Trade Platform</span>
-            </motion.div>
-          </Link>
-          <Link to="/crm/dashboard">
-            <motion.div
-              whileHover={{ x: 4 }}
-              className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-200 text-amber-400/70 hover:text-amber-400 hover:bg-amber-400/10 border border-amber-400/0 hover:border-amber-400/20"
-            >
-              <Layers size={18} />
-              <span className="font-bold text-xs tracking-wider uppercase">CRM Platform</span>
             </motion.div>
           </Link>
         </div>

@@ -5,7 +5,6 @@ import {
   Zap, Globe2, ArrowDownRight, ArrowUpRight, CheckCircle2,
   Clock, XCircle, RefreshCw,
 } from 'lucide-react';
-import { CRMSyncPanel } from './CRMSyncPanel';
 import { MarketControlPanel } from './MarketControlPanel';
 import { supabase } from '../../lib/supabase';
 
@@ -26,7 +25,7 @@ interface TxEvent {
   created_at: string;
 }
 
-const TABS = ['overview', 'crm', 'forex', 'system'] as const;
+const TABS = ['overview', 'forex', 'system'] as const;
 type Tab = typeof TABS[number];
 
 const statusIcon = (s: string) => {
@@ -281,10 +280,6 @@ export const AdminDashboard: React.FC = () => {
               </div>
             </div>
           </>
-        )}
-
-        {activeTab === 'crm' && (
-          <CRMSyncPanel />
         )}
 
         {activeTab === 'forex' && (
