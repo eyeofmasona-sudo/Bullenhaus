@@ -133,7 +133,7 @@ export function Layout({ children, role, onLogout }: { children: ReactNode, role
                   key={item.name}
                   to={item.href}
                   className={clsx(
-                    "flex items-center gap-4 px-4 py-3 rounded text-sm transition-colors",
+                    "flex items-center gap-4 px-4 py-3 rounded text-sm transition-colors outline-none focus:outline-none",
                     isActive 
                       ? "bg-white/5 text-aura-gold border-l-2 border-aura-gold/50" 
                       : "text-aura-platinum/50 hover:bg-white/5 hover:text-aura-platinum border-l-2 border-transparent"
@@ -153,14 +153,14 @@ export function Layout({ children, role, onLogout }: { children: ReactNode, role
             <div className="mb-2 px-4 text-[10px] font-bold tracking-widest text-aura-platinum/30 uppercase">Switch Zone</div>
             <Link
               to="/trade/dashboard"
-              className="flex items-center gap-4 px-4 py-3 rounded text-sm transition-colors text-sky-400/60 hover:bg-sky-500/10 hover:text-sky-400 border-l-2 border-transparent hover:border-sky-500/40 outline-none focus:outline-none"
+              className="flex items-center gap-4 px-4 py-3 rounded text-sm transition-colors text-sky-400/60 hover:bg-sky-500/10 hover:text-sky-400 border-l-2 border-transparent outline-none focus:outline-none"
             >
               <Database className="w-4 h-4" />
               Trade Platform
             </Link>
             <Link
               to="/admin"
-              className="flex items-center gap-4 px-4 py-3 rounded text-sm transition-colors text-rose-400/60 hover:bg-rose-500/10 hover:text-rose-400 border-l-2 border-transparent hover:border-rose-500/40 outline-none focus:outline-none"
+              className="flex items-center gap-4 px-4 py-3 rounded text-sm transition-colors text-rose-400/60 hover:bg-rose-500/10 hover:text-rose-400 border-l-2 border-transparent outline-none focus:outline-none"
             >
               <Shield className="w-4 h-4" />
               Admin Panel
