@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Brain, Sparkles, FileText, Target, Zap, MessageSquare,
   Loader2, AlertTriangle, ChevronDown, RefreshCw,
   Eye, EyeOff, CheckCircle2, Info,
+  ShieldAlert, Search, Users, BarChart3, Clock,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { supabase } from "../../../lib/supabase/browserClient";
@@ -36,7 +37,7 @@ interface SlimClient {
   tier: "Titanium" | "Platinum" | "Silver";
 }
 
-type TabKey = "summary" | "scoring" | "action" | "comm";
+type TabKey = "summary" | "scoring" | "action" | "comm" | "risk" | "productivity" | "dashboard" | "search";
 
 // ── AI caller ─────────────────────────────────────────────────────────────────
 
@@ -550,6 +551,595 @@ This analysis is for human review only — no automated actions will be triggere
   );
 }
 
+// ── Tab 5 — Risk Alerts ───────────────────────────────────────────────────────
+
+const RISK_SYSTEM = `You are a compliance and risk observation AI for Bullenhaus — a regulated trading platform.
+Identify data patterns that may indicate risk and surface them for human review.
+CRITICAL RULES:
+- Never draw legal, financial, or compliance conclusions.
+- Never recommend approval or rejection of any transaction or account.
+- Never invent or assume data not present in the provided information.
+- All outputs are observations only — for human review by qualified compliance staff.
+- Explicitly state that all findings require human verification and approval.`;
+
+function RiskTab({ clients, clientsLoading }: { clients: SlimClient[]; clientsLoading: boolean }) {
+  const [result, setResult]   = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState<string | null>(null);
+
+  const kycIssues = clients.filter(c => c.kyc_status !== "VERIFIED").length;
+  const highRisk  = clients.filter(c => c.balance >= 5_000 && c.kyc_status !== "VERIFIED").length;
+  const noCountry = clients.filter(c => !c.country).length;
+
+  const runScan = async () => {
+    setLoading(true); setError(null); setResult("");
+    try {
+      const { data: txData } = await supabase
+        .from("transactions")
+        .select("type, status, amount, created_at, user_id")
+        .order("created_at", { ascending: false })
+        .limit(500);
+
+      const txList = txData ?? [];
+      const pending  = txList.filter(t => t.status?.toUpperCase() === "PENDING");
+      const failed   = txList.filter(t => ["FAILED", "REJECTED"].includes(t.status?.toUpperCase() ?? ""));
+      const bigWd    = txList.filter(t => t.type?.toUpperCase() === "WITHDRAWAL" && Number(t.amount) >= 10_000);
+
+      const failedDepMap: Record<string, number> = {};
+      txList
+        .filter(t => t.type?.toUpperCase() === "DEPOSIT" && ["FAILED", "REJECTED"].includes(t.status?.toUpperCase() ?? ""))
+        .forEach(t => { if (t.user_id) failedDepMap[t.user_id] = (failedDepMap[t.user_id] || 0) + 1; });
+      const repeatedFailedDep = Object.values(failedDepMap).filter(n => n >= 2).length;
+
+      const ctx = {
+        clientSnapshot: {
+          total:                  clients.length,
+          kycUnverified:          kycIssues,
+          highBalanceUnverified:  highRisk,
+          missingCountry:         noCountry,
+          zeroBalance:            clients.filter(c => c.balance === 0).length,
+        },
+        transactionSnapshot: {
+          totalScanned:                txList.length,
+          pendingCount:                pending.length,
+          failedRejectedCount:         failed.length,
+          repeatedFailedDepositClients: repeatedFailedDep,
+          largeWithdrawals_10k_plus:   bigWd.length,
+          largeWithdrawalDetails:      bigWd.slice(0, 8).map(t => ({ amount: fmt(Number(t.amount)), status: t.status, date: t.created_at?.slice(0, 10) })),
+        },
+        highBalanceUnverifiedSample: clients
+          .filter(c => c.balance >= 5_000 && c.kyc_status !== "VERIFIED")
+          .slice(0, 8)
+          .map(c => ({ name: c.name, balance: fmt(c.balance), kyc: c.kyc_status, country: c.country ?? "N/A" })),
+      };
+
+      const userMsg = `Review this CRM data snapshot and surface any patterns that may require human attention:
+
+DATA:
+${JSON.stringify(ctx, null, 2)}
+
+Respond in EXACTLY this format:
+
+🔴 HIGH-PRIORITY OBSERVATIONS
+[Patterns requiring immediate human review — or "None identified"]
+
+🟡 MODERATE-PRIORITY OBSERVATIONS
+[Patterns worth monitoring in the next 24–48 hours — or "None identified"]
+
+🟢 DATA QUALITY NOTES
+[Missing or inconsistent data fields that should be collected]
+
+📋 SUGGESTED REVIEW TASKS (for compliance/operations team)
+[Bullet list of manual review tasks — these are suggestions only, not instructions]
+
+⚠️ DISCLAIMER: All observations are for human review only. No legal, financial, or compliance conclusions are drawn. All findings must be verified and acted upon by qualified staff.`;
+
+      setResult(await callOpenAI(RISK_SYSTEM, userMsg));
+    } catch (e: any) { setError(e.message); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <div className="space-y-5">
+      <p className="text-[13px] text-aura-platinum/60 leading-relaxed">
+        AI scans client data patterns to surface potential risk signals for compliance review — KYC gaps,
+        deposit/withdrawal anomalies, inactive high-value accounts, and suspicious patterns.{" "}
+        <span className="text-aura-ruby font-bold">All findings require human review. No automated actions.</span>
+      </p>
+
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: "Total Clients",         value: clientsLoading ? "…" : String(clients.length), color: "text-aura-platinum" },
+          { label: "KYC Not Verified",      value: clientsLoading ? "…" : String(kycIssues),      color: "text-aura-warning"  },
+          { label: "High Balance + No KYC", value: clientsLoading ? "…" : String(highRisk),       color: "text-aura-ruby"     },
+        ].map(s => (
+          <div key={s.label} className="px-4 py-3 rounded-xl bg-black/30 border border-glass-border text-center">
+            <div className="text-[9px] text-aura-platinum/40 uppercase tracking-widest mb-1">{s.label}</div>
+            <div className={`text-2xl font-bold font-mono ${s.color}`}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {noCountry > 0 && (
+        <div className="flex items-start gap-2.5 p-3 rounded-xl bg-aura-warning/5 border border-aura-warning/20">
+          <AlertTriangle className="w-4 h-4 text-aura-warning shrink-0 mt-0.5" />
+          <p className="text-xs text-aura-warning/80">
+            <span className="font-bold">{noCountry} client{noCountry !== 1 ? "s" : ""}</span> missing country information — may affect compliance checks.
+          </p>
+        </div>
+      )}
+
+      <button
+        onClick={runScan}
+        disabled={loading || clientsLoading || clients.length === 0}
+        className="w-full py-3 rounded-xl bg-aura-ruby/10 hover:bg-aura-ruby text-aura-ruby hover:text-white font-bold border border-aura-ruby/30 hover:border-aura-ruby transition-all text-sm uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+      >
+        {loading
+          ? <><Loader2 className="w-4 h-4 animate-spin" /> Scanning for risk patterns…</>
+          : <><ShieldAlert className="w-4 h-4" /> Run Risk Scan</>}
+      </button>
+
+      <ResultBox result={result} loading={false} error={error} />
+      {loading && <ResultBox result="" loading={true} error={null} />}
+    </div>
+  );
+}
+
+// ── Tab 6 — Agent Productivity ────────────────────────────────────────────────
+
+const PRODUCTIVITY_SYSTEM = `You are an agent productivity assistant for Bullenhaus CRM.
+Help agents prioritise their work and prepare for client interactions.
+RULES:
+- Never make decisions. Provide drafts and suggestions only.
+- Never fabricate data not present in the client context.
+- All suggestions require human review before use.
+- Do not include financial advice or trading recommendations.`;
+
+type ProductivityMode = "template" | "script" | "reminder";
+
+function ProductivityTab({ clients, clientsLoading }: { clients: SlimClient[]; clientsLoading: boolean }) {
+  const [selected, setSelected] = useState("");
+  const [mode, setMode]         = useState<ProductivityMode>("template");
+  const [result, setResult]     = useState("");
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState<string | null>(null);
+
+  const needsAttention = useMemo(() =>
+    clients.filter(c => c.kyc_status !== "VERIFIED" || c.balance === 0).slice(0, 10),
+  [clients]);
+
+  const modeLabels: Record<ProductivityMode, string> = {
+    template: "Message Template",
+    script:   "Call Script",
+    reminder: "Follow-up Reminder",
+  };
+
+  const generate = async () => {
+    const client = clients.find(c => c.id === selected);
+    if (!client) return;
+    setLoading(true); setError(null); setResult("");
+    try {
+      const ctx = await buildClientContext(client);
+      const prompts: Record<ProductivityMode, string> = {
+        template: `Generate a professional outreach message template for this client.
+The agent will personalise it — do NOT make it sound AI-generated.
+Keep it concise (3–5 sentences), warm, and professional.
+
+CLIENT DATA:
+${JSON.stringify(ctx, null, 2)}
+
+Format:
+SUBJECT: [suggested subject line]
+
+MESSAGE BODY:
+[message text — use [Agent Name] as placeholder]
+
+PERSONALISATION TIPS:
+• [1–2 things to adjust before sending]
+
+NOTE: This is a draft only. Agent must review and personalise before sending.`,
+
+        script: `Prepare a call script outline for an agent contacting this client.
+It should be a natural conversation guide, not a robotic script.
+
+CLIENT DATA:
+${JSON.stringify(ctx, null, 2)}
+
+Format:
+CALL OBJECTIVE: [main goal of this call]
+
+OPENING (30 sec):
+[how to introduce and set the tone]
+
+KEY TALKING POINTS:
+• [point 1 — based on client data]
+• [point 2]
+• [point 3]
+
+EXPECTED OBJECTIONS & RESPONSES:
+• Objection: [likely concern] → Response: [suggested reply]
+
+CLOSING:
+[how to end with a clear next step]
+
+NOTE: This is a guide only. Adapt naturally to the conversation.`,
+
+        reminder: `Create a follow-up reminder plan for this client.
+Based on their current state, suggest what the agent should do and when.
+
+CLIENT DATA:
+${JSON.stringify(ctx, null, 2)}
+
+Format:
+PRIORITY: [High / Medium / Low]
+FOLLOW-UP ACTION: [specific action]
+TIMING: [e.g. "Within 24 hours" / "This week"]
+REASON: [1–2 sentences based on client data]
+
+PREPARATION CHECKLIST:
+• [what to review before contacting]
+• [what to have ready]
+
+NOTE: This reminder is a suggestion. Agent or manager must confirm before acting.`,
+      };
+      setResult(await callOpenAI(PRODUCTIVITY_SYSTEM, prompts[mode]));
+    } catch (e: any) { setError(e.message); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <div className="space-y-5">
+      <p className="text-[13px] text-aura-platinum/60 leading-relaxed">
+        Generate personalised message templates, call scripts, and follow-up reminders.
+        All drafts require agent review before use.
+      </p>
+
+      {needsAttention.length > 0 && (
+        <div className="rounded-xl border border-aura-warning/20 bg-aura-warning/5 p-4">
+          <p className="text-[10px] font-bold text-aura-warning uppercase tracking-widest mb-2.5">
+            Clients Needing Attention ({needsAttention.length})
+          </p>
+          <div className="space-y-1.5">
+            {needsAttention.map(c => (
+              <button
+                key={c.id}
+                onClick={() => { setSelected(c.id); setResult(""); setError(null); }}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left transition-all text-xs ${
+                  selected === c.id
+                    ? "bg-aura-gold/15 border border-aura-gold/30 text-aura-gold"
+                    : "bg-black/20 border border-glass-border text-aura-platinum/60 hover:text-aura-platinum hover:border-aura-gold/15"
+                }`}
+              >
+                <span className="font-bold truncate">{c.name}</span>
+                <span className={`shrink-0 ml-2 text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                  c.kyc_status !== "VERIFIED"
+                    ? "bg-aura-warning/15 text-aura-warning"
+                    : "bg-aura-ruby/15 text-aura-ruby"
+                }`}>
+                  {c.kyc_status !== "VERIFIED" ? "KYC Pending" : "Zero Balance"}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <ClientSelector
+        clients={clients}
+        selected={selected}
+        onSelect={id => { setSelected(id); setResult(""); setError(null); }}
+        loading={clientsLoading}
+      />
+
+      <div>
+        <label className="block text-[10px] uppercase tracking-widest text-aura-platinum/50 mb-1.5">Output Type</label>
+        <div className="flex gap-2">
+          {(["template", "script", "reminder"] as ProductivityMode[]).map(m => (
+            <button
+              key={m}
+              onClick={() => { setMode(m); setResult(""); setError(null); }}
+              className={`flex-1 py-2 rounded-lg text-[10px] font-bold border transition-all uppercase tracking-wider ${
+                mode === m
+                  ? "bg-aura-gold/15 border-aura-gold/40 text-aura-gold"
+                  : "bg-black/20 border-glass-border text-aura-platinum/40 hover:text-aura-platinum hover:border-aura-gold/15"
+              }`}
+            >
+              {modeLabels[m]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <button
+        onClick={generate}
+        disabled={!selected || loading || clientsLoading}
+        className="w-full py-3 rounded-xl bg-aura-gold/10 hover:bg-aura-gold text-aura-gold hover:text-black font-bold border border-aura-gold/30 hover:border-aura-gold transition-all text-sm uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+      >
+        {loading
+          ? <><Loader2 className="w-4 h-4 animate-spin" /> Generating…</>
+          : <><Clock className="w-4 h-4" /> Generate {modeLabels[mode]}</>}
+      </button>
+      <ResultBox result={result} loading={false} error={error} />
+      {loading && <ResultBox result="" loading={true} error={null} />}
+    </div>
+  );
+}
+
+// ── Tab 7 — Team / Manager Dashboard ─────────────────────────────────────────
+
+const DASHBOARD_SYSTEM = `You are a CRM performance analysis AI for Bullenhaus.
+Summarise team performance and surface management insights for review.
+RULES:
+- Do not draw legal, compliance, or HR conclusions.
+- Never recommend disciplinary or financial decisions.
+- All outputs are for manager/director review only.
+- Do not invent data not present in the context.`;
+
+function TeamDashTab({ workerRole }: { workerRole: string }) {
+  const [result, setResult]   = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState<string | null>(null);
+
+  const allowed = ["manager", "director", "admin", "trade_admin"].includes(workerRole);
+
+  const generate = async () => {
+    setLoading(true); setError(null); setResult("");
+    try {
+      const [workersRes, clientsRes, txRes] = await Promise.all([
+        supabase.from("users").select("id, full_name, first_name, last_name, email, role, last_seen_at").in("role", ["agent", "manager"]).order("role"),
+        supabase.from("users").select("id, kyc_status, balance, created_at").eq("role", "client"),
+        supabase.from("transactions").select("type, status, amount, created_at").order("created_at", { ascending: false }).limit(300),
+      ]);
+
+      const workers = (workersRes.data ?? []).map(w => ({
+        name:     [w.first_name, w.last_name].filter(Boolean).join(" ") || w.full_name || w.email,
+        role:     w.role,
+        lastSeen: w.last_seen_at ? new Date(w.last_seen_at).toISOString().slice(0, 16) : "Never",
+        onlineNow: w.last_seen_at ? (Date.now() - new Date(w.last_seen_at).getTime()) < 5 * 60_000 : false,
+      }));
+
+      const clientList = clientsRes.data ?? [];
+      const txList     = txRes.data ?? [];
+      const now        = new Date();
+      const week       = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+      const ctx = {
+        reviewerRole: workerRole,
+        team: {
+          totalWorkers: workers.length,
+          onlineNow:    workers.filter(w => w.onlineNow).length,
+          agents:       workers.filter(w => w.role === "agent").map(w => ({ name: w.name, lastSeen: w.lastSeen, onlineNow: w.onlineNow })),
+          managers:     workers.filter(w => w.role === "manager").map(w => ({ name: w.name, lastSeen: w.lastSeen })),
+        },
+        clients: {
+          total:       clientList.length,
+          kycVerified: clientList.filter(c => c.kyc_status === "VERIFIED").length,
+          kycPending:  clientList.filter(c => c.kyc_status !== "VERIFIED").length,
+          highValue:   clientList.filter(c => Number(c.balance) >= 10_000).length,
+          newThisWeek: clientList.filter(c => new Date(c.created_at) >= week).length,
+          topByBalance: clientList.slice().sort((a, b) => Number(b.balance) - Number(a.balance)).slice(0, 5).map(c => ({ balance: fmt(Number(c.balance)), kyc: c.kyc_status })),
+        },
+        transactions: {
+          pendingCount:        txList.filter(t => t.status?.toUpperCase() === "PENDING").length,
+          pendingVolume:       fmt(txList.filter(t => t.status?.toUpperCase() === "PENDING").reduce((s, t) => s + Number(t.amount), 0)),
+          depositsThisWeek:   fmt(txList.filter(t => t.type?.toUpperCase() === "DEPOSIT" && new Date(t.created_at) >= week).reduce((s, t) => s + Number(t.amount), 0)),
+          withdrawalsThisWeek: fmt(txList.filter(t => t.type?.toUpperCase() === "WITHDRAWAL" && new Date(t.created_at) >= week).reduce((s, t) => s + Number(t.amount), 0)),
+          largeWithdrawals:    txList.filter(t => t.type?.toUpperCase() === "WITHDRAWAL" && Number(t.amount) >= 10_000).length,
+        },
+      };
+
+      const userMsg = `Generate a CRM performance summary for a ${workerRole}:
+
+DATA:
+${JSON.stringify(ctx, null, 2)}
+
+Respond in EXACTLY this format:
+
+📊 CRM HEALTH SUMMARY
+[3–4 sentence overview of the current platform state]
+
+👥 TEAM STATUS
+[Bullet points about team activity, online patterns, and agents that may need attention]
+
+🔥 PRIORITY ACTIONS FOR ${workerRole.toUpperCase()}
+[Top 3–5 items that require management attention right now]
+
+💰 FINANCIAL PIPELINE (THIS WEEK)
+[Summary of deposits, withdrawals, and pending transactions]
+
+🚀 OPPORTUNITIES
+[Client segments or situations representing growth or engagement opportunities]
+
+📋 RECOMMENDED REVIEW TASKS
+[Bullet list of suggested manual checks for the ${workerRole}]
+
+NOTE: This summary is for internal management review only. No automated actions are taken. All recommendations require human approval.`;
+
+      setResult(await callOpenAI(DASHBOARD_SYSTEM, userMsg));
+    } catch (e: any) { setError(e.message); }
+    finally { setLoading(false); }
+  };
+
+  if (!allowed && workerRole) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+        <Users className="w-10 h-10 text-aura-platinum/20" />
+        <p className="text-sm font-bold text-aura-platinum/40">Manager &amp; Director Access Only</p>
+        <p className="text-xs text-aura-platinum/25 max-w-xs">
+          This tab is available to managers, directors, and admins.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      <p className="text-[13px] text-aura-platinum/60 leading-relaxed">
+        AI generates a CRM performance overview covering team activity, client pipeline,
+        transaction health, and priority actions for {workerRole === "manager" ? "your team" : "the full platform"}.
+        All outputs are for management review only.
+      </p>
+
+      <button
+        onClick={generate}
+        disabled={loading}
+        className="w-full py-3 rounded-xl bg-aura-gold/10 hover:bg-aura-gold text-aura-gold hover:text-black font-bold border border-aura-gold/30 hover:border-aura-gold transition-all text-sm uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+      >
+        {loading
+          ? <><Loader2 className="w-4 h-4 animate-spin" /> Generating team insights…</>
+          : <><BarChart3 className="w-4 h-4" /> Generate Team Insights Report</>}
+      </button>
+
+      <ResultBox result={result} loading={false} error={error} />
+      {loading && <ResultBox result="" loading={true} error={null} />}
+    </div>
+  );
+}
+
+// ── Tab 8 — Search & Knowledge Assistant ─────────────────────────────────────
+
+const SEARCH_SYSTEM = `You are a CRM knowledge assistant for Bullenhaus trading platform.
+Answer questions about CRM data using only the provided context snapshot.
+RULES:
+- Only reference data present in the snapshot — never invent figures or client details.
+- Do not make legal, financial, or compliance conclusions.
+- Do not reveal confidential client details beyond what is relevant to the question.
+- All answers are for internal staff use only.`;
+
+const EXAMPLE_QUERIES = [
+  "Which clients have not completed KYC?",
+  "Show clients with the highest balance",
+  "How many clients registered this month?",
+  "Which clients have zero balance?",
+  "Summarise today's CRM activity",
+  "Which clients need immediate attention?",
+];
+
+function SearchTab({
+  clients, clientsLoading, workerRole,
+}: {
+  clients: SlimClient[];
+  clientsLoading: boolean;
+  workerRole: string;
+}) {
+  const [query, setQuery]     = useState("");
+  const [result, setResult]   = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState<string | null>(null);
+
+  const search = async (q?: string) => {
+    const question = (q ?? query).trim();
+    if (!question) return;
+    setLoading(true); setError(null); setResult("");
+    try {
+      const { data: txData } = await supabase
+        .from("transactions")
+        .select("type, status, amount, created_at, user_id")
+        .order("created_at", { ascending: false })
+        .limit(200);
+
+      const txList = txData ?? [];
+      const now    = new Date();
+      const today  = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const week   = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const month  = new Date(now.getFullYear(), now.getMonth(), 1);
+
+      const ctx = {
+        askerRole:    workerRole || "agent",
+        totalClients: clients.length,
+        clientSummary: {
+          kycVerified:    clients.filter(c => c.kyc_status === "VERIFIED").length,
+          kycPending:     clients.filter(c => c.kyc_status !== "VERIFIED").length,
+          withBalance:    clients.filter(c => c.balance > 0).length,
+          zeroBalance:    clients.filter(c => c.balance === 0).length,
+          highValue_10k:  clients.filter(c => c.balance >= 10_000).length,
+          newToday:       clients.filter(c => new Date(c.createdAt) >= today).length,
+          newThisWeek:    clients.filter(c => new Date(c.createdAt) >= week).length,
+          newThisMonth:   clients.filter(c => new Date(c.createdAt) >= month).length,
+          topByBalance:   clients.slice().sort((a, b) => b.balance - a.balance).slice(0, 8)
+            .map(c => ({ name: c.name, balance: fmt(c.balance), kyc: c.kyc_status, country: c.country ?? "N/A" })),
+          kycPendingList: clients.filter(c => c.kyc_status !== "VERIFIED").slice(0, 12)
+            .map(c => ({ name: c.name, kyc: c.kyc_status, balance: fmt(c.balance) })),
+          zeroBalanceList: clients.filter(c => c.balance === 0).slice(0, 10)
+            .map(c => ({ name: c.name, kyc: c.kyc_status })),
+        },
+        transactionSummary: {
+          pendingCount:         txList.filter(t => t.status?.toUpperCase() === "PENDING").length,
+          depositsToday:        fmt(txList.filter(t => t.type?.toUpperCase() === "DEPOSIT" && new Date(t.created_at) >= today).reduce((s, t) => s + Number(t.amount), 0)),
+          withdrawalsToday:     fmt(txList.filter(t => t.type?.toUpperCase() === "WITHDRAWAL" && new Date(t.created_at) >= today).reduce((s, t) => s + Number(t.amount), 0)),
+          depositsThisWeek:     fmt(txList.filter(t => t.type?.toUpperCase() === "DEPOSIT" && new Date(t.created_at) >= week).reduce((s, t) => s + Number(t.amount), 0)),
+          withdrawalsThisWeek:  fmt(txList.filter(t => t.type?.toUpperCase() === "WITHDRAWAL" && new Date(t.created_at) >= week).reduce((s, t) => s + Number(t.amount), 0)),
+          largeWithdrawals_10k: txList.filter(t => t.type?.toUpperCase() === "WITHDRAWAL" && Number(t.amount) >= 10_000).length,
+        },
+      };
+
+      const userMsg = `QUESTION FROM ${(workerRole || "agent").toUpperCase()}: "${question}"
+
+CRM DATA SNAPSHOT:
+${JSON.stringify(ctx, null, 2)}
+
+Answer the question clearly and concisely using only the data above.
+Format your answer cleanly with sections if helpful.
+If the question cannot be answered from the available data, say so clearly.`;
+
+      setResult(await callOpenAI(SEARCH_SYSTEM, userMsg));
+    } catch (e: any) { setError(e.message); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <div className="space-y-5">
+      <p className="text-[13px] text-aura-platinum/60 leading-relaxed">
+        Ask any question about your CRM data in plain language. AI will analyse the available data
+        and return a structured answer. Answers are based on live data at time of query.
+      </p>
+
+      <div className="space-y-2">
+        <label className="block text-[10px] uppercase tracking-widest text-aura-platinum/50">Your Question</label>
+        <div className="relative">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-aura-platinum/30 pointer-events-none" />
+          <input
+            type="text"
+            value={query}
+            onChange={e => { setQuery(e.target.value); setResult(""); setError(null); }}
+            onKeyDown={e => e.key === "Enter" && search()}
+            placeholder="e.g. Which clients haven't completed KYC?"
+            className={`${inputCls} pl-10`}
+          />
+        </div>
+      </div>
+
+      <div>
+        <p className="text-[10px] text-aura-platinum/30 uppercase tracking-widest mb-2">Example queries</p>
+        <div className="flex flex-wrap gap-1.5">
+          {EXAMPLE_QUERIES.map(q => (
+            <button
+              key={q}
+              onClick={() => { setQuery(q); setResult(""); setError(null); search(q); }}
+              className="px-2.5 py-1 rounded-lg text-[10px] bg-black/30 border border-glass-border text-aura-platinum/40 hover:text-aura-platinum hover:border-aura-gold/20 transition-all"
+            >
+              {q}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <button
+        onClick={() => search()}
+        disabled={!query.trim() || loading || clientsLoading}
+        className="w-full py-3 rounded-xl bg-aura-gold/10 hover:bg-aura-gold text-aura-gold hover:text-black font-bold border border-aura-gold/30 hover:border-aura-gold transition-all text-sm uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+      >
+        {loading
+          ? <><Loader2 className="w-4 h-4 animate-spin" /> Searching…</>
+          : <><Search className="w-4 h-4" /> Search CRM Data</>}
+      </button>
+
+      <ResultBox result={result} loading={false} error={error} />
+      {loading && <ResultBox result="" loading={true} error={null} />}
+    </div>
+  );
+}
+
 // ── API Key Settings (inline panel) ──────────────────────────────────────────
 
 function ApiKeyPanel({ onClose }: { onClose: () => void }) {
@@ -615,10 +1205,14 @@ function ApiKeyPanel({ onClose }: { onClose: () => void }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 const TABS: { key: TabKey; label: string; icon: React.ElementType; desc: string }[] = [
-  { key: "summary", label: "Client Summary",         icon: FileText,      desc: "Profile, financials, risk level" },
-  { key: "scoring", label: "Lead Scoring",            icon: Target,        desc: "Hot / Warm / Cold / Risky" },
-  { key: "action",  label: "Next Best Action",        icon: Zap,           desc: "Agent step recommendation" },
-  { key: "comm",    label: "Communication Analysis",  icon: MessageSquare, desc: "Calls, chats, emails, notes" },
+  { key: "summary",      label: "Client Summary",      icon: FileText,      desc: "Profile, financials, risk level"  },
+  { key: "scoring",      label: "Lead Scoring",         icon: Target,        desc: "Hot / Warm / Cold / Risky"        },
+  { key: "action",       label: "Next Best Action",     icon: Zap,           desc: "Agent step recommendation"        },
+  { key: "comm",         label: "Communication",        icon: MessageSquare, desc: "Calls, chats, emails, notes"      },
+  { key: "risk",         label: "Risk Alerts",          icon: ShieldAlert,   desc: "Suspicious patterns & KYC gaps"   },
+  { key: "productivity", label: "Productivity",         icon: Clock,         desc: "Templates, scripts & reminders"   },
+  { key: "dashboard",    label: "Team Insights",        icon: BarChart3,     desc: "Manager & director dashboard"     },
+  { key: "search",       label: "CRM Search",           icon: Search,        desc: "Ask questions in plain language"  },
 ];
 
 export function AIInsights() {
@@ -627,8 +1221,21 @@ export function AIInsights() {
   const [clientsLoading, setClientsLoading] = useState(true);
   const [clientsError,   setClientsError]   = useState<string | null>(null);
   const [showKeyPanel,   setShowKeyPanel]   = useState(false);
+  const [workerRole,     setWorkerRole]     = useState<string>("");
 
   const hasKey = Boolean(localStorage.getItem(CRM_AI_KEY));
+
+  useEffect(() => {
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) return;
+      const { data: u } = await supabase
+        .from("users")
+        .select("role")
+        .eq("id", data.user.id)
+        .single();
+      if (u?.role) setWorkerRole(u.role);
+    });
+  }, []);
 
   const loadClients = useCallback(async () => {
     setClientsLoading(true); setClientsError(null);
@@ -661,8 +1268,10 @@ export function AIInsights() {
             <Sparkles className="w-4 h-4 text-aura-gold" />
           </div>
           <p className="text-[13px] text-aura-platinum/50 leading-relaxed max-w-xl">
-            AI-powered summaries, scoring, action suggestions, and communication analysis for CRM agents.
-            All outputs are recommendations only — no actions are automated.
+            AI-powered analysis: client summaries, lead scoring, next actions, communication analysis,
+            risk alerts, productivity tools, team dashboards, and CRM search.
+            All outputs are recommendations — no actions are automated.
+            {workerRole && <span className="ml-2 text-[10px] text-aura-gold/60 uppercase tracking-widest font-bold">· {workerRole}</span>}
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -713,7 +1322,7 @@ export function AIInsights() {
       <Disclaimer />
 
       {/* ── Tab bar ───────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-2">
         {TABS.map(t => {
           const Icon = t.icon;
           const active = tab === t.key;
@@ -721,15 +1330,15 @@ export function AIInsights() {
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`relative flex flex-col items-start gap-1 p-3.5 rounded-xl border transition-all text-left ${
+              className={`relative flex flex-col items-start gap-1 p-3 rounded-xl border transition-all text-left ${
                 active
                   ? "bg-aura-gold/8 border-aura-gold/30 text-aura-gold"
                   : "bg-black/20 border-glass-border text-aura-platinum/50 hover:border-aura-gold/15 hover:text-aura-platinum/80"
               }`}
             >
-              <Icon className="w-4 h-4" />
-              <span className="text-[11px] font-bold uppercase tracking-wider leading-tight">{t.label}</span>
-              <span className="text-[9px] opacity-60">{t.desc}</span>
+              <Icon className="w-3.5 h-3.5" />
+              <span className="text-[10px] font-bold uppercase tracking-wider leading-tight">{t.label}</span>
+              <span className="text-[8px] opacity-60 leading-tight">{t.desc}</span>
               {active && (
                 <motion.div layoutId="tab-indicator" className="absolute bottom-0 left-0 right-0 h-0.5 bg-aura-gold rounded-b-xl" />
               )}
@@ -742,10 +1351,14 @@ export function AIInsights() {
       <div className="rounded-2xl border border-glass-border bg-[#0A0A0B] p-6">
         <AnimatePresence mode="wait">
           <motion.div key={tab} initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }} transition={{ duration: 0.15 }}>
-            {tab === "summary" && <SummaryTab clients={clients} clientsLoading={clientsLoading} />}
-            {tab === "scoring" && <ScoringTab clients={clients} clientsLoading={clientsLoading} />}
-            {tab === "action"  && <ActionTab  clients={clients} clientsLoading={clientsLoading} />}
-            {tab === "comm"    && <CommTab />}
+            {tab === "summary"      && <SummaryTab     clients={clients} clientsLoading={clientsLoading} />}
+            {tab === "scoring"      && <ScoringTab     clients={clients} clientsLoading={clientsLoading} />}
+            {tab === "action"       && <ActionTab      clients={clients} clientsLoading={clientsLoading} />}
+            {tab === "comm"         && <CommTab />}
+            {tab === "risk"         && <RiskTab        clients={clients} clientsLoading={clientsLoading} />}
+            {tab === "productivity" && <ProductivityTab clients={clients} clientsLoading={clientsLoading} />}
+            {tab === "dashboard"    && <TeamDashTab    workerRole={workerRole} />}
+            {tab === "search"       && <SearchTab      clients={clients} clientsLoading={clientsLoading} workerRole={workerRole} />}
           </motion.div>
         </AnimatePresence>
       </div>
