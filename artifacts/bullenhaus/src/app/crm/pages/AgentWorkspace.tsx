@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { Phone, Clock, FileText, PlayCircle, Plus, ChevronRight, MoreHorizontal, Loader2, AlertCircle } from "lucide-react";
+import { Phone, Clock, FileText, PlayCircle, Plus, ChevronRight, MoreHorizontal, Loader2, AlertCircle, ChevronDown } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
-import { useLeads } from "../hooks/useLeads";
+import { useLeads, updateLeadStage, LEAD_STAGES, type LeadStage } from "../hooks/useLeads";
 import { useI18n } from "../lib/i18n";
 import { usePhoneDialer } from "../contexts/PhoneDialerContext";
 
@@ -13,7 +13,14 @@ interface LocalTask {
   urgent: boolean;
 }
 
-function LeadPipeline({ leads, meta, loading, error, onCall }: { leads: any[]; meta: any; loading: boolean; error: string | null; onCall: (phone: string, name: string) => void }) {
+function LeadPipeline({ leads, meta, loading, error, onCall, onStageChange }: {
+  leads: any[];
+  meta: any;
+  loading: boolean;
+  error: string | null;
+  onCall: (phone: string, name: string) => void;
+  onStageChange: (leadId: string, stage: LeadStage) => void;
+}) {
   const stages = meta?.grouped || {
     'New Inquiries': [],
     'In Discussion': [],
@@ -91,6 +98,27 @@ function LeadPipeline({ leads, meta, loading, error, onCall }: { leads: any[]; m
                             </div>
                           </div>
                        </div>
+                       {/* Stage selector */}
+                       <div className="mb-3" onClick={e => e.stopPropagation()}>
+                         <div className="relative">
+                           <select
+                             value={lead.stage}
+                             onChange={e => onStageChange(lead.id, e.target.value as LeadStage)}
+                             className={`w-full appearance-none rounded-lg px-3 py-1.5 pr-7 text-[10px] font-bold uppercase tracking-widest border outline-none cursor-pointer transition-colors ${
+                               lead.stage === 'FUNDED'       ? 'bg-aura-emerald/10 border-aura-emerald/30 text-aura-emerald' :
+                               lead.stage === 'PENDING_KYC' ? 'bg-aura-warning/10 border-aura-warning/30 text-aura-warning' :
+                               lead.stage === 'IN_DISCUSSION'? 'bg-aura-gold/10 border-aura-gold/30 text-aura-gold' :
+                               'bg-white/5 border-glass-border text-aura-platinum/60'
+                             }`}
+                           >
+                             {LEAD_STAGES.map(s => (
+                               <option key={s.value} value={s.value} className="bg-[#121214] text-aura-platinum">{s.label}</option>
+                             ))}
+                           </select>
+                           <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none opacity-50" />
+                         </div>
+                       </div>
+
                        <div className="flex justify-between items-center border-t border-glass-border pt-3">
                           <span className="text-[9px] uppercase tracking-widest text-aura-platinum/40">{lead.acquisitionSource?.leadSource || 'Unknown'}</span>
                           <div className="flex gap-1">
@@ -132,7 +160,14 @@ export function AgentWorkspace() {
   const [taskType, setTaskType] = useState('Call');
   const [taskTime, setTaskTime] = useState('Next 1 Hour');
 
-  const { leads, meta, loading, error } = useLeads(1, 100);
+  const { leads, meta, loading, error, refetch } = useLeads(1, 100);
+
+  const handleStageChange = async (leadId: string, stage: LeadStage) => {
+    try {
+      await updateLeadStage(leadId, stage);
+      await refetch();
+    } catch (_) { /* silent — stale UI acceptable */ }
+  };
 
   // Stats derived from leads
   const todayStart = new Date();
@@ -354,6 +389,7 @@ export function AgentWorkspace() {
         loading={loading}
         error={error}
         onCall={(phone, name) => openDialer({ phone, name })}
+        onStageChange={handleStageChange}
       />
 
       <Modal 

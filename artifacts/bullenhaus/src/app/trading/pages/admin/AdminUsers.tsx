@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Search, Filter, Shield, CheckCircle2, RefreshCw, Eye, Plus, Minus, Pencil, Users } from 'lucide-react';
+import { Search, Filter, Shield, CheckCircle2, RefreshCw, Eye, Plus, Minus, Pencil, Users, Phone, Globe } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase';
 
@@ -105,6 +105,7 @@ export const AdminUsers = () => {
           <thead>
             <tr className="border-b border-border text-[10px] font-bold text-text-dim uppercase tracking-widest bg-surface/60">
               <th className="px-6 py-4 font-bold">Identity</th>
+              <th className="px-6 py-4 font-bold">Contact</th>
               <th className="px-6 py-4 font-bold">UUID</th>
               <th className="px-6 py-4 font-bold">Role</th>
               <th className="px-6 py-4 font-bold">KYC</th>
@@ -116,7 +117,7 @@ export const AdminUsers = () => {
           <tbody className="divide-y divide-border font-mono text-xs">
             {filteredUsers.length === 0 ? (
               <tr>
-                <td colSpan={7}>
+                <td colSpan={8}>
                   <div className="flex flex-col items-center justify-center py-16 gap-3">
                     <div className="w-12 h-12 rounded-full bg-surface border border-border flex items-center justify-center">
                       <Users size={20} className="text-text-dim" />
@@ -141,6 +142,24 @@ export const AdminUsers = () => {
                       <p className="text-sm font-bold text-text group-hover:text-gold transition-colors">{user.display_name || user.email || 'User'}</p>
                       <p className="text-[10px] text-text-dim italic mt-0.5">{user.email}</p>
                     </div>
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="space-y-1">
+                    {user.phone ? (
+                      <div className="flex items-center gap-1.5 text-xs text-text-muted">
+                        <Phone size={10} className="text-success shrink-0" />
+                        <span className="font-mono">{user.phone}</span>
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-text-dim">—</span>
+                    )}
+                    {user.country && (
+                      <div className="flex items-center gap-1.5 text-[10px] text-text-dim">
+                        <Globe size={10} className="shrink-0" />
+                        <span>{user.country}</span>
+                      </div>
+                    )}
                   </div>
                 </td>
                 <td className="px-6 py-4 text-text-dim truncate max-w-[120px]">{user.id}</td>
@@ -215,11 +234,30 @@ export const AdminUsers = () => {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 text-xs">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6 text-xs">
             <div className="bg-black/20 border border-white/5 rounded-xl p-4">
               <p className="text-slate-500 uppercase font-bold tracking-widest mb-2">Identity</p>
               <p className="text-white break-all">{selectedUser.id}</p>
               <p className="text-slate-400 mt-2">{selectedUser.email}</p>
+            </div>
+            <div className="bg-black/20 border border-white/5 rounded-xl p-4">
+              <p className="text-slate-500 uppercase font-bold tracking-widest mb-2">Contact</p>
+              {selectedUser.phone ? (
+                <div className="flex items-center gap-1.5 text-white">
+                  <Phone size={11} className="text-success shrink-0" />
+                  <span className="font-mono">{selectedUser.phone}</span>
+                </div>
+              ) : (
+                <p className="text-slate-500 italic">No phone</p>
+              )}
+              {selectedUser.country ? (
+                <div className="flex items-center gap-1.5 text-slate-400 mt-2">
+                  <Globe size={11} className="shrink-0" />
+                  <span>{selectedUser.country}</span>
+                </div>
+              ) : (
+                <p className="text-slate-500 mt-2 italic">No country</p>
+              )}
             </div>
             <div className="bg-black/20 border border-white/5 rounded-xl p-4">
               <p className="text-slate-500 uppercase font-bold tracking-widest mb-2">Access</p>
@@ -229,9 +267,9 @@ export const AdminUsers = () => {
             <div className="bg-black/20 border border-white/5 rounded-xl p-4">
               <p className="text-slate-500 uppercase font-bold tracking-widest mb-2">Wallet</p>
               <p className="text-white font-mono text-lg">
-                ${Number(selectedUser.wallet?.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ${Number(selectedUser.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
-              <p className="text-slate-400 mt-2">{selectedUser.wallet?.currency || 'USD'}</p>
+              <p className="text-slate-400 mt-2">USD</p>
             </div>
           </div>
 

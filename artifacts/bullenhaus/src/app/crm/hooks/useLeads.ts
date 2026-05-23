@@ -58,3 +58,20 @@ export function useLeads(page = 1, limit = 50, search = '') {
 
   return { leads: data, meta, loading, error, refetch: fetchLeads };
 }
+
+export const LEAD_STAGES = [
+  { value: 'NEW_INQUIRY',  label: 'New Inquiry'  },
+  { value: 'IN_DISCUSSION', label: 'In Discussion' },
+  { value: 'PENDING_KYC',  label: 'Pending KYC'  },
+  { value: 'FUNDED',       label: 'Funded (FTD)'  },
+] as const;
+
+export type LeadStage = typeof LEAD_STAGES[number]['value'];
+
+export async function updateLeadStage(leadId: string, stage: LeadStage): Promise<void> {
+  const { error } = await supabase
+    .from('leads')
+    .update({ stage })
+    .eq('id', leadId);
+  if (error) throw new Error(error.message);
+}
