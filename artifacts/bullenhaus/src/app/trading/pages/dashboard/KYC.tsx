@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Upload, ShieldCheck, FileText, Camera, CheckCircle2, AlertCircle, Clock, XCircle } from 'lucide-react';
+import { Upload, ShieldCheck, FileText, Camera, CheckCircle2, AlertCircle, Clock, XCircle, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
@@ -9,9 +9,9 @@ import { useAuth } from '../../contexts/AuthContext';
 type DocKey = 'passport' | 'id_card' | 'selfie';
 
 const DOC_SLOTS: { key: DocKey; label: string; icon: React.ReactNode; hint: string; camera?: boolean }[] = [
-  { key: 'passport', label: 'Passport',      icon: <FileText size={24} className="text-slate-400" />, hint: 'Photo page clearly visible' },
-  { key: 'id_card',  label: 'ID Card',        icon: <FileText size={24} className="text-slate-400" />, hint: 'Front & back if applicable' },
-  { key: 'selfie',   label: 'Selfie with ID', icon: <Camera  size={24} className="text-slate-400" />, hint: 'Hold document next to your face', camera: true },
+  { key: 'passport', label: 'Passport',      icon: <FileText size={28} />, hint: 'Photo page clearly visible' },
+  { key: 'id_card',  label: 'ID Card',        icon: <FileText size={28} />, hint: 'Front & back if applicable' },
+  { key: 'selfie',   label: 'Selfie with ID', icon: <Camera  size={28} />, hint: 'Hold document next to your face', camera: true },
 ];
 
 export const KYC = () => {
@@ -20,16 +20,38 @@ export const KYC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [files, setFiles] = useState<Record<DocKey, File | null>>({ passport: null, id_card: null, selfie: null });
 
+  const passportRef = useRef<HTMLInputElement>(null);
+  const idCardRef   = useRef<HTMLInputElement>(null);
+  const selfieRef   = useRef<HTMLInputElement>(null);
+
+  const refMap: Record<DocKey, React.RefObject<HTMLInputElement | null>> = {
+    passport: passportRef,
+    id_card:  idCardRef,
+    selfie:   selfieRef,
+  };
+
   const handleFile = (key: DocKey, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
-    if (file && file.size > 10 * 1024 * 1024) { toast.error('File must be under 10 MB'); return; }
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { toast.error('File must be under 10 MB'); return; }
     setFiles(prev => ({ ...prev, [key]: file }));
+  };
+
+  const clearFile = (key: DocKey, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setFiles(prev => ({ ...prev, [key]: null }));
+    const ref = refMap[key];
+    if (ref.current) ref.current.value = '';
+  };
+
+  const triggerUpload = (key: DocKey) => {
+    refMap[key].current?.click();
   };
 
   const handleSubmit = async () => {
     const chosen = (Object.entries(files) as [DocKey, File | null][]).filter(([, f]) => f !== null);
-    if (chosen.length === 0) { toast.error('Upload at least one document'); return; }
-    if (!user) { toast.error('Please log in first'); return; }
+    if (chosen.length === 0) { toast.error('Select at least one document to upload'); return; }
+    if (!user?.id) { toast.error('Session expired — please log in again'); return; }
 
     setSubmitting(true);
     try {
@@ -37,7 +59,7 @@ export const KYC = () => {
 
       for (const [key, file] of chosen) {
         if (!file) continue;
-        const ext  = file.name.split('.').pop() ?? 'bin';
+        const ext  = file.name.split('.').pop()?.toLowerCase() ?? 'bin';
         const path = `${user.id}/${key}_${Date.now()}.${ext}`;
 
         const { error: upErr } = await supabase.storage
@@ -46,6 +68,7 @@ export const KYC = () => {
 
         if (upErr) throw new Error(`Upload failed for ${key}: ${upErr.message}`);
         uploaded.push({ type: key, name: file.name, path, contentType: file.type });
+        toast.success(`${key.replace('_', ' ')} uploaded`);
       }
 
       const { error: dbErr } = await supabase
@@ -57,7 +80,7 @@ export const KYC = () => {
       await refreshProfile();
       toast.success('Documents submitted — awaiting admin review');
     } catch (err: any) {
-      toast.error(err.message || 'Submission failed');
+      toast.error(err.message || 'Submission failed. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -112,8 +135,10 @@ export const KYC = () => {
     );
   }
 
+  const hasAnyFile = Object.values(files).some(f => f !== null);
+
   return (
-    <div className="p-4 lg:p-8 animate-in fade-in duration-500">
+    <div className="animate-in fade-in duration-500">
       <div className="max-w-3xl mx-auto">
         <div className="flex items-center gap-4 mb-8">
           <div className="p-3 bg-accent-primary/10 rounded-2xl text-accent-primary">
@@ -126,72 +151,94 @@ export const KYC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          {DOC_SLOTS.map(({ key, label, icon, hint, camera }) => (
-            <label
-              key={key}
-              className={`flex flex-col items-center justify-center gap-3 border-2 border-dashed rounded-2xl p-6 cursor-pointer transition-all min-h-[160px] ${
-                files[key]
-                  ? 'border-accent-secondary/50 bg-accent-secondary/5'
-                  : 'border-white/10 bg-white/5 hover:border-accent-primary/50'
-              }`}
-            >
-              {files[key] ? (
-                <>
-                  <CheckCircle2 size={32} className="text-accent-secondary" />
-                  <span className="text-xs font-bold text-accent-secondary text-center break-all">{files[key]!.name}</span>
-                  <span className="text-[10px] text-slate-500">Click to replace</span>
-                </>
-              ) : (
-                <>
-                  {icon}
-                  <div className="text-center">
-                    <p className="text-sm font-bold text-white mb-0.5">{label}</p>
-                    <p className="text-[10px] text-slate-500">{hint}</p>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    {camera ? <><Camera size={11} /> Open Camera</> : <><Upload size={11} /> Upload file</>}
-                  </div>
-                </>
-              )}
-              {camera ? (
-                <input
-                  type="file"
-                  className="hidden"
-                  accept="image/*"
-                  capture="user"
-                  onChange={e => handleFile(key, e)}
-                />
-              ) : (
-                <input
-                  type="file"
-                  className="hidden"
-                  accept="image/*,.pdf"
-                  onChange={e => handleFile(key, e)}
-                />
-              )}
-            </label>
-          ))}
+          {DOC_SLOTS.map(({ key, label, icon, hint, camera }) => {
+            const file = files[key];
+            return (
+              <div
+                key={key}
+                onClick={() => triggerUpload(key)}
+                className={`flex flex-col items-center justify-center gap-3 border-2 border-dashed rounded-2xl p-6 cursor-pointer transition-all min-h-[160px] select-none ${
+                  file
+                    ? 'border-emerald-500/50 bg-emerald-500/5'
+                    : 'border-white/10 bg-white/5 hover:border-accent-primary/50 active:bg-white/10'
+                }`}
+              >
+                {file ? (
+                  <>
+                    <CheckCircle2 size={32} className="text-emerald-400" />
+                    <span className="text-xs font-bold text-emerald-400 text-center break-all px-2 leading-snug">
+                      {file.name}
+                    </span>
+                    <button
+                      onClick={e => clearFile(key, e)}
+                      className="flex items-center gap-1 text-[10px] text-slate-500 hover:text-rose-400 transition-colors mt-1"
+                    >
+                      <X size={10} /> Remove
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-slate-400">{icon}</div>
+                    <div className="text-center">
+                      <p className="text-sm font-bold text-white mb-0.5">{label}</p>
+                      <p className="text-[10px] text-slate-500">{hint}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[11px] font-bold text-slate-300 uppercase tracking-wider">
+                      {camera ? <><Camera size={12} /> Open Camera</> : <><Upload size={12} /> Upload File</>}
+                    </div>
+                  </>
+                )}
+
+                {/* Hidden file inputs — triggered via ref */}
+                {camera ? (
+                  <input
+                    ref={selfieRef}
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    capture="user"
+                    onChange={e => handleFile(key, e)}
+                    onClick={e => e.stopPropagation()}
+                  />
+                ) : (
+                  <input
+                    ref={key === 'passport' ? passportRef : idCardRef}
+                    type="file"
+                    className="hidden"
+                    accept="image/*,.pdf"
+                    onChange={e => handleFile(key, e)}
+                    onClick={e => e.stopPropagation()}
+                  />
+                )}
+              </div>
+            );
+          })}
         </div>
 
         <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-2xl p-5 flex gap-4 mb-6">
           <AlertCircle className="text-yellow-500 flex-shrink-0 mt-0.5" size={18} />
-          <div className="text-sm text-yellow-500/80">
-            <p className="font-bold text-yellow-500 mb-1">{t('importantNote', { defaultValue: 'Important' })}</p>
-            <p className="text-xs">{t('kycNote', { defaultValue: 'Documents must be clear, unexpired, and match your registered name. Supported formats: JPG, PNG, PDF (max 10 MB each).' })}</p>
+          <div>
+            <p className="font-bold text-yellow-500 mb-1 text-sm">{t('importantNote', { defaultValue: 'Important' })}</p>
+            <p className="text-xs text-yellow-500/80">{t('kycNote', { defaultValue: 'Documents must be clear, unexpired, and match your registered name. Supported formats: JPG, PNG, PDF (max 10 MB each).' })}</p>
           </div>
         </div>
 
         <button
           onClick={handleSubmit}
-          disabled={submitting || Object.values(files).every(f => f === null)}
-          className="btn-gold w-full py-4 rounded-2xl text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={submitting || !hasAnyFile}
+          className="btn-gold w-full py-4 rounded-2xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {submitting ? (
             <span className="flex items-center justify-center gap-2">
               <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
               Uploading documents...
             </span>
-          ) : 'Submit for Verification'}
+          ) : (
+            <span className="flex items-center justify-center gap-2">
+              <ShieldCheck size={16} />
+              Submit for Verification {hasAnyFile ? `(${Object.values(files).filter(Boolean).length} file${Object.values(files).filter(Boolean).length > 1 ? 's' : ''})` : ''}
+            </span>
+          )}
         </button>
       </div>
     </div>
