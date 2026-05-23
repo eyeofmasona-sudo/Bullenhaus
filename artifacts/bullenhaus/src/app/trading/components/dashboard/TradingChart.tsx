@@ -59,6 +59,9 @@ export const TradingChart: React.FC = () => {
     if (!chartContainerRef.current) return;
 
     const chart = createChart(chartContainerRef.current, {
+      localization: {
+        locale: 'en-US',
+      },
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
         textColor: '#94a3b8',

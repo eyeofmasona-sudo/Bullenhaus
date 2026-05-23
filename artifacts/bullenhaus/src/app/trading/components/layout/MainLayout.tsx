@@ -104,7 +104,7 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
         <Sidebar onClose={() => setIsMobileMenuOpen(false)} />
       </div>
 
-      <div className="flex-1 flex flex-col relative overflow-hidden">
+      <div className="flex-1 flex flex-col relative min-h-0">
         {/* Header */}
         <header className="h-16 flex items-center justify-between px-4 md:px-8 border-b border-border-glass bg-surface-bg/50 backdrop-blur-xl z-20">
           <div className="flex-1 flex items-center gap-4 max-w-xl">
@@ -243,8 +243,8 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
           <div className="fixed top-0 left-1/4 w-96 h-96 bg-accent-primary/20 blur-[150px] rounded-full pointer-events-none z-[-1]" />
           <div className="fixed bottom-0 right-1/4 w-96 h-96 bg-accent-secondary/10 blur-[150px] rounded-full pointer-events-none z-[-1]" />
           <div className="relative z-10 w-full p-4 md:p-8">{children}</div>
-          <TradingFooter />
         </main>
+        <TradingFooter />
       </div>
     </div>
   );

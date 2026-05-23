@@ -1,11 +1,14 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import LanguageDetector from 'i18next-browser-languagedetector';
+
+const savedLang = (() => {
+  try { return localStorage.getItem('i18n-lang') || 'en'; } catch { return 'en'; }
+})();
 
 i18n
-  .use(LanguageDetector)
   .use(initReactI18next)
   .init({
+    lng: savedLang,
     fallbackLng: 'en',
     debug: false,
     interpolation: {
@@ -36,7 +39,7 @@ i18n
           submit: 'Submit',
           cancel: 'Cancel',
           search: 'Search',
-          logout: 'Logout System',
+          logout: 'Logout',
           admin: 'Command Center',
           action: 'Action',
           livePrices: 'Live prices and market performance',
@@ -168,7 +171,7 @@ i18n
           submit: 'Absenden',
           cancel: 'Abbrechen',
           search: 'Suche',
-          logout: 'System abmelden',
+          logout: 'Abmelden',
           admin: 'Kommandozentrum',
           action: 'Aktion',
           livePrices: 'Live-Preise und Marktentwicklung',
@@ -277,5 +280,9 @@ i18n
       }
     }
   });
+
+i18n.on('languageChanged', (lng) => {
+  try { localStorage.setItem('i18n-lang', lng); } catch {}
+});
 
 export default i18n;

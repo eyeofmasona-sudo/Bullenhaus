@@ -10,7 +10,7 @@ const LEGAL_LINKS = [
 ];
 
 export const TradingFooter: React.FC = () => (
-  <footer className="mt-16 pt-8 pb-6 border-t border-white/5">
+  <footer className="pt-6 pb-6 border-t border-white/5 shrink-0">
     <div className="flex flex-col items-center gap-5">
       <div className="flex items-center gap-2 text-[10px] text-slate-500">
         <Shield size={12} className="text-accent-primary/50" />
