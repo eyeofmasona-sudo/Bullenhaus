@@ -131,6 +131,8 @@ export const TradingChart: React.FC = () => {
   const zoomRef       = useRef(8);
   const [activeTool,  setActiveTool]  = useState<DrawTool>('pointer');
   const [hasDrawings, setHasDrawings] = useState(false);
+  const [textInput,   setTextInput]   = useState<{ x: number; y: number } | null>(null);
+  const textInputRef = useRef<HTMLInputElement>(null);
 
   const [showPanel, setShowPanel] = useState(false);
   const [indicators, setIndicators] = useState<Record<IndicatorKey, boolean>>({ ema: true, rsi: false, macd: false, sma: false, bb: false });
@@ -306,12 +308,8 @@ export const TradingChart: React.FC = () => {
       const { x, y } = pos(e);
 
       if (tool === 'text') {
-        const t = window.prompt('Label:');
-        if (t?.trim()) {
-          shapesRef.current = [...shapesRef.current, { type: 'text', x, y, text: t.trim() }];
-          setHasDrawings(true);
-          redraw();
-        }
+        setTextInput({ x, y });
+        setTimeout(() => textInputRef.current?.focus(), 30);
         return;
       }
       if (tool === 'zoom') {
@@ -745,10 +743,53 @@ export const TradingChart: React.FC = () => {
               ref={drawCanvasRef}
               className="absolute inset-0 w-full h-full"
               style={{
+                zIndex: 10,
                 pointerEvents: activeTool === 'pointer' || activeTool === 'hand' ? 'none' : 'auto',
                 cursor: CURSOR_MAP[activeTool],
               }}
             />
+            {/* Inline text input for Text tool */}
+            {textInput && (
+              <input
+                ref={textInputRef}
+                autoFocus
+                placeholder="Type label…"
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    const val = (e.target as HTMLInputElement).value.trim();
+                    if (val) {
+                      const canvas = drawCanvasRef.current;
+                      const ctx = canvas?.getContext('2d');
+                      if (canvas && ctx) {
+                        shapesRef.current = [...shapesRef.current, { type: 'text', x: textInput.x, y: textInput.y, text: val }];
+                        setHasDrawings(true);
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        shapesRef.current.forEach(s => drawShape(ctx, s));
+                      }
+                    }
+                    setTextInput(null);
+                  }
+                  if (e.key === 'Escape') setTextInput(null);
+                }}
+                onBlur={() => setTextInput(null)}
+                style={{
+                  position: 'absolute',
+                  left: textInput.x,
+                  top: textInput.y - 14,
+                  zIndex: 20,
+                  background: 'rgba(10,10,11,0.85)',
+                  border: '1px solid #D4AF37',
+                  borderRadius: 4,
+                  color: '#D4AF37',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  padding: '2px 6px',
+                  outline: 'none',
+                  width: 140,
+                  fontFamily: 'Inter, sans-serif',
+                }}
+              />
+            )}
           </div>
         </div>
       </div>
