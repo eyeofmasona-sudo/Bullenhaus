@@ -1,13 +1,31 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Search, Filter, Shield, CheckCircle2, RefreshCw, Eye, Plus, Minus, Pencil, Users, Phone, Globe } from 'lucide-react';
+import { Search, Filter, Shield, CheckCircle2, RefreshCw, Eye, Plus, Minus, Pencil, Users, Phone, Globe, X, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase';
+
+const ROLES = ['client', 'agent', 'manager', 'director', 'admin', 'trade_admin'];
+const KYC_STATUSES = ['PENDING', 'VERIFIED', 'REJECTED'];
+
+interface EditForm {
+  first_name: string;
+  last_name: string;
+  display_name: string;
+  phone: string;
+  country: string;
+  role: string;
+  kyc_status: string;
+}
 
 export const AdminUsers = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
+  const [editingUser, setEditingUser] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState<EditForm>({
+    first_name: '', last_name: '', display_name: '', phone: '', country: '', role: 'client', kyc_status: 'PENDING',
+  });
+  const [saving, setSaving] = useState(false);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -32,6 +50,51 @@ export const AdminUsers = () => {
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  const openEdit = (user: any) => {
+    setEditingUser(user);
+    setEditForm({
+      first_name: user.first_name || '',
+      last_name: user.last_name || '',
+      display_name: user.display_name || '',
+      phone: user.phone || '',
+      country: user.country || '',
+      role: user.role || 'client',
+      kyc_status: user.kyc_status || 'PENDING',
+    });
+  };
+
+  const closeEdit = () => {
+    setEditingUser(null);
+  };
+
+  const saveEdit = async () => {
+    if (!editingUser) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          first_name: editForm.first_name || null,
+          last_name: editForm.last_name || null,
+          display_name: editForm.display_name || null,
+          phone: editForm.phone || null,
+          country: editForm.country || null,
+          role: editForm.role,
+          kyc_status: editForm.kyc_status,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', editingUser.id);
+      if (error) throw error;
+      toast.success('User updated');
+      closeEdit();
+      await fetchUsers();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update user');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const adjustWallet = async (user: any, mode: 'add' | 'remove' | 'set') => {
     const label = mode === 'add' ? 'add' : mode === 'remove' ? 'remove' : 'set';
@@ -72,7 +135,7 @@ export const AdminUsers = () => {
   const filteredUsers = useMemo(() => {
     const query = search.trim().toLowerCase();
     if (!query) return users;
-    return users.filter(user => [user.id, user.email, user.display_name, user.role, user.kyc_status].some(value => String(value || '').toLowerCase().includes(query)));
+    return users.filter(user => [user.id, user.email, user.display_name, user.role, user.kyc_status, user.phone, user.country].some(value => String(value || '').toLowerCase().includes(query)));
   }, [search, users]);
 
   return (
@@ -88,7 +151,7 @@ export const AdminUsers = () => {
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-dim" />
             <input
               type="text"
-              placeholder="Search UUID, email, name..."
+              placeholder="Search UUID, email, name, phone..."
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               className="input-dark pl-9 py-2 text-sm w-72"
@@ -165,8 +228,10 @@ export const AdminUsers = () => {
                 <td className="px-6 py-4 text-text-dim truncate max-w-[120px]">{user.id}</td>
                 <td className="px-6 py-4">
                   <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter ${
-                    user.role === 'ADMIN' ? 'bg-danger/10 text-danger' :
-                    user.role === 'PRO' ? 'bg-gold/10 text-gold' :
+                    user.role === 'admin' ? 'bg-danger/10 text-danger' :
+                    user.role === 'trade_admin' ? 'bg-warning/10 text-warning' :
+                    user.role === 'manager' || user.role === 'director' ? 'bg-gold/10 text-gold' :
+                    user.role === 'agent' ? 'bg-info/10 text-info' :
                     'bg-surface text-text-muted'
                   }`}>
                     {user.role || 'client'}
@@ -195,6 +260,13 @@ export const AdminUsers = () => {
                          <Eye size={15} />
                       </button>
                       <button
+                         onClick={() => openEdit(user)}
+                         className="p-2 text-text-dim hover:text-gold hover:bg-gold/10 rounded-lg transition-all"
+                         title="Edit User"
+                      >
+                         <Pencil size={15} />
+                      </button>
+                      <button
                          onClick={() => adjustWallet(user, 'add')}
                          className="p-2 text-text-dim hover:text-success hover:bg-success/10 rounded-lg transition-all"
                          title="Add Balance"
@@ -208,13 +280,6 @@ export const AdminUsers = () => {
                       >
                          <Minus size={15} />
                       </button>
-                      <button
-                         onClick={() => adjustWallet(user, 'set')}
-                         className="p-2 text-text-dim hover:text-info hover:bg-info/10 rounded-lg transition-all"
-                         title="Set Balance"
-                      >
-                         <Pencil size={15} />
-                      </button>
                    </div>
                 </td>
               </tr>
@@ -222,6 +287,7 @@ export const AdminUsers = () => {
           </tbody>
         </table>
       </div>
+
       {selectedUser && (
         <div className="glass-card mt-6 p-6 border-white/10">
           <div className="flex items-start justify-between gap-6">
@@ -274,6 +340,9 @@ export const AdminUsers = () => {
           </div>
 
           <div className="flex flex-wrap gap-3 mt-6">
+            <button onClick={() => openEdit(selectedUser)} className="px-4 py-2 rounded-xl bg-gold/10 text-gold border border-gold/20 text-xs font-bold hover:bg-gold hover:text-black transition-all">
+              Edit User
+            </button>
             <button onClick={() => adjustWallet(selectedUser, 'add')} className="px-4 py-2 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-xs font-bold hover:bg-emerald-500 hover:text-black transition-all">
               Add Assets
             </button>
@@ -283,6 +352,116 @@ export const AdminUsers = () => {
             <button onClick={() => adjustWallet(selectedUser, 'set')} className="px-4 py-2 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20 text-xs font-bold hover:bg-blue-500 hover:text-black transition-all">
               Edit Assets
             </button>
+          </div>
+        </div>
+      )}
+
+      {editingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="glass-card w-full max-w-lg p-6 border border-border-strong shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-sm font-bold text-white uppercase tracking-widest">Edit User</h3>
+                <p className="text-xs text-text-dim mt-1">{editingUser.email}</p>
+              </div>
+              <button onClick={closeEdit} className="p-1.5 rounded-lg text-text-dim hover:text-text hover:bg-white/5 transition-all">
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[10px] font-bold text-text-dim uppercase tracking-widest mb-1.5">First Name</label>
+                <input
+                  type="text"
+                  value={editForm.first_name}
+                  onChange={e => setEditForm(f => ({ ...f, first_name: e.target.value }))}
+                  placeholder="First name"
+                  className="input-dark w-full py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-text-dim uppercase tracking-widest mb-1.5">Last Name</label>
+                <input
+                  type="text"
+                  value={editForm.last_name}
+                  onChange={e => setEditForm(f => ({ ...f, last_name: e.target.value }))}
+                  placeholder="Last name"
+                  className="input-dark w-full py-2 text-sm"
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-[10px] font-bold text-text-dim uppercase tracking-widest mb-1.5">Display Name</label>
+                <input
+                  type="text"
+                  value={editForm.display_name}
+                  onChange={e => setEditForm(f => ({ ...f, display_name: e.target.value }))}
+                  placeholder="Display name"
+                  className="input-dark w-full py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-text-dim uppercase tracking-widest mb-1.5">Phone</label>
+                <input
+                  type="text"
+                  value={editForm.phone}
+                  onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))}
+                  placeholder="+1 234 567 8900"
+                  className="input-dark w-full py-2 text-sm font-mono"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-text-dim uppercase tracking-widest mb-1.5">Country</label>
+                <input
+                  type="text"
+                  value={editForm.country}
+                  onChange={e => setEditForm(f => ({ ...f, country: e.target.value }))}
+                  placeholder="e.g. United States"
+                  className="input-dark w-full py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-text-dim uppercase tracking-widest mb-1.5">Role</label>
+                <select
+                  value={editForm.role}
+                  onChange={e => setEditForm(f => ({ ...f, role: e.target.value }))}
+                  className="input-dark w-full py-2 text-sm"
+                >
+                  {ROLES.map(r => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-text-dim uppercase tracking-widest mb-1.5">KYC Status</label>
+                <select
+                  value={editForm.kyc_status}
+                  onChange={e => setEditForm(f => ({ ...f, kyc_status: e.target.value }))}
+                  className="input-dark w-full py-2 text-sm"
+                >
+                  {KYC_STATUSES.map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={closeEdit}
+                className="px-4 py-2 rounded-xl border border-border text-text-muted text-xs font-bold hover:border-border-strong hover:text-text transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveEdit}
+                disabled={saving}
+                className="px-4 py-2 rounded-xl bg-gold text-black text-xs font-bold hover:bg-gold/80 transition-all flex items-center gap-2 disabled:opacity-50"
+              >
+                {saving ? <RefreshCw size={13} className="animate-spin" /> : <Save size={13} />}
+                {saving ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
           </div>
         </div>
       )}
