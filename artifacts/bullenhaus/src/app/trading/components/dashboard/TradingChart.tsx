@@ -252,12 +252,17 @@ export const TradingChart: React.FC = () => {
     };
     const tfSeconds = getTfSeconds(currentTimeframe);
 
+    const isJPYPair = currentPair.includes('JPY');
+    const isCryptoPair = currentPair.endsWith('USDT');
+    const isMetalPair = currentPair.startsWith('XA') || currentPair.startsWith('XP');
+    const isExoticPair = ['USDTRY','USDMXN','USDZAR','USDSEK','USDNOK','USDDKK','USDPLN',
+      'USDCNH','EURTRY','EURSEK','EURNOK','GBPTRY','GBPZAR'].includes(currentPair);
+
+    const precision = isJPYPair ? 3 : isCryptoPair ? 2 : isMetalPair ? 2 : isExoticPair ? 3 : 5;
+    const minMove  = isJPYPair ? 0.001 : isCryptoPair ? 0.01 : isMetalPair ? 0.01 : isExoticPair ? 0.001 : 0.00001;
+
     candlestick.applyOptions({
-      priceFormat: {
-        type: 'price',
-        precision: currentPair.includes('JPY') ? 3 : currentPair.endsWith('USDT') ? 2 : 5,
-        minMove: currentPair.includes('JPY') ? 0.001 : currentPair.endsWith('USDT') ? 0.01 : 0.00001,
-      },
+      priceFormat: { type: 'price', precision, minMove },
     });
 
     const isForex = !currentPair.endsWith('USDT');

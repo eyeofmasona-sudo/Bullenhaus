@@ -13,53 +13,64 @@ export interface ForexPairConfig {
   isPaused: boolean;
 }
 
-// Major, Minor, Exotic and Metal pairs
-const forexPairList = [
+// Realistic seed prices (approximate current market rates)
+const SEED_PRICES: Record<string, number> = {
   // Majors
-  'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD',
-  // Minors
-  'EURGBP', 'EURJPY', 'EURCHF', 'EURAUD', 'EURCAD', 'EURNZD', 
-  'GBPJPY', 'GBPCHF', 'GBPAUD', 'GBPCAD', 'GBPNZD', 
-  'AUDJPY', 'AUDCHF', 'AUDCAD', 'AUDNZD', 
-  'CADJPY', 'CADCHF', 'NZDJPY', 'NZDCHF', 'NZDCAD', 'CHFJPY',
+  EURUSD: 1.0850, GBPUSD: 1.2650, USDJPY: 149.50, USDCHF: 0.9050,
+  AUDUSD: 0.6530, USDCAD: 1.3670, NZDUSD: 0.5970,
+  // Minors EUR
+  EURGBP: 0.8580, EURJPY: 162.30, EURCHF: 0.9820, EURAUD: 1.6620,
+  EURCAD: 1.4830, EURNZD: 1.8190,
+  // Minors GBP
+  GBPJPY: 188.90, GBPCHF: 1.1450, GBPAUD: 1.9370, GBPCAD: 1.7290, GBPNZD: 2.1200,
+  // Minors AUD
+  AUDJPY: 97.60, AUDCHF: 0.5910, AUDCAD: 0.8940, AUDNZD: 1.0940,
+  // Other crosses
+  CADJPY: 109.50, CADCHF: 0.6630, NZDJPY: 89.40, NZDCHF: 0.5410,
+  NZDCAD: 0.8170, CHFJPY: 165.30,
   // Exotics
-  'USDTRY', 'USDMXN', 'USDZAR', 'USDSEK', 'USDNOK', 'USDDKK', 'USDPLN', 'USDCNH', 
-  'EURTRY', 'EURSEK', 'EURNOK', 'GBPTRY', 'GBPZAR', 'AUDSGD', 'SGDJPY',
+  USDTRY: 32.50, USDMXN: 17.20, USDZAR: 18.80, USDSEK: 10.50,
+  USDNOK: 10.80, USDDKK: 6.90, USDPLN: 3.97, USDCNH: 7.24,
+  EURTRY: 35.20, EURSEK: 11.40, EURNOK: 11.72,
+  GBPTRY: 41.20, GBPZAR: 23.80, AUDSGD: 0.8810, SGDJPY: 110.50,
   // Metals
-  'XAUUSD', 'XAGUSD', 'XPTUSD', 'XPDUSD'
+  XAUUSD: 2340.00, XAGUSD: 27.80, XPTUSD: 960.00, XPDUSD: 1020.00,
+};
+
+// Volatility per symbol (pip/tick size for random walk)
+const VOLATILITY: Record<string, number> = {
+  USDJPY: 0.008, EURJPY: 0.010, GBPJPY: 0.012, AUDJPY: 0.008,
+  CADJPY: 0.008, NZDJPY: 0.007, CHFJPY: 0.009, SGDJPY: 0.008,
+  XAUUSD: 0.40, XAGUSD: 0.04, XPTUSD: 0.35, XPDUSD: 0.35,
+  USDTRY: 0.015, USDMXN: 0.008, USDZAR: 0.012, USDSEK: 0.006,
+  USDNOK: 0.006, USDDKK: 0.004, USDPLN: 0.004, USDCNH: 0.004,
+  EURTRY: 0.018, EURSEK: 0.007, EURNOK: 0.007, GBPTRY: 0.022,
+  GBPZAR: 0.015, AUDSGD: 0.0002,
+};
+
+const DEFAULT_VOLATILITY = 0.00008;
+const DEFAULT_SPREAD = 0.00010;
+
+const forexPairList = [
+  'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD',
+  'EURGBP', 'EURJPY', 'EURCHF', 'EURAUD', 'EURCAD', 'EURNZD',
+  'GBPJPY', 'GBPCHF', 'GBPAUD', 'GBPCAD', 'GBPNZD',
+  'AUDJPY', 'AUDCHF', 'AUDCAD', 'AUDNZD',
+  'CADJPY', 'CADCHF', 'NZDJPY', 'NZDCHF', 'NZDCAD', 'CHFJPY',
+  'USDTRY', 'USDMXN', 'USDZAR', 'USDSEK', 'USDNOK', 'USDDKK', 'USDPLN', 'USDCNH',
+  'EURTRY', 'EURSEK', 'EURNOK', 'GBPTRY', 'GBPZAR', 'AUDSGD', 'SGDJPY',
+  'XAUUSD', 'XAGUSD', 'XPTUSD', 'XPDUSD',
 ];
 
 const defaultPairs: Record<string, ForexPairConfig> = {};
 forexPairList.forEach(symbol => {
-  let price = 1.0;
-  let volatility = 0.0001;
-  let spread = 0.0001;
-  
-  if (symbol.includes('JPY')) {
-    price = 150.0;
-    volatility = 0.01;
-    spread = 0.01;
-  } else if (symbol === 'XAUUSD') {
-    price = 2300.0;
-    volatility = 0.5;
-    spread = 0.2;
-  } else if (symbol === 'XAGUSD') {
-    price = 28.0;
-    volatility = 0.05;
-    spread = 0.02;
-  } else if (symbol === 'XPTUSD') {
-    price = 950.0;
-    volatility = 0.5;
-    spread = 0.2;
-  } else if (symbol === 'XPDUSD') {
-    price = 1050.0;
-    volatility = 0.5;
-    spread = 0.2;
-  } else if (symbol.includes('TRY') || symbol.includes('MXN') || symbol.includes('ZAR') || symbol.includes('SEK') || symbol.includes('NOK') || symbol.includes('DKK') || symbol.includes('PLN') || symbol.includes('CNH')) {
-    price = 15.0; // dummy price for exotics
-    volatility = 0.01;
-    spread = 0.005;
-  }
+  const price = SEED_PRICES[symbol] ?? 1.0;
+  const volatility = VOLATILITY[symbol] ?? DEFAULT_VOLATILITY;
+
+  let spread = DEFAULT_SPREAD;
+  if (symbol.includes('JPY')) spread = volatility * 0.5;
+  else if (symbol.startsWith('XA') || symbol.startsWith('XP')) spread = volatility * 0.3;
+  else if (['USDTRY','USDMXN','USDZAR','USDSEK','USDNOK','EURTRY','GBPTRY'].includes(symbol)) spread = volatility * 0.5;
 
   defaultPairs[symbol] = {
     symbol,
@@ -69,15 +80,14 @@ forexPairList.forEach(symbol => {
     volatility,
     spread,
     trend: 'sideways',
-    isPaused: false
+    isPaused: false,
   };
 });
 
 interface ForexState {
   pairs: Record<string, ForexPairConfig>;
   globalVolatilityMultiplier: number;
-  
-  // Admin Actions
+
   updatePrice: (symbol: string, newPrice: number) => void;
   setVolatility: (symbol: string, vol: number) => void;
   setSpread: (symbol: string, spread: number) => void;
@@ -112,10 +122,7 @@ export const useForexStore = create<ForexState>((set, get) => ({
   })),
 
   resetMarket: (symbol) => set(state => ({
-    pairs: { 
-      ...state.pairs, 
-      [symbol]: { ...defaultPairs[symbol] } 
-    }
+    pairs: { ...state.pairs, [symbol]: { ...defaultPairs[symbol] } }
   })),
 
   tickSimulation: () => set(state => {
@@ -127,29 +134,26 @@ export const useForexStore = create<ForexState>((set, get) => ({
       if (p.isPaused) return;
 
       let move = (Math.random() - 0.5) * p.volatility * state.globalVolatilityMultiplier;
-      
+
       if (p.trend === 'bull') {
-        move += (Math.random() * p.volatility * 0.5);
+        move += Math.random() * p.volatility * 0.5;
       } else if (p.trend === 'bear') {
-        move -= (Math.random() * p.volatility * 0.5);
+        move -= Math.random() * p.volatility * 0.5;
       } else if (p.trend === 'crash') {
-        move -= (Math.random() * p.volatility * 5); // Huge drop
+        move -= Math.random() * p.volatility * 5;
       } else if (p.trend === 'news') {
-        move += (Math.random() - 0.5) * p.volatility * 10; // Huge swings both ways
+        move += (Math.random() - 0.5) * p.volatility * 10;
       }
 
-      const newPrice = p.price + move;
+      const newPrice = Math.max(p.price * 0.001, p.price + move);
       const change24h = ((newPrice - p.basePrice) / p.basePrice) * 100;
-      
+
       if (newPrice !== p.price) {
         newPairs[sym] = { ...p, price: newPrice, change24h };
         changed = true;
       }
     });
 
-    if (changed) {
-       return { pairs: newPairs };
-    }
-    return state;
-  })
+    return changed ? { pairs: newPairs } : state;
+  }),
 }));
