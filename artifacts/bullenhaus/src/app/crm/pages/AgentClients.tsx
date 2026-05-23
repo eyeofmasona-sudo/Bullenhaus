@@ -194,7 +194,7 @@ function ClientDrawer({ client, onClose }: { client: AgentClient | null; onClose
                         <div className={`text-sm font-mono font-bold ${isDeposit ? 'text-aura-emerald' : isWithdrawal ? 'text-aura-ruby' : 'text-aura-platinum'}`}>
                           {isDeposit ? '+' : isWithdrawal ? '−' : ''}{fmt(tx.amount)}
                         </div>
-                        <div className={`text-[9px] uppercase ${tx.status === 'COMPLETED' ? 'text-aura-emerald' : tx.status === 'FAILED' ? 'text-aura-ruby' : 'text-yellow-400'}`}>{tx.status}</div>
+                        <div className={`text-[9px] uppercase ${tx.status === 'COMPLETED' || tx.status === 'APPROVED' ? 'text-aura-emerald' : tx.status === 'FAILED' || tx.status === 'REJECTED' ? 'text-aura-ruby' : tx.status === 'PROCESSING' ? 'text-blue-400' : 'text-yellow-400'}`}>{tx.status}</div>
                       </div>
                     </div>
                   );

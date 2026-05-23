@@ -184,8 +184,9 @@ function ClientDrawer({ client, isOpen, onClose }: { client: CRMClient | null; i
               const isDeposit = tx.type === "DEPOSIT";
               const isWithdrawal = tx.type === "WITHDRAWAL";
               const statusColor =
-                tx.status === "COMPLETED" ? "text-aura-emerald" :
-                tx.status === "FAILED"    ? "text-aura-ruby" :
+                tx.status === "COMPLETED" || tx.status === "APPROVED"  ? "text-aura-emerald" :
+                tx.status === "FAILED"    || tx.status === "REJECTED"  ? "text-aura-ruby" :
+                tx.status === "PROCESSING"                              ? "text-blue-400" :
                 "text-aura-warning";
               return (
                 <div
