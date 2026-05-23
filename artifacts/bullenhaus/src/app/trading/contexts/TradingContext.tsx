@@ -29,7 +29,7 @@ export interface TradingActions {
 const defaultState: Omit<TradingState, 'currentPrice' | 'priceChange24h' | 'priceChangePercent24h'> = {
   currentPair: 'BTCUSDT',
   currentTimeframe: '1m',
-  orderSize: '0.1',
+  orderSize: '10',
   leverage: 20,
   takeProfit: '',
   stopLoss: '',

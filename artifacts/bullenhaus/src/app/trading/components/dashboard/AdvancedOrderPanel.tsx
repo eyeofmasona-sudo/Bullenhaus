@@ -241,35 +241,72 @@ export const AdvancedOrderPanel: React.FC = () => {
         )}
 
         {/* TP / SL */}
-        <div className="grid grid-cols-2 gap-4">
-           <div>
-              <div className="flex justify-between items-end mb-2">
-                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1"><Target size={10} className="text-accent-secondary" /> {t('takeProfit')}</label>
-              </div>
-              <div className="relative">
-                 <input 
-                    type="text" 
-                    placeholder={t('none')}
-                    value={takeProfit}
-                    onChange={(e) => setTakeProfit(e.target.value)}
-                    className="w-full p-2.5 bg-[#111] border border-white/10 rounded-xl text-xs font-mono font-bold text-white focus:outline-none focus:border-accent-secondary/50 transition-all"
-                 />
-              </div>
-           </div>
-           <div>
-              <div className="flex justify-between items-end mb-2">
-                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1"><ShieldAlert size={10} className="text-accent-quaternary" /> {t('stopLoss')}</label>
-              </div>
-              <div className="relative">
-                 <input 
-                    type="text" 
-                    placeholder={t('none')}
-                    value={stopLoss}
-                    onChange={(e) => setStopLoss(e.target.value)}
-                    className="w-full p-2.5 bg-[#111] border border-white/10 rounded-xl text-xs font-mono font-bold text-white focus:outline-none focus:border-accent-quaternary/50 transition-all"
-                 />
-              </div>
-           </div>
+        <div className="space-y-3">
+          {/* Take Profit */}
+          <div>
+            <div className="flex justify-between items-end mb-1.5">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1"><Target size={10} className="text-accent-secondary" /> {t('takeProfit')}</label>
+              {takeProfit && <button onClick={() => setTakeProfit('')} className="text-[9px] text-slate-600 hover:text-slate-400 transition-colors">Clear</button>}
+            </div>
+            <div className="flex gap-1 mb-1.5">
+              {[0.5, 1, 2, 5].map(pct => {
+                const price = currentPrice ? (currentPrice * (1 + pct / 100)).toFixed(2) : '';
+                const active = takeProfit === price;
+                return (
+                  <button
+                    key={pct}
+                    onClick={() => setTakeProfit(active ? '' : price)}
+                    className={`flex-1 py-1 rounded-lg text-[9px] font-bold border transition-all ${active ? 'bg-accent-secondary/20 border-accent-secondary/50 text-accent-secondary' : 'bg-white/5 border-white/10 text-slate-500 hover:text-accent-secondary hover:border-accent-secondary/30'}`}
+                  >
+                    +{pct}%
+                  </button>
+                );
+              })}
+            </div>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder={t('none')}
+                value={takeProfit}
+                onChange={(e) => setTakeProfit(e.target.value)}
+                className="w-full p-2.5 bg-[#111] border border-white/10 rounded-xl text-xs font-mono font-bold text-white focus:outline-none focus:border-accent-secondary/50 transition-all pr-14"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-bold text-slate-600">USDT</span>
+            </div>
+          </div>
+
+          {/* Stop Loss */}
+          <div>
+            <div className="flex justify-between items-end mb-1.5">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1"><ShieldAlert size={10} className="text-accent-quaternary" /> {t('stopLoss')}</label>
+              {stopLoss && <button onClick={() => setStopLoss('')} className="text-[9px] text-slate-600 hover:text-slate-400 transition-colors">Clear</button>}
+            </div>
+            <div className="flex gap-1 mb-1.5">
+              {[0.5, 1, 2, 5].map(pct => {
+                const price = currentPrice ? (currentPrice * (1 - pct / 100)).toFixed(2) : '';
+                const active = stopLoss === price;
+                return (
+                  <button
+                    key={pct}
+                    onClick={() => setStopLoss(active ? '' : price)}
+                    className={`flex-1 py-1 rounded-lg text-[9px] font-bold border transition-all ${active ? 'bg-accent-quaternary/20 border-accent-quaternary/50 text-accent-quaternary' : 'bg-white/5 border-white/10 text-slate-500 hover:text-accent-quaternary hover:border-accent-quaternary/30'}`}
+                  >
+                    -{pct}%
+                  </button>
+                );
+              })}
+            </div>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder={t('none')}
+                value={stopLoss}
+                onChange={(e) => setStopLoss(e.target.value)}
+                className="w-full p-2.5 bg-[#111] border border-white/10 rounded-xl text-xs font-mono font-bold text-white focus:outline-none focus:border-accent-quaternary/50 transition-all pr-14"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-bold text-slate-600">USDT</span>
+            </div>
+          </div>
         </div>
 
         {/* Risk & Liquidation Info */}
