@@ -2,6 +2,13 @@ import React, { Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet, Link } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 
+// Legal Pages
+import { ContactCompliance } from './app/trading/pages/legal/ContactCompliance';
+import { TermsOfService }    from './app/trading/pages/legal/TermsOfService';
+import { PrivacyPolicy }     from './app/trading/pages/legal/PrivacyPolicy';
+import { AMLPolicy }         from './app/trading/pages/legal/AMLPolicy';
+import { CorporateData }     from './app/trading/pages/legal/CorporateData';
+
 // Guards & Contexts
 import { AuthProvider, useAuth } from './app/trading/contexts/AuthContext';
 import { AuthGuard } from './components/guards/AuthGuard';
@@ -210,6 +217,15 @@ const AppContent = () => {
               </Route>
             </Route>
           </Route>
+
+          {/* ==========================================
+              LEGAL PAGES (Public)
+             ========================================== */}
+          <Route path="/legal/contact"  element={<React.Suspense fallback={<Fallback />}><ContactCompliance /></React.Suspense>} />
+          <Route path="/legal/terms"    element={<React.Suspense fallback={<Fallback />}><TermsOfService /></React.Suspense>} />
+          <Route path="/legal/privacy"  element={<React.Suspense fallback={<Fallback />}><PrivacyPolicy /></React.Suspense>} />
+          <Route path="/legal/aml"      element={<React.Suspense fallback={<Fallback />}><AMLPolicy /></React.Suspense>} />
+          <Route path="/legal/corporate" element={<React.Suspense fallback={<Fallback />}><CorporateData /></React.Suspense>} />
 
           {/* Catch-all */}
           <Route path="*" element={<NotFoundPage />} />
