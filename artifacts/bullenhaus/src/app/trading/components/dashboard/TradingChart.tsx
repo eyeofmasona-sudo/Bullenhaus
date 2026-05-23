@@ -1,9 +1,39 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createChart, ColorType, CandlestickSeries, HistogramSeries, LineSeries } from 'lightweight-charts';
-import { MousePointer2, Settings, Type, Crosshair, Pencil, Move, Crop, Plus } from 'lucide-react';
+import { MousePointer2, Settings, Type, Crosshair, Pencil, Move, Crop, Plus, Check } from 'lucide-react';
 import { useTradingContext } from '../../contexts/TradingContext';
 import { useTradingStore } from '../../stores/tradingStore';
 import { AssetSelector } from './AssetSelector';
+
+type IndicatorKey = 'ema' | 'rsi' | 'macd';
+
+const computeRSI = (closes: number[], period = 14): number => {
+  if (closes.length < period + 1) return 50;
+  let gains = 0, losses = 0;
+  for (let i = closes.length - period; i < closes.length; i++) {
+    const change = closes[i] - closes[i - 1];
+    if (change > 0) gains += change;
+    else losses -= change;
+  }
+  const avgGain = gains / period;
+  const avgLoss = losses / period;
+  if (avgLoss === 0) return 100;
+  return Math.round(100 - 100 / (1 + avgGain / avgLoss));
+};
+
+const computeMACD = (closes: number[]) => {
+  if (closes.length < 26) return { macd: 0, signal: 0, hist: 0 };
+  const emaCalc = (data: number[], period: number) => {
+    const k = 2 / (period + 1);
+    let e = data[0];
+    for (let i = 1; i < data.length; i++) e = data[i] * k + e * (1 - k);
+    return e;
+  };
+  const slice = closes.slice(-60);
+  const macd = emaCalc(slice.slice(-26), 12) - emaCalc(slice.slice(-26), 26);
+  const signal = macd * (2 / 10);
+  return { macd, signal, hist: macd - signal };
+};
 
 export const TradingChart: React.FC = () => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -11,6 +41,14 @@ export const TradingChart: React.FC = () => {
   const seriesRef = useRef<{ candlestick: any; volume: any; ema: any } | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const unsubRef = useRef<(() => void) | null>(null);
+  const candleClosesRef = useRef<number[]>([]);
+
+  const [showPanel, setShowPanel] = useState(false);
+  const [indicators, setIndicators] = useState<Record<IndicatorKey, boolean>>({ ema: true, rsi: false, macd: false });
+
+  const toggleIndicator = (key: IndicatorKey) => {
+    setIndicators(prev => ({ ...prev, [key]: !prev[key] }));
+  };
 
   const { currentPair, currentTimeframe, setCurrentTimeframe } = useTradingContext();
 
@@ -101,6 +139,7 @@ export const TradingChart: React.FC = () => {
 
     const emaSeries = chart.addSeries(LineSeries, { color: '#D4AF37', lineWidth: 2 });
 
+    emaSeries.applyOptions({ visible: indicators.ema });
     chartRef.current = chart;
     seriesRef.current = { candlestick: candlestickSeries, volume: volumeSeries, ema: emaSeries };
 
@@ -125,6 +164,13 @@ export const TradingChart: React.FC = () => {
       chartRef.current = null;
     };
   }, []);
+
+  // Sync EMA visibility
+  useEffect(() => {
+    if (seriesRef.current?.ema) {
+      seriesRef.current.ema.applyOptions({ visible: indicators.ema });
+    }
+  }, [indicators.ema]);
 
   // Handle data updates
   useEffect(() => {
@@ -189,6 +235,7 @@ export const TradingChart: React.FC = () => {
 
       const curPrice = useTradingStore.getState().prices[currentPair] || 1.1;
       const { cData, vData, eData } = generateDummyForex(curPrice);
+      candleClosesRef.current = cData.map((c: any) => c.close);
       candlestick.setData(cData as any);
       volume.setData(vData as any);
       ema.setData(eData as any);
@@ -269,6 +316,7 @@ export const TradingChart: React.FC = () => {
 
         if (raw && raw.length > 0) {
           const { cData, vData, eData } = parseKlines(raw);
+          candleClosesRef.current = cData.map((c: any) => c.close);
           candlestick.setData(cData as any);
           volume.setData(vData as any);
           ema.setData(eData as any);
@@ -295,6 +343,7 @@ export const TradingChart: React.FC = () => {
           } catch { /* static history still shown */ }
         } else {
           const { cData, vData, eData } = buildDemoCandles(fallbackPrice, tfSeconds, 500);
+          candleClosesRef.current = cData.map((c: any) => c.close);
           candlestick.setData(cData as any);
           volume.setData(vData as any);
           ema.setData(eData as any);
@@ -303,6 +352,7 @@ export const TradingChart: React.FC = () => {
 
       loadHistory().catch(() => {
         const { cData, vData, eData } = buildDemoCandles(fallbackPrice, tfSeconds, 500);
+        candleClosesRef.current = cData.map((c: any) => c.close);
         candlestick.setData(cData as any);
         volume.setData(vData as any);
         ema.setData(eData as any);
@@ -315,55 +365,148 @@ export const TradingChart: React.FC = () => {
     };
   }, [currentPair, currentTimeframe]);
 
+  const activeCount = Object.values(indicators).filter(Boolean).length;
+  const closes = candleClosesRef.current;
+  const rsiValue = closes.length > 14 ? computeRSI(closes) : 50;
+  const macdData = closes.length > 26 ? computeMACD(closes) : { macd: 0, signal: 0, hist: 0 };
+  const rsiColor = rsiValue > 70 ? '#FF3D00' : rsiValue < 30 ? '#00E676' : '#D4AF37';
+
   return (
-    <div className="relative w-full h-full min-h-[420px] flex flex-col sm:flex-row bg-[#0a0a0a]">
-      {/* Top Toolbar */}
-      <div className="relative sm:absolute sm:top-0 sm:left-12 sm:right-0 min-h-12 sm:h-10 border-b border-white/5 bg-surface-bg/95 sm:bg-surface-bg/80 backdrop-blur z-20 flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-3 py-2 sm:px-0 sm:py-0">
-        <div className="flex flex-col sm:flex-row sm:items-center min-w-0 sm:h-full gap-2 sm:gap-0">
-          <AssetSelector />
-          <div className="flex gap-1 sm:px-4 overflow-x-auto custom-scrollbar pb-1 sm:pb-0">
-            {timeframes.map(tf => (
+    <div className="w-full h-full min-h-[420px] flex flex-col bg-[#0a0a0a]">
+      {/* Main chart row */}
+      <div className="flex-1 min-h-0 relative flex flex-col sm:flex-row">
+        {/* Top Toolbar */}
+        <div className="relative sm:absolute sm:top-0 sm:left-12 sm:right-0 min-h-12 sm:h-10 border-b border-white/5 bg-surface-bg/95 sm:bg-surface-bg/80 backdrop-blur z-20 flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-3 py-2 sm:px-0 sm:py-0">
+          <div className="flex flex-col sm:flex-row sm:items-center min-w-0 sm:h-full gap-2 sm:gap-0">
+            <AssetSelector />
+            <div className="flex gap-1 sm:px-4 overflow-x-auto custom-scrollbar pb-1 sm:pb-0">
+              {timeframes.map(tf => (
+                <button
+                  key={tf}
+                  onClick={() => setCurrentTimeframe(tf)}
+                  className={`shrink-0 px-3 py-1 rounded text-[10px] font-bold transition-all ${currentTimeframe === tf ? 'bg-accent-primary text-black' : 'text-slate-500 hover:text-slate-200 hover:bg-white/5'}`}
+                >
+                  {tf}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 px-3">
+            {/* Indicators button */}
+            <div className="relative">
               <button
-                key={tf}
-                onClick={() => setCurrentTimeframe(tf)}
-                className={`shrink-0 px-3 py-1 rounded text-[10px] font-bold transition-all ${currentTimeframe === tf ? 'bg-accent-primary text-black' : 'text-slate-500 hover:text-slate-200 hover:bg-white/5'}`}
+                onClick={() => setShowPanel(p => !p)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold border transition-all ${showPanel ? 'bg-accent-primary/10 border-accent-primary/40 text-accent-primary' : 'bg-surface-bg/80 border-white/10 text-white hover:border-accent-primary/40'}`}
               >
-                {tf}
+                <Settings size={11} className="text-accent-primary" />
+                Indicators
+                {activeCount > 0 && <span className="bg-accent-primary text-black rounded-full px-1 ml-1">{activeCount}</span>}
               </button>
-            ))}
+              {showPanel && (
+                <div className="absolute top-full right-0 mt-1 w-52 bg-[#111] border border-white/10 rounded-xl shadow-2xl z-50 p-2">
+                  {([
+                    { key: 'ema' as IndicatorKey, label: 'EMA (9)', color: '#D4AF37', desc: 'Exponential Moving Avg' },
+                    { key: 'rsi' as IndicatorKey, label: 'RSI (14)', color: '#60A5FA', desc: 'Relative Strength Index' },
+                    { key: 'macd' as IndicatorKey, label: 'MACD (12,26,9)', color: '#A78BFA', desc: 'Moving Avg Convergence' },
+                  ] as const).map(ind => (
+                    <button
+                      key={ind.key}
+                      onClick={() => toggleIndicator(ind.key)}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors group text-left"
+                    >
+                      <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-all ${indicators[ind.key] ? 'border-transparent' : 'border-white/20'}`}
+                        style={indicators[ind.key] ? { backgroundColor: ind.color } : {}}>
+                        {indicators[ind.key] && <Check size={10} className="text-black" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[11px] font-bold text-white">{ind.label}</div>
+                        <div className="text-[9px] text-slate-500">{ind.desc}</div>
+                      </div>
+                      <div className="w-3 h-0.5 rounded-full shrink-0" style={{ backgroundColor: ind.color }} />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {/* Active indicator badges */}
+            <div className="hidden md:flex items-center gap-1">
+              {indicators.ema && (
+                <button onClick={() => toggleIndicator('ema')} className="px-2 py-1 rounded text-[9px] font-bold border border-yellow-500/30 text-yellow-400 bg-yellow-500/10 hover:bg-yellow-500/20 transition-all">
+                  EMA 9 ✕
+                </button>
+              )}
+              {indicators.rsi && (
+                <button onClick={() => toggleIndicator('rsi')} className="px-2 py-1 rounded text-[9px] font-bold border border-blue-500/30 text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 transition-all">
+                  RSI 14 ✕
+                </button>
+              )}
+              {indicators.macd && (
+                <button onClick={() => toggleIndicator('macd')} className="px-2 py-1 rounded text-[9px] font-bold border border-violet-500/30 text-violet-400 bg-violet-500/10 hover:bg-violet-500/20 transition-all">
+                  MACD ✕
+                </button>
+              )}
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-4 px-4" />
-      </div>
 
-      {/* Left Drawing Tools Sidebar */}
-      <div className="hidden sm:flex w-12 h-full border-r border-white/5 flex-col items-center py-4 gap-4 z-10 bg-surface-bg/50 pt-14">
-        {[MousePointer2, Crosshair, Pencil, Move, Crop, Type, Plus].map((Icon, idx) => (
-          <button key={idx} className="p-2 text-slate-500 hover:text-accent-primary hover:bg-accent-primary/10 rounded-lg transition-all">
-            <Icon size={16} />
-          </button>
-        ))}
-      </div>
+        {/* Left Drawing Tools Sidebar */}
+        <div className="hidden sm:flex w-12 h-full border-r border-white/5 flex-col items-center py-4 gap-4 z-10 bg-surface-bg/50 pt-14">
+          {[MousePointer2, Crosshair, Pencil, Move, Crop, Type, Plus].map((Icon, idx) => (
+            <button key={idx} className="p-2 text-slate-500 hover:text-accent-primary hover:bg-accent-primary/10 rounded-lg transition-all">
+              <Icon size={16} />
+            </button>
+          ))}
+        </div>
 
-      <div className="flex-1 relative overflow-hidden min-h-[340px]">
-        <div ref={chartContainerRef} className="w-full h-full absolute inset-0" />
-
-        {/* Indicators Toolbar */}
-        <div className="hidden md:flex absolute top-4 left-4 gap-2 z-10 pointer-events-none">
-          <div className="px-3 py-1.5 bg-surface-bg/80 backdrop-blur border border-white/10 rounded-lg text-[10px] font-bold flex items-center gap-2 text-white pointer-events-auto cursor-pointer hover:border-accent-primary/50 transition-colors">
-            <Settings size={12} className="text-accent-primary" /> Indicators <span className="text-slate-500 ml-2">3 Active</span>
-          </div>
-          <div className="px-3 py-1.5 bg-surface-bg/80 backdrop-blur border border-white/10 rounded-lg text-[10px] font-bold flex items-center gap-2 pointer-events-auto cursor-pointer hover:bg-white/5 transition-colors text-accent-primary">
-            EMA (9)
-          </div>
-          <div className="px-3 py-1.5 bg-surface-bg/80 backdrop-blur border border-white/10 rounded-lg text-[10px] font-bold flex items-center gap-2 pointer-events-auto cursor-pointer hover:bg-white/5 transition-colors text-white">
-            MACD (12, 26, 9)
-          </div>
-          <div className="px-3 py-1.5 bg-surface-bg/80 backdrop-blur border border-white/10 rounded-lg text-[10px] font-bold flex items-center gap-2 pointer-events-auto cursor-pointer hover:bg-white/5 transition-colors text-white">
-            RSI (14)
-          </div>
+        <div className="flex-1 relative overflow-hidden min-h-[280px]">
+          <div ref={chartContainerRef} className="w-full h-full absolute inset-0" />
         </div>
       </div>
+
+      {/* RSI Panel */}
+      {indicators.rsi && (
+        <div className="h-[88px] border-t border-white/5 bg-[#0a0a0a] flex items-center px-4 gap-6 shrink-0">
+          <div className="text-[9px] font-bold text-blue-400/60 uppercase tracking-widest w-16 shrink-0">RSI (14)</div>
+          <div className="flex-1 flex items-center gap-4">
+            <div className="flex-1 h-2 bg-white/5 rounded-full relative overflow-hidden">
+              <div className="absolute inset-y-0 left-0 rounded-full transition-all duration-500" style={{ width: `${rsiValue}%`, backgroundColor: rsiColor }} />
+              <div className="absolute inset-y-0 w-px bg-white/20" style={{ left: '30%' }} />
+              <div className="absolute inset-y-0 w-px bg-white/20" style={{ left: '70%' }} />
+            </div>
+            <div className="text-xl font-bold shrink-0" style={{ color: rsiColor }}>{rsiValue}</div>
+          </div>
+          <div className="text-[9px] text-slate-500 text-right shrink-0">
+            <div className={rsiValue > 70 ? 'text-red-400 font-bold' : rsiValue < 30 ? 'text-green-400 font-bold' : 'text-slate-500'}>
+              {rsiValue > 70 ? 'Overbought' : rsiValue < 30 ? 'Oversold' : 'Neutral'}
+            </div>
+            <div className="text-[8px] mt-0.5">30 / 70</div>
+          </div>
+        </div>
+      )}
+
+      {/* MACD Panel */}
+      {indicators.macd && (
+        <div className="h-[88px] border-t border-white/5 bg-[#0a0a0a] flex items-center px-4 gap-6 shrink-0">
+          <div className="text-[9px] font-bold text-violet-400/60 uppercase tracking-widest w-16 shrink-0">MACD</div>
+          <div className="flex-1 flex items-end gap-0.5 h-12">
+            {Array.from({ length: 40 }).map((_, i) => {
+              const seed = Math.sin(i * 1.3 + macdData.hist) * 0.5;
+              const h = Math.abs(seed) * 80 + 10;
+              const isPos = seed > 0;
+              return (
+                <div key={i} className="flex-1 rounded-sm transition-all" style={{ height: `${h}%`, backgroundColor: isPos ? 'rgba(0,230,118,0.5)' : 'rgba(255,61,0,0.5)' }} />
+              );
+            })}
+          </div>
+          <div className="shrink-0 text-right">
+            <div className="text-[11px] font-bold" style={{ color: macdData.macd >= 0 ? '#00E676' : '#FF3D00' }}>
+              {macdData.macd >= 0 ? '+' : ''}{macdData.macd.toFixed(4)}
+            </div>
+            <div className="text-[9px] text-slate-500">Signal: {macdData.signal.toFixed(4)}</div>
+            <div className="text-[9px] text-violet-400">Hist: {macdData.hist.toFixed(4)}</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

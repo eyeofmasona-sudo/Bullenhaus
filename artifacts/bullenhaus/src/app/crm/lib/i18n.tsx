@@ -256,12 +256,13 @@ const LanguageContext = createContext<{
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(() => {
-    const saved = localStorage.getItem("aura_locale");
+    const saved = localStorage.getItem("i18n-lang") || localStorage.getItem("aura_locale");
     return saved === "de" ? "de" : "en";
   });
 
   const value = useMemo(() => {
     const setLocale = (next: Locale) => {
+      localStorage.setItem("i18n-lang", next);
       localStorage.setItem("aura_locale", next);
       setLocaleState(next);
     };
