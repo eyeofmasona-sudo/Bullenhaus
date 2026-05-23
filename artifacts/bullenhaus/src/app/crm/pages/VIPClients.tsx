@@ -2,9 +2,10 @@ import React, { useState, useEffect } from "react";
 import {
   Search, MoreVertical, ShieldAlert, Star, Phone, Mail, ChevronRight,
   LayoutList, CheckCircle2, AlertTriangle, TrendingUp, ArrowDownLeft,
-  ArrowUpRight, Loader2, AlertCircle, DollarSign, Clock, ShieldCheck
+  ArrowUpRight, Loader2, AlertCircle, DollarSign, Clock, ShieldCheck, Globe
 } from "lucide-react";
 import { usePhoneDialer } from "../contexts/PhoneDialerContext";
+import { useAuth } from "../../trading/contexts/AuthContext";
 import { Button } from "../components/ui/Button";
 import { Drawer } from "../components/ui/Drawer";
 import { EmptyState } from "../components/ui/EmptyState";
@@ -278,6 +279,8 @@ export function VIPClientsPage() {
 export function VIPClients({ vipOnly = false }: { vipOnly?: boolean }) {
   const { t } = useI18n();
   const { openDialer } = usePhoneDialer();
+  const { role } = useAuth();
+  const isAgent = role === 'agent';
   const [search, setSearch] = useState("");
   const [filterTier, setFilterTier] = useState<string | null>(null);
   const [selectedClient, setSelectedClient] = useState<CRMClient | null>(null);
@@ -339,6 +342,7 @@ export function VIPClients({ vipOnly = false }: { vipOnly?: boolean }) {
             <ClientCard
               key={c.id}
               client={c}
+              isAgent={isAgent}
               onViewProfile={() => setSelectedClient(c)}
               onCall={(phone, name, clientId) => openDialer({ phone, name, clientId })}
             />
@@ -391,7 +395,7 @@ function ClientCardSkeleton() {
   );
 }
 
-function ClientCard({ client, onViewProfile, onCall }: { client: CRMClient; onViewProfile: () => void; onCall: (phone: string, name: string, clientId: string) => void }) {
+function ClientCard({ client, onViewProfile, onCall, isAgent }: { client: CRMClient; onViewProfile: () => void; onCall: (phone: string, name: string, clientId: string) => void; isAgent: boolean }) {
   const clientName = `${client.firstName} ${client.lastName}`;
   const initials = `${client.firstName.charAt(0)}${client.lastName.charAt(0)}`.toUpperCase() || "?";
   const isNew = (Date.now() - new Date(client.createdAt).getTime()) < 48 * 60 * 60 * 1000;
@@ -437,7 +441,7 @@ function ClientCard({ client, onViewProfile, onCall }: { client: CRMClient; onVi
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mt-6 mb-6">
+      <div className="grid grid-cols-2 gap-4 mt-6 mb-3">
         <div className="bg-black/40 px-4 py-3 rounded border border-aura-gold/20">
           <div className="text-[9px] text-aura-platinum/40 uppercase tracking-[0.2em] mb-1">Balance</div>
           <div className="text-lg font-light font-mono text-aura-gold">{fmt(client.totalBalance)}</div>
@@ -450,19 +454,33 @@ function ClientCard({ client, onViewProfile, onCall }: { client: CRMClient; onVi
         </div>
       </div>
 
+      {(client.phone || client.country) && (
+        <div className="flex items-center gap-3 mb-4 text-[10px] text-aura-platinum/50">
+          {client.phone && (
+            <span className="flex items-center gap-1"><Phone className="w-3 h-3 text-aura-emerald/60" />{client.phone}</span>
+          )}
+          {client.phone && client.country && <span className="text-aura-platinum/20">·</span>}
+          {client.country && (
+            <span className="flex items-center gap-1"><Globe className="w-3 h-3 text-aura-platinum/30" />{client.country}</span>
+          )}
+        </div>
+      )}
+
       <div className="flex items-center gap-2 border-t border-glass-border pt-4">
-        <Button
-          variant="secondary"
-          className="flex-1 text-[10px]"
-          onClick={() => {
-            const phone = client.phone || client.email;
-            if (phone) onCall(phone, clientName, client.id);
-          }}
-          disabled={!client.phone}
-          title={client.phone ? `Call ${clientName}` : "No phone number on file"}
-        >
-          <Phone className="w-3.5 h-3.5" /> {client.phone ? "Call" : "No phone"}
-        </Button>
+        {isAgent && (
+          <Button
+            variant="secondary"
+            className="flex-1 text-[10px]"
+            onClick={() => {
+              const phone = client.phone || client.email;
+              if (phone) onCall(phone, clientName, client.id);
+            }}
+            disabled={!client.phone}
+            title={client.phone ? `Call ${clientName}` : "No phone number on file"}
+          >
+            <Phone className="w-3.5 h-3.5" /> {client.phone ? "Call" : "No phone"}
+          </Button>
+        )}
         <Button variant="secondary" className="flex-1 text-[10px]">
           <Mail className="w-3.5 h-3.5" /> Email
         </Button>

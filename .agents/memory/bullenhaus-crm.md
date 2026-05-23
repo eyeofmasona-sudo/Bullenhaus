@@ -55,6 +55,18 @@ description: Supabase project details, account roster, DB tables, and key decisi
 - The unified `src/App.tsx` is the only entry point now; the old `app/crm/main.tsx` is dead. The CRM wrapper in `App.tsx` MUST wrap its `<Outlet>` in `<LanguageProvider>`, otherwise every `/crm/*` route renders a black screen + React error boundary.
 - **Why:** standalone CRM entry used to mount the provider; when migrating to the unified router that wiring was easy to miss. Same pattern applies to any future hooks that throw without their provider — check provider mounting whenever adding a CRM page.
 
+## users table — extended columns (migration 12)
+- Added: `first_name text`, `last_name text`, `country text` to `public.users`
+- Added: `public.telephony_numbers` table (id, phone_number, label, provider, assigned_agent_id, is_active) with RLS: admin/director full CRUD, agents SELECT own
+- `useClients.ts` mapUser prefers explicit `first_name`/`last_name` over splitting `full_name`
+- Register.tsx now collects first_name, last_name, country, phone — upserts into users table after signUp
+
+## Telephony role-based access
+- `PhoneDialerProvider` requires `role` prop; only renders `<PhoneDialer>` + `openDialer` for role='agent'
+- Call buttons in VIPClients and AgentWorkspace are hidden for non-agent roles via `isAgent` prop
+- Admin/Director get `/crm/telephony` (TelephonySettings.tsx) — manage numbers, assign to agents
+- Agent gets `/crm/my-clients` (AgentClients.tsx) — their assigned clients only, no KYC tab
+
 ## useWalletSync — read Supabase directly
 - `useWalletSync.ts` must query `supabase.from('users').select('balance, realized_pnl, margin_used')` directly (not via any `profile` variable). An earlier version referenced an undefined `profile` and silently caught the ReferenceError, leaving wallet stuck at 0.
 - **Why:** there's no in-scope `profile`/`useProfile` context in trading; the source of truth is the Supabase `users` row keyed by `auth.user.id`.

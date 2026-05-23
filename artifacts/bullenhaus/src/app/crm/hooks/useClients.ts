@@ -7,6 +7,7 @@ export interface CRMClient {
   lastName: string;
   email: string;
   phone: string | null;
+  country: string | null;
   company: string | null;
   totalBalance: number;
   tier: 'Titanium' | 'Platinum' | 'Silver';
@@ -17,36 +18,31 @@ export interface CRMClient {
 }
 
 function mapUser(u: any): CRMClient {
-  const raw = u.full_name || u.email.split('@')[0];
-  const parts = raw.trim().split(/\s+/);
-  const firstName = parts[0] ?? '';
-  const lastName = parts.slice(1).join(' ') || '';
-  const balance = Number(u.balance) || 0;
+  const firstName = u.first_name?.trim() || (u.full_name || u.email.split('@')[0]).trim().split(/\s+/)[0] || '';
+  const lastName  = u.last_name?.trim()  || (u.full_name || '').trim().split(/\s+/).slice(1).join(' ') || '';
+  const balance   = Number(u.balance) || 0;
 
   const tier: CRMClient['tier'] =
     balance >= 100_000 ? 'Titanium' :
-    balance >= 10_000  ? 'Platinum' :
-    'Silver';
+    balance >= 10_000  ? 'Platinum' : 'Silver';
 
   const riskScore: CRMClient['riskScore'] =
-    balance === 0 ? 'LOW' :
-    balance < 1_000 ? 'MEDIUM' :
-    balance < 5_000 ? 'MEDIUM' :
-    'LOW';
+    balance === 0 ? 'LOW' : balance < 5_000 ? 'MEDIUM' : 'LOW';
 
   return {
     id: u.id,
     firstName,
     lastName,
-    email: u.email,
-    phone: (u.phone as string | null) ?? null,
-    company: null,
+    email:        u.email,
+    phone:        (u.phone as string | null) ?? null,
+    country:      (u.country as string | null) ?? null,
+    company:      null,
     totalBalance: balance,
     tier,
     riskScore,
-    kyc_status: u.kyc_status ?? 'PENDING',
-    updatedAt: u.updated_at ?? u.created_at,
-    createdAt: u.created_at,
+    kyc_status:   u.kyc_status ?? 'PENDING',
+    updatedAt:    u.updated_at ?? u.created_at,
+    createdAt:    u.created_at,
   };
 }
 
@@ -62,13 +58,13 @@ export function useClients(page = 1, limit = 50, search = '') {
     try {
       let q = supabase
         .from('users')
-        .select('id, email, full_name, phone, balance, kyc_status, created_at, updated_at')
+        .select('id, email, full_name, first_name, last_name, phone, country, balance, kyc_status, created_at, updated_at')
         .eq('role', 'client')
         .order('created_at', { ascending: false })
         .range((page - 1) * limit, page * limit - 1);
 
       if (search) {
-        q = q.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
+        q = q.or(`full_name.ilike.%${search}%,email.ilike.%${search}%,first_name.ilike.%${search}%,last_name.ilike.%${search}%`);
       }
 
       const { data: rows, error: dbError } = await q;

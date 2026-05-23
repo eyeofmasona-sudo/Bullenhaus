@@ -28,35 +28,38 @@ const getNavForRole = (role: string, t: (key: string) => string) => {
   switch (role) {
     case 'director':
       return [
-        { name: t('navDirectorDashboard'), href: '/crm/dashboard',  icon: LayoutDashboard },
-        { name: t('navClients'),           href: '/crm/clients',    icon: Users },
-        { name: t('navVipClients'),        href: '/crm/vip',        icon: Sparkles },
-        { name: t('navManagerDashboard'),  href: '/crm/manager',    icon: TrendingUp },
-        { name: 'Call History',            href: '/crm/calls',      icon: PhoneCall },
+        { name: t('navDirectorDashboard'), href: '/crm/dashboard',   icon: LayoutDashboard },
+        { name: t('navClients'),           href: '/crm/clients',     icon: Users },
+        { name: t('navVipClients'),        href: '/crm/vip',         icon: Sparkles },
+        { name: t('navManagerDashboard'),  href: '/crm/manager',     icon: TrendingUp },
+        { name: 'Call History',            href: '/crm/calls',       icon: PhoneCall },
+        { name: 'Telephony',               href: '/crm/telephony',   icon: Phone },
       ];
     case 'admin':
       return [
-        { name: t('navAdminPanel'),        href: '/crm/admin',      icon: Settings },
-        { name: t('navDirectorDashboard'), href: '/crm/dashboard',  icon: LayoutDashboard },
-        { name: t('navClients'),           href: '/crm/clients',    icon: Users },
-        { name: t('navVipClients'),        href: '/crm/vip',        icon: Sparkles },
-        { name: t('navManagerDashboard'),  href: '/crm/manager',    icon: TrendingUp },
-        { name: 'Call History',            href: '/crm/calls',      icon: PhoneCall },
+        { name: t('navAdminPanel'),        href: '/crm/admin',       icon: Settings },
+        { name: t('navDirectorDashboard'), href: '/crm/dashboard',   icon: LayoutDashboard },
+        { name: t('navClients'),           href: '/crm/clients',     icon: Users },
+        { name: t('navVipClients'),        href: '/crm/vip',         icon: Sparkles },
+        { name: t('navManagerDashboard'),  href: '/crm/manager',     icon: TrendingUp },
+        { name: 'Call History',            href: '/crm/calls',       icon: PhoneCall },
+        { name: 'Telephony',               href: '/crm/telephony',   icon: Phone },
       ];
     case 'manager':
       return [
-        { name: t('navManagerDashboard'), href: '/crm/manager',    icon: LayoutDashboard },
-        { name: t('navTeamPipeline'),     href: '/crm/workspace',  icon: Users },
-        { name: t('navClients'),          href: '/crm/clients',    icon: ShieldCheck },
-        { name: t('navDirectorDashboard'),href: '/crm/dashboard',  icon: PhoneCall },
-        { name: 'Call History',           href: '/crm/calls',      icon: PhoneCall },
+        { name: t('navManagerDashboard'), href: '/crm/manager',     icon: LayoutDashboard },
+        { name: t('navTeamPipeline'),     href: '/crm/workspace',   icon: Users },
+        { name: t('navClients'),          href: '/crm/clients',     icon: ShieldCheck },
+        { name: t('navDirectorDashboard'),href: '/crm/dashboard',   icon: TrendingUp },
+        { name: 'Call History',           href: '/crm/calls',       icon: PhoneCall },
       ];
     case 'agent':
       return [
-        { name: t('navAgentWorkspace'),   href: '/crm/workspace',  icon: LayoutDashboard },
-        { name: t('navClients'),          href: '/crm/clients',    icon: ShieldCheck },
-        { name: 'Call History',           href: '/crm/calls',      icon: PhoneCall },
-        { name: t('navManagerDashboard'), href: '/crm/dashboard',  icon: Phone },
+        { name: t('navAgentWorkspace'),   href: '/crm/workspace',   icon: LayoutDashboard },
+        { name: 'My Clients',             href: '/crm/my-clients',  icon: Users },
+        { name: t('navClients'),          href: '/crm/clients',     icon: ShieldCheck },
+        { name: 'Call History',           href: '/crm/calls',       icon: PhoneCall },
+        { name: t('navManagerDashboard'), href: '/crm/dashboard',   icon: TrendingUp },
       ];
     default:
       return [

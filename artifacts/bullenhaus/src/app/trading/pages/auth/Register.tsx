@@ -1,22 +1,41 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Mail, Lock, UserPlus, AlertCircle, User, CheckCircle2 } from 'lucide-react';
+import { Mail, Lock, UserPlus, AlertCircle, User, CheckCircle2, Phone, Globe, ChevronDown } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { crmService } from '../../services/crmService';
 import { getAttribution } from '../../hooks/useAttribution';
+import { COUNTRIES, type Country } from '../../../crm/data/countries';
 
 export const Register: React.FC = () => {
   const navigate = useNavigate();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+
+  const [firstName, setFirstName] = useState('');
+  const [lastName,  setLastName]  = useState('');
+  const [email,     setEmail]     = useState('');
+  const [password,  setPassword]  = useState('');
+  const [country,   setCountry]   = useState<Country | null>(null);
+  const [localPhone, setLocalPhone] = useState('');
+  const [loading,   setLoading]   = useState(false);
+  const [error,     setError]     = useState<string | null>(null);
+  const [success,   setSuccess]   = useState(false);
+
+  const fullPhone = country && localPhone.trim() ? `${country.dialCode}${localPhone.trim().replace(/^0/, '')}` : '';
+  const fullName  = `${firstName.trim()} ${lastName.trim()}`.trim();
+
+  const handleCountryChange = (code: string) => {
+    const found = COUNTRIES.find(c => c.code === code) ?? null;
+    setCountry(found);
+    setLocalPhone('');
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!firstName.trim()) { setError('First name is required.'); return; }
+    if (!lastName.trim())  { setError('Last name is required.'); return; }
+    if (!country)          { setError('Please select your country.'); return; }
+    if (!localPhone.trim()) { setError('Phone number is required.'); return; }
+
     setLoading(true);
     setError(null);
 
@@ -28,7 +47,7 @@ export const Register: React.FC = () => {
       }
 
       let userSession = null;
-      let userId = null;
+      let userId: string | null = null;
 
       try {
         const { data, error: signUpError } = await supabase.auth.signUp({
@@ -36,12 +55,18 @@ export const Register: React.FC = () => {
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/trade/dashboard`,
-            data: { full_name: name },
+            data: {
+              full_name:  fullName,
+              first_name: firstName.trim(),
+              last_name:  lastName.trim(),
+              country:    country.name,
+              phone:      fullPhone,
+            },
           },
         });
         if (signUpError) throw signUpError;
         userSession = data.session;
-        userId = data.user?.id;
+        userId = data.user?.id ?? null;
       } catch (authError: any) {
         if (authError.message?.includes('Failed to fetch') || import.meta.env.VITE_SUPABASE_URL?.includes('dummy')) {
           setSuccess(true);
@@ -50,29 +75,43 @@ export const Register: React.FC = () => {
         throw authError;
       }
 
+      // Persist extended profile to users table (works when auto-confirm is on)
+      if (userId) {
+        try {
+          await supabase.from('users').upsert({
+            id:         userId,
+            email,
+            full_name:  fullName,
+            first_name: firstName.trim(),
+            last_name:  lastName.trim(),
+            country:    country.name,
+            phone:      fullPhone,
+          }, { onConflict: 'id' });
+        } catch (_) { /* Non-fatal — trigger may handle this */ }
+      }
+
+      // Register in CRM
       try {
         const attribution = getAttribution();
-        const token = userSession?.access_token;
-        const externalTraderId = userId;
-        if (externalTraderId) {
+        if (userId) {
           await crmService.registerClient({
-            external_trader_id: externalTraderId,
-            full_name: name,
+            external_trader_id: userId,
+            full_name: fullName,
             email,
             account: {
-              external_account_id: `ACC-${externalTraderId}`,
-              platform: 'Bullenhaus',
+              external_account_id: `ACC-${userId}`,
+              platform:     'Bullenhaus',
               account_type: 'real',
-              currency: 'USD',
-              balance: 0,
-              equity: 0,
-              leverage: 100,
+              currency:     'USD',
+              balance:      0,
+              equity:       0,
+              leverage:     100,
             },
             ...(attribution ? { attribution } : {}),
-          }, token);
+          }, userSession?.access_token);
         }
-      } catch (crmError) {
-        console.error('Failed to register in CRM:', crmError);
+      } catch (_) {
+        // Non-fatal CRM error
       }
 
       if (userSession) {
@@ -95,11 +134,9 @@ export const Register: React.FC = () => {
         </div>
         <h2 className="font-serif text-2xl font-semibold text-text mb-2">Application submitted</h2>
         <p className="text-sm text-text-muted mb-6">
-          Your operator credentials are being provisioned. You can sign in right away.
+          Your account is being prepared. You can sign in shortly.
         </p>
-        <Link to="/login" className="btn-gold inline-flex">
-          Return to login
-        </Link>
+        <Link to="/login" className="btn-gold inline-flex">Return to login</Link>
       </div>
     );
   }
@@ -107,7 +144,7 @@ export const Register: React.FC = () => {
   return (
     <div className="p-8">
       <div className="mb-7">
-        <h2 className="font-serif text-2xl font-semibold text-text tracking-tight">Operator application</h2>
+        <h2 className="font-serif text-2xl font-semibold text-text tracking-tight">Create account</h2>
         <p className="text-sm text-text-muted mt-1.5">Apply for access to the Bullenhaus terminal.</p>
       </div>
 
@@ -123,49 +160,94 @@ export const Register: React.FC = () => {
       )}
 
       <form onSubmit={handleRegister} className="space-y-4">
-        <div>
-          <label className="label-eyebrow block mb-2">Display name</label>
-          <div className="relative">
-            <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" />
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="input-dark pl-11"
-              placeholder="Neon Trader"
-              required
-            />
+
+        {/* Name row */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="label-eyebrow block mb-2">First name</label>
+            <div className="relative">
+              <User size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" />
+              <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)}
+                className="input-dark pl-10 text-sm" placeholder="John" required />
+            </div>
+          </div>
+          <div>
+            <label className="label-eyebrow block mb-2">Last name</label>
+            <div className="relative">
+              <User size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" />
+              <input type="text" value={lastName} onChange={e => setLastName(e.target.value)}
+                className="input-dark pl-10 text-sm" placeholder="Smith" required />
+            </div>
           </div>
         </div>
 
+        {/* Country */}
+        <div>
+          <label className="label-eyebrow block mb-2">Country</label>
+          <div className="relative">
+            <Globe size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none z-10" />
+            <select
+              value={country?.code ?? ''}
+              onChange={e => handleCountryChange(e.target.value)}
+              className="input-dark pl-10 pr-9 appearance-none w-full cursor-pointer"
+              required
+            >
+              <option value="" disabled>Select country…</option>
+              {COUNTRIES.map(c => (
+                <option key={c.code} value={c.code}>{c.flag} {c.name}</option>
+              ))}
+            </select>
+            <ChevronDown size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" />
+          </div>
+        </div>
+
+        {/* Phone */}
+        <div>
+          <label className="label-eyebrow block mb-2">Phone number</label>
+          <div className="flex gap-2">
+            {/* Dial code badge */}
+            <div className="flex items-center gap-1.5 px-3 rounded-xl bg-black/40 border border-border text-text-muted text-sm font-mono shrink-0 min-w-[72px] justify-center select-none">
+              {country ? (
+                <span>{country.flag} {country.dialCode}</span>
+              ) : (
+                <span className="text-text-dim text-xs">+—</span>
+              )}
+            </div>
+            <div className="relative flex-1">
+              <Phone size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" />
+              <input
+                type="tel"
+                value={localPhone}
+                onChange={e => setLocalPhone(e.target.value.replace(/[^\d\s\-()]/g, ''))}
+                className="input-dark pl-10 w-full"
+                placeholder={country ? 'Enter number…' : 'Select country first'}
+                disabled={!country}
+                required
+              />
+            </div>
+          </div>
+          {fullPhone && (
+            <p className="text-[10px] text-text-dim mt-1.5 font-mono">Will be stored as: {fullPhone}</p>
+          )}
+        </div>
+
+        {/* Email */}
         <div>
           <label className="label-eyebrow block mb-2">Secure email</label>
           <div className="relative">
             <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" />
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="input-dark pl-11"
-              placeholder="operator@bullenhaus.com"
-              required
-            />
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+              className="input-dark pl-11" placeholder="you@example.com" required />
           </div>
         </div>
 
+        {/* Password */}
         <div>
           <label className="label-eyebrow block mb-2">Passphrase</label>
           <div className="relative">
             <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" />
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="input-dark pl-11"
-              placeholder="Minimum 8 characters"
-              required
-              minLength={8}
-            />
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+              className="input-dark pl-11" placeholder="Minimum 8 characters" required minLength={8} />
           </div>
         </div>
 
@@ -173,19 +255,14 @@ export const Register: React.FC = () => {
           {loading ? (
             <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
           ) : (
-            <>
-              <UserPlus size={16} />
-              Submit application
-            </>
+            <><UserPlus size={16} /> Submit application</>
           )}
         </button>
       </form>
 
       <div className="mt-7 pt-6 border-t border-border text-center text-sm text-text-muted">
-        Existing operator?{' '}
-        <Link to="/login" className="font-bold text-gold hover:text-gold-light transition-colors ml-1">
-          Initialize
-        </Link>
+        Already have an account?{' '}
+        <Link to="/login" className="font-bold text-gold hover:text-gold-light transition-colors ml-1">Sign in</Link>
       </div>
     </div>
   );
