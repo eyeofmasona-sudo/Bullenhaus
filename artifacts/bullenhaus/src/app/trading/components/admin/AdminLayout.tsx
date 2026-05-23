@@ -10,7 +10,8 @@ import {
   Menu, 
   X,
   LayoutDashboard,
-  BarChart2
+  BarChart2,
+  Briefcase
 } from 'lucide-react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -47,6 +48,7 @@ const AdminSidebarItem = ({ icon: Icon, label, to, active }: any) => (
 
 const AdminSidebar = ({ onClose }: any) => {
   const location = useLocation();
+  const { role } = useAuth();
   const currentPath = location.pathname;
 
   return (
@@ -66,12 +68,12 @@ const AdminSidebar = ({ onClose }: any) => {
         <AdminSidebarItem icon={Users} label="User Manager" to="/admin/users" active={currentPath === '/admin/users'} />
         <AdminSidebarItem icon={ShieldCheck} label="KYC Queue" to="/admin/kyc" active={currentPath === '/admin/kyc'} />
         <AdminSidebarItem icon={History} label="Deposits" to="/admin/deposits" active={currentPath === '/admin/deposits'} />
-        <AdminSidebarItem icon={History} label="Withdrawals" to="/admin/withdrawals" active={currentPath === '/admin/withdrawals'} />
+        <AdminSidebarItem icon={History} label="Withdrawals" to="/admin/withdrawals" active={currentPath === '/admin/deposits'} />
         <AdminSidebarItem icon={BarChart2} label="Market Control" to="/admin/market-control" active={currentPath === '/admin/market-control'} />
         <AdminSidebarItem icon={History} label="Transactions" to="/admin/transactions" active={currentPath === '/admin/transactions'} />
         <AdminSidebarItem icon={Settings} label="System Config" to="/admin/settings" active={currentPath === '/admin/settings'} />
 
-        {/* Zone switcher — visible for admin */}
+        {/* Zone switcher */}
         <div className="pt-3 mt-3 border-t border-rose-500/10">
           <p className="text-[9px] font-bold tracking-[0.2em] text-slate-600 uppercase px-4 mb-2">Switch Zone</p>
           <Link to="/trade/dashboard">
@@ -83,6 +85,17 @@ const AdminSidebar = ({ onClose }: any) => {
               <span className="font-bold text-xs tracking-wider uppercase">Trade Platform</span>
             </motion.div>
           </Link>
+          {role === 'admin' && (
+            <Link to="/crm/admin">
+              <motion.div
+                whileHover={{ x: 4 }}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-200 text-aura-gold/70 hover:text-aura-gold hover:bg-aura-gold/10 border border-aura-gold/0 hover:border-aura-gold/20"
+              >
+                <Briefcase size={18} />
+                <span className="font-bold text-xs tracking-wider uppercase">CRM Admin</span>
+              </motion.div>
+            </Link>
+          )}
         </div>
       </nav>
 

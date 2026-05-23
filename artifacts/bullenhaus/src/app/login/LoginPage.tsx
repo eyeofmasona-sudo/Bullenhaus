@@ -63,14 +63,14 @@ export default function LoginPage() {
         if (!userRole) {
           const { data: { user: authUser } } = await supabase.auth.getUser();
           const metaRole = authUser?.user_metadata?.role as string | undefined;
-          if (metaRole && ['client','agent','manager','director','admin'].includes(metaRole)) {
+          if (metaRole && ['client','agent','manager','director','admin','trade_admin'].includes(metaRole)) {
             userRole = metaRole as UnifiedRole;
           } else {
             userRole = 'client';
           }
         }
 
-        if (userRole === 'admin') target = '/admin/dashboard';
+        if (userRole === 'admin' || userRole === 'trade_admin') target = '/admin/dashboard';
         else if (userRole === 'agent' || userRole === 'manager' || userRole === 'director') target = '/crm/dashboard';
       }
       navigate(target, { replace: true });

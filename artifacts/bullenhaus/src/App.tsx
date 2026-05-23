@@ -182,7 +182,7 @@ const AppContent = () => {
               TRADE ADMIN ZONE
              ========================================== */}
           <Route element={<AuthGuard />}>
-            <Route element={<RoleGuard allowedRoles={['admin']} />}>
+            <Route element={<RoleGuard allowedRoles={['admin', 'trade_admin']} />}>
               <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="/admin" element={<TradeAdminLayout />}>
                 <Route path="dashboard" element={<TradeAdminOverview />} />
