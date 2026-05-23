@@ -113,8 +113,6 @@ export const AdvancedOrderPanel: React.FC = () => {
       toast.success(t('orderPlaced', { defaultValue: `${orderType} order placed` }));
     }
     
-    // reset amount
-    setAmount('0');
     setTakeProfit('');
     setStopLoss('');
   };

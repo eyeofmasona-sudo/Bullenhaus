@@ -161,7 +161,8 @@ export const KYC = () => {
                   <input
                     ref={fileInputRefs[key]}
                     type="file"
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 outline-none"
+                    style={{ WebkitTapHighlightColor: 'transparent' }}
                     accept={camera ? 'image/*' : 'image/*,.pdf'}
                     {...(camera ? { capture: 'user' as const } : {})}
                     onChange={e => handleFile(key, e)}

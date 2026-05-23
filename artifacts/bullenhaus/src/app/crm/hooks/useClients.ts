@@ -115,7 +115,7 @@ export function useClients(page = 1, limit = 50, search = '') {
 export interface ClientTransaction {
   id: string;
   type: 'DEPOSIT' | 'WITHDRAWAL' | 'TRADE';
-  status: 'PENDING' | 'COMPLETED' | 'FAILED';
+  status: 'PENDING' | 'COMPLETED' | 'FAILED' | 'APPROVED' | 'REJECTED' | 'PROCESSING';
   amount: number;
   created_at: string;
 }
