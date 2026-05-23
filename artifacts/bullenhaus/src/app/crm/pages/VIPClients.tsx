@@ -4,6 +4,7 @@ import {
   LayoutList, CheckCircle2, AlertTriangle, TrendingUp, ArrowDownLeft,
   ArrowUpRight, Loader2, AlertCircle, DollarSign, Clock, ShieldCheck
 } from "lucide-react";
+import { PhoneDialer } from "../components/PhoneDialer";
 import { Button } from "../components/ui/Button";
 import { Drawer } from "../components/ui/Drawer";
 import { EmptyState } from "../components/ui/EmptyState";
@@ -279,6 +280,7 @@ export function VIPClients({ vipOnly = false }: { vipOnly?: boolean }) {
   const [search, setSearch] = useState("");
   const [filterTier, setFilterTier] = useState<string | null>(null);
   const [selectedClient, setSelectedClient] = useState<CRMClient | null>(null);
+  const [dialerPrefill, setDialerPrefill] = useState<{ phone: string; name?: string; clientId?: string } | null>(null);
 
   const { clients, loading: isLoading, error } = useClients(1, 100, search);
 
@@ -334,7 +336,12 @@ export function VIPClients({ vipOnly = false }: { vipOnly?: boolean }) {
       ) : filteredClients.length > 0 ? (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           {filteredClients.map(c => (
-            <ClientCard key={c.id} client={c} onViewProfile={() => setSelectedClient(c)} />
+            <ClientCard
+              key={c.id}
+              client={c}
+              onViewProfile={() => setSelectedClient(c)}
+              onCall={(phone, name, clientId) => setDialerPrefill({ phone, name, clientId })}
+            />
           ))}
         </div>
       ) : (
@@ -349,6 +356,7 @@ export function VIPClients({ vipOnly = false }: { vipOnly?: boolean }) {
       )}
 
       <ClientDrawer isOpen={!!selectedClient} onClose={() => setSelectedClient(null)} client={selectedClient} />
+      <PhoneDialer prefill={dialerPrefill} onClearPrefill={() => setDialerPrefill(null)} />
     </div>
   );
 }
@@ -384,7 +392,7 @@ function ClientCardSkeleton() {
   );
 }
 
-function ClientCard({ client, onViewProfile }: { client: CRMClient; onViewProfile: () => void }) {
+function ClientCard({ client, onViewProfile, onCall }: { client: CRMClient; onViewProfile: () => void; onCall: (phone: string, name: string, clientId: string) => void }) {
   const clientName = `${client.firstName} ${client.lastName}`;
   const initials = `${client.firstName.charAt(0)}${client.lastName.charAt(0)}`.toUpperCase() || "?";
   const isNew = (Date.now() - new Date(client.createdAt).getTime()) < 48 * 60 * 60 * 1000;
@@ -444,8 +452,17 @@ function ClientCard({ client, onViewProfile }: { client: CRMClient; onViewProfil
       </div>
 
       <div className="flex items-center gap-2 border-t border-glass-border pt-4">
-        <Button variant="secondary" className="flex-1 text-[10px]">
-          <Phone className="w-3.5 h-3.5" /> Call
+        <Button
+          variant="secondary"
+          className="flex-1 text-[10px]"
+          onClick={() => {
+            const phone = client.phone || client.email;
+            if (phone) onCall(phone, clientName, client.id);
+          }}
+          disabled={!client.phone}
+          title={client.phone ? `Call ${clientName}` : "No phone number on file"}
+        >
+          <Phone className="w-3.5 h-3.5" /> {client.phone ? "Call" : "No phone"}
         </Button>
         <Button variant="secondary" className="flex-1 text-[10px]">
           <Mail className="w-3.5 h-3.5" /> Email

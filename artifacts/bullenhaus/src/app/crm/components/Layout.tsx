@@ -5,7 +5,8 @@ import {
   Building2, 
   LayoutDashboard, 
   Users, 
-  PhoneCall, 
+  PhoneCall,
+  Phone,
   Sparkles, 
   Settings, 
   ShieldCheck,
@@ -27,18 +28,20 @@ const getNavForRole = (role: string, t: (key: string) => string) => {
   switch (role) {
     case 'director':
       return [
-        { name: t('navDirectorDashboard'), href: '/crm/dashboard', icon: LayoutDashboard },
-        { name: t('navClients'),           href: '/crm/clients',   icon: Users },
-        { name: t('navVipClients'),        href: '/crm/vip',       icon: Sparkles },
-        { name: t('navManagerDashboard'),  href: '/crm/manager',   icon: TrendingUp },
+        { name: t('navDirectorDashboard'), href: '/crm/dashboard',  icon: LayoutDashboard },
+        { name: t('navClients'),           href: '/crm/clients',    icon: Users },
+        { name: t('navVipClients'),        href: '/crm/vip',        icon: Sparkles },
+        { name: t('navManagerDashboard'),  href: '/crm/manager',    icon: TrendingUp },
+        { name: 'Call History',            href: '/crm/calls',      icon: PhoneCall },
       ];
     case 'admin':
       return [
-        { name: t('navAdminPanel'),        href: '/crm/admin',     icon: Settings },
-        { name: t('navDirectorDashboard'), href: '/crm/dashboard', icon: LayoutDashboard },
-        { name: t('navClients'),           href: '/crm/clients',   icon: Users },
-        { name: t('navVipClients'),        href: '/crm/vip',       icon: Sparkles },
-        { name: t('navManagerDashboard'),  href: '/crm/manager',   icon: TrendingUp },
+        { name: t('navAdminPanel'),        href: '/crm/admin',      icon: Settings },
+        { name: t('navDirectorDashboard'), href: '/crm/dashboard',  icon: LayoutDashboard },
+        { name: t('navClients'),           href: '/crm/clients',    icon: Users },
+        { name: t('navVipClients'),        href: '/crm/vip',        icon: Sparkles },
+        { name: t('navManagerDashboard'),  href: '/crm/manager',    icon: TrendingUp },
+        { name: 'Call History',            href: '/crm/calls',      icon: PhoneCall },
       ];
     case 'manager':
       return [
@@ -46,12 +49,14 @@ const getNavForRole = (role: string, t: (key: string) => string) => {
         { name: t('navTeamPipeline'),     href: '/crm/workspace',  icon: Users },
         { name: t('navClients'),          href: '/crm/clients',    icon: ShieldCheck },
         { name: t('navDirectorDashboard'),href: '/crm/dashboard',  icon: PhoneCall },
+        { name: 'Call History',           href: '/crm/calls',      icon: PhoneCall },
       ];
     case 'agent':
       return [
         { name: t('navAgentWorkspace'),   href: '/crm/workspace',  icon: LayoutDashboard },
         { name: t('navClients'),          href: '/crm/clients',    icon: ShieldCheck },
-        { name: t('navManagerDashboard'), href: '/crm/dashboard',  icon: PhoneCall },
+        { name: 'Call History',           href: '/crm/calls',      icon: PhoneCall },
+        { name: t('navManagerDashboard'), href: '/crm/dashboard',  icon: Phone },
       ];
     default:
       return [
