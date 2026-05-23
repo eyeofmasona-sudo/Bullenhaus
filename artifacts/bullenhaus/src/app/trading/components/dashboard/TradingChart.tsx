@@ -5,7 +5,31 @@ import { useTradingContext } from '../../contexts/TradingContext';
 import { useTradingStore } from '../../stores/tradingStore';
 import { AssetSelector } from './AssetSelector';
 
-type IndicatorKey = 'ema' | 'rsi' | 'macd';
+type IndicatorKey = 'ema' | 'rsi' | 'macd' | 'sma' | 'bb';
+
+type CandlePoint = { time: number; open: number; high: number; low: number; close: number };
+
+const computeSMAData = (candles: CandlePoint[], period = 20) => {
+  const result: { time: number; value: number }[] = [];
+  for (let i = period - 1; i < candles.length; i++) {
+    const sum = candles.slice(i - period + 1, i + 1).reduce((a, c) => a + c.close, 0);
+    result.push({ time: candles[i].time, value: sum / period });
+  }
+  return result;
+};
+
+const computeBBData = (candles: CandlePoint[], period = 20, mult = 2) => {
+  const upper: { time: number; value: number }[] = [];
+  const lower: { time: number; value: number }[] = [];
+  for (let i = period - 1; i < candles.length; i++) {
+    const slice = candles.slice(i - period + 1, i + 1);
+    const mean = slice.reduce((a, c) => a + c.close, 0) / period;
+    const std = Math.sqrt(slice.reduce((a, c) => a + (c.close - mean) ** 2, 0) / period);
+    upper.push({ time: candles[i].time, value: mean + mult * std });
+    lower.push({ time: candles[i].time, value: mean - mult * std });
+  }
+  return { upper, lower };
+};
 
 const computeRSI = (closes: number[], period = 14): number => {
   if (closes.length < period + 1) return 50;
@@ -38,13 +62,14 @@ const computeMACD = (closes: number[]) => {
 export const TradingChart: React.FC = () => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<any>(null);
-  const seriesRef = useRef<{ candlestick: any; volume: any; ema: any } | null>(null);
+  const seriesRef = useRef<{ candlestick: any; volume: any; ema: any; sma: any; bbUpper: any; bbLower: any } | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const unsubRef = useRef<(() => void) | null>(null);
   const candleClosesRef = useRef<number[]>([]);
+  const candleDataRef = useRef<CandlePoint[]>([]);
 
   const [showPanel, setShowPanel] = useState(false);
-  const [indicators, setIndicators] = useState<Record<IndicatorKey, boolean>>({ ema: true, rsi: false, macd: false });
+  const [indicators, setIndicators] = useState<Record<IndicatorKey, boolean>>({ ema: true, rsi: false, macd: false, sma: false, bb: false });
 
   const toggleIndicator = (key: IndicatorKey) => {
     setIndicators(prev => ({ ...prev, [key]: !prev[key] }));
@@ -138,10 +163,16 @@ export const TradingChart: React.FC = () => {
     volumeSeries.priceScale().applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
 
     const emaSeries = chart.addSeries(LineSeries, { color: '#D4AF37', lineWidth: 2 });
+    const smaSeries = chart.addSeries(LineSeries, { color: '#F97316', lineWidth: 2, lineStyle: 1 });
+    const bbUpperSeries = chart.addSeries(LineSeries, { color: 'rgba(139,92,246,0.6)', lineWidth: 1, lineStyle: 1 });
+    const bbLowerSeries = chart.addSeries(LineSeries, { color: 'rgba(139,92,246,0.6)', lineWidth: 1, lineStyle: 1 });
 
     emaSeries.applyOptions({ visible: indicators.ema });
+    smaSeries.applyOptions({ visible: false });
+    bbUpperSeries.applyOptions({ visible: false });
+    bbLowerSeries.applyOptions({ visible: false });
     chartRef.current = chart;
-    seriesRef.current = { candlestick: candlestickSeries, volume: volumeSeries, ema: emaSeries };
+    seriesRef.current = { candlestick: candlestickSeries, volume: volumeSeries, ema: emaSeries, sma: smaSeries, bbUpper: bbUpperSeries, bbLower: bbLowerSeries };
 
     const resizeChart = () => {
       const container = chartContainerRef.current;
@@ -172,6 +203,29 @@ export const TradingChart: React.FC = () => {
     }
   }, [indicators.ema]);
 
+  // Sync SMA visibility
+  useEffect(() => {
+    const s = seriesRef.current;
+    if (!s?.sma) return;
+    s.sma.applyOptions({ visible: indicators.sma });
+    if (indicators.sma && candleDataRef.current.length >= 20) {
+      s.sma.setData(computeSMAData(candleDataRef.current) as any);
+    }
+  }, [indicators.sma]);
+
+  // Sync BB visibility
+  useEffect(() => {
+    const s = seriesRef.current;
+    if (!s?.bbUpper || !s?.bbLower) return;
+    s.bbUpper.applyOptions({ visible: indicators.bb });
+    s.bbLower.applyOptions({ visible: indicators.bb });
+    if (indicators.bb && candleDataRef.current.length >= 20) {
+      const { upper, lower } = computeBBData(candleDataRef.current);
+      s.bbUpper.setData(upper as any);
+      s.bbLower.setData(lower as any);
+    }
+  }, [indicators.bb]);
+
   // Handle data updates
   useEffect(() => {
     if (!chartRef.current || !seriesRef.current) return;
@@ -179,7 +233,7 @@ export const TradingChart: React.FC = () => {
     if (wsRef.current) { wsRef.current.close(); wsRef.current = null; }
     if (unsubRef.current) { unsubRef.current(); unsubRef.current = null; }
 
-    const { candlestick, volume, ema } = seriesRef.current;
+    const { candlestick, volume, ema, sma, bbUpper, bbLower } = seriesRef.current;
 
     const getTfSeconds = (tf: string) => {
       const value = parseInt(tf);
@@ -236,9 +290,12 @@ export const TradingChart: React.FC = () => {
       const curPrice = useTradingStore.getState().prices[currentPair] || 1.1;
       const { cData, vData, eData } = generateDummyForex(curPrice);
       candleClosesRef.current = cData.map((c: any) => c.close);
+      candleDataRef.current = cData as CandlePoint[];
       candlestick.setData(cData as any);
       volume.setData(vData as any);
       ema.setData(eData as any);
+      if (indicators.sma) { sma.setData(computeSMAData(cData as CandlePoint[]) as any); }
+      if (indicators.bb) { const { upper, lower } = computeBBData(cData as CandlePoint[]); bbUpper.setData(upper as any); bbLower.setData(lower as any); }
 
       let lastPrice = curPrice;
       unsubRef.current = useTradingStore.subscribe((state) => {
@@ -317,9 +374,12 @@ export const TradingChart: React.FC = () => {
         if (raw && raw.length > 0) {
           const { cData, vData, eData } = parseKlines(raw);
           candleClosesRef.current = cData.map((c: any) => c.close);
+          candleDataRef.current = cData as CandlePoint[];
           candlestick.setData(cData as any);
           volume.setData(vData as any);
           ema.setData(eData as any);
+          if (indicators.sma) { sma.setData(computeSMAData(cData as CandlePoint[]) as any); }
+          if (indicators.bb) { const { upper, lower } = computeBBData(cData as CandlePoint[]); bbUpper.setData(upper as any); bbLower.setData(lower as any); }
 
           // Live WebSocket for real-time tick updates
           try {
@@ -344,18 +404,24 @@ export const TradingChart: React.FC = () => {
         } else {
           const { cData, vData, eData } = buildDemoCandles(fallbackPrice, tfSeconds, 500);
           candleClosesRef.current = cData.map((c: any) => c.close);
+          candleDataRef.current = cData as CandlePoint[];
           candlestick.setData(cData as any);
           volume.setData(vData as any);
           ema.setData(eData as any);
+          if (indicators.sma) { sma.setData(computeSMAData(cData as CandlePoint[]) as any); }
+          if (indicators.bb) { const { upper, lower } = computeBBData(cData as CandlePoint[]); bbUpper.setData(upper as any); bbLower.setData(lower as any); }
         }
       };
 
       loadHistory().catch(() => {
         const { cData, vData, eData } = buildDemoCandles(fallbackPrice, tfSeconds, 500);
         candleClosesRef.current = cData.map((c: any) => c.close);
+        candleDataRef.current = cData as CandlePoint[];
         candlestick.setData(cData as any);
         volume.setData(vData as any);
         ema.setData(eData as any);
+        if (indicators.sma) { sma.setData(computeSMAData(cData as CandlePoint[]) as any); }
+        if (indicators.bb) { const { upper, lower } = computeBBData(cData as CandlePoint[]); bbUpper.setData(upper as any); bbLower.setData(lower as any); }
       });
     }
 
@@ -406,6 +472,8 @@ export const TradingChart: React.FC = () => {
                 <div className="absolute top-full right-0 mt-1 w-52 bg-[#111] border border-white/10 rounded-xl shadow-2xl z-50 p-2">
                   {([
                     { key: 'ema' as IndicatorKey, label: 'EMA (9)', color: '#D4AF37', desc: 'Exponential Moving Avg' },
+                    { key: 'sma' as IndicatorKey, label: 'SMA (20)', color: '#F97316', desc: 'Simple Moving Average' },
+                    { key: 'bb' as IndicatorKey, label: 'BB (20, 2)', color: '#8B5CF6', desc: 'Bollinger Bands' },
                     { key: 'rsi' as IndicatorKey, label: 'RSI (14)', color: '#60A5FA', desc: 'Relative Strength Index' },
                     { key: 'macd' as IndicatorKey, label: 'MACD (12,26,9)', color: '#A78BFA', desc: 'Moving Avg Convergence' },
                   ] as const).map(ind => (
@@ -433,6 +501,16 @@ export const TradingChart: React.FC = () => {
               {indicators.ema && (
                 <button onClick={() => toggleIndicator('ema')} className="px-2 py-1 rounded text-[9px] font-bold border border-yellow-500/30 text-yellow-400 bg-yellow-500/10 hover:bg-yellow-500/20 transition-all">
                   EMA 9 ✕
+                </button>
+              )}
+              {indicators.sma && (
+                <button onClick={() => toggleIndicator('sma')} className="px-2 py-1 rounded text-[9px] font-bold border border-orange-500/30 text-orange-400 bg-orange-500/10 hover:bg-orange-500/20 transition-all">
+                  SMA 20 ✕
+                </button>
+              )}
+              {indicators.bb && (
+                <button onClick={() => toggleIndicator('bb')} className="px-2 py-1 rounded text-[9px] font-bold border border-purple-500/30 text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 transition-all">
+                  BB 20 ✕
                 </button>
               )}
               {indicators.rsi && (
