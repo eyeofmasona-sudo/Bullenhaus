@@ -140,14 +140,23 @@ export function Dashboard() {
           icon={<TrendingUp className="w-5 h-5" />}
           subtitle="Deposits minus withdrawals"
         />
-        <KPICard
-          title="CRM Team"
-          value={loading ? "—" : String(stats?.crmWorkers.length ?? 0)}
-          change={`${stats?.crmWorkers.filter(w => w.role === "agent").length ?? 0} agents active`}
-          trend="up"
-          icon={<ShieldAlert className="w-5 h-5" />}
-          subtitle="Specialists online"
-        />
+        {(() => {
+          const workers = stats?.crmWorkers ?? [];
+          const onlineCount = workers.filter(w => {
+            if (!w.last_seen_at) return false;
+            return (Date.now() - new Date(w.last_seen_at).getTime()) < 5 * 60_000;
+          }).length;
+          return (
+            <KPICard
+              title="CRM Team"
+              value={loading ? "—" : String(onlineCount)}
+              change={loading ? "…" : `${onlineCount} of ${workers.length} online`}
+              trend={onlineCount > 0 ? "up" : "down"}
+              icon={<ShieldAlert className="w-5 h-5" />}
+              subtitle="Active last 5 min"
+            />
+          );
+        })()}
       </div>
 
       {/* Charts */}

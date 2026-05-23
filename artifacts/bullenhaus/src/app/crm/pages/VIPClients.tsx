@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Search, MoreVertical, ShieldAlert, Star, Phone, Mail, ChevronRight,
   LayoutList, CheckCircle2, AlertTriangle, TrendingUp, ArrowDownLeft,
-  ArrowUpRight, Loader2, AlertCircle, DollarSign, Clock, ShieldCheck, Globe
+  ArrowUpRight, Loader2, AlertCircle, DollarSign, Clock, ShieldCheck, Globe,
+  Copy, UserCircle, ExternalLink
 } from "lucide-react";
 import { usePhoneDialer } from "../contexts/PhoneDialerContext";
 import { useAuth } from "../../trading/contexts/AuthContext";
@@ -395,6 +396,83 @@ function ClientCardSkeleton() {
   );
 }
 
+function ClientCardMenu({ client, onViewProfile, onCall, isAgent }: {
+  client: CRMClient;
+  onViewProfile: () => void;
+  onCall: (phone: string, name: string, clientId: string) => void;
+  isAgent: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const clientName = `${client.firstName} ${client.lastName}`;
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const actions = [
+    {
+      icon: <UserCircle className="w-3.5 h-3.5" />,
+      label: 'View Profile',
+      onClick: () => { onViewProfile(); setOpen(false); },
+    },
+    {
+      icon: <Mail className="w-3.5 h-3.5" />,
+      label: 'Send Email',
+      onClick: () => { window.open(`mailto:${client.email}`, '_blank'); setOpen(false); },
+    },
+    {
+      icon: <Copy className="w-3.5 h-3.5" />,
+      label: 'Copy Email',
+      onClick: () => { navigator.clipboard.writeText(client.email); setOpen(false); },
+    },
+    ...(client.phone ? [{
+      icon: <ExternalLink className="w-3.5 h-3.5" />,
+      label: 'Copy Phone',
+      onClick: () => { navigator.clipboard.writeText(client.phone!); setOpen(false); },
+    }] : []),
+    ...(isAgent && client.phone ? [{
+      icon: <Phone className="w-3.5 h-3.5 text-aura-emerald" />,
+      label: 'Call Client',
+      onClick: () => { onCall(client.phone!, clientName, client.id); setOpen(false); },
+      highlight: true,
+    }] : []),
+  ];
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={e => { e.stopPropagation(); setOpen(v => !v); }}
+        className="p-2 hover:bg-white/5 rounded transition-colors text-aura-platinum/50 hover:text-aura-platinum opacity-0 group-hover:opacity-100"
+      >
+        <MoreVertical className="w-4 h-4" />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-9 z-50 w-44 bg-[#0d0d0f] border border-white/10 rounded-xl shadow-2xl overflow-hidden">
+          {actions.map((a, i) => (
+            <button
+              key={i}
+              onClick={e => { e.stopPropagation(); a.onClick(); }}
+              className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-xs text-left transition-colors hover:bg-white/5 ${
+                (a as any).highlight ? 'text-aura-emerald' : 'text-aura-platinum/70 hover:text-aura-platinum'
+              } ${i > 0 ? 'border-t border-white/5' : ''}`}
+            >
+              {a.icon}
+              {a.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ClientCard({ client, onViewProfile, onCall, isAgent }: { client: CRMClient; onViewProfile: () => void; onCall: (phone: string, name: string, clientId: string) => void; isAgent: boolean }) {
   const clientName = `${client.firstName} ${client.lastName}`;
   const initials = `${client.firstName.charAt(0)}${client.lastName.charAt(0)}`.toUpperCase() || "?";
@@ -436,9 +514,7 @@ function ClientCard({ client, onViewProfile, onCall, isAgent }: { client: CRMCli
             </div>
           </div>
         </div>
-        <button className="p-2 hover:bg-white/5 rounded transition-colors text-aura-platinum/50 hover:text-aura-platinum opacity-0 group-hover:opacity-100">
-          <MoreVertical className="w-4 h-4" />
-        </button>
+        <ClientCardMenu client={client} onViewProfile={onViewProfile} onCall={onCall} isAgent={isAgent} />
       </div>
 
       <div className="grid grid-cols-2 gap-4 mt-6 mb-3">
