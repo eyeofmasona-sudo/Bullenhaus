@@ -34,9 +34,50 @@ export const AdminDeposits = () => {
 
   const handleAction = async (id: string, status: TxStatus) => {
     try {
-      const { error } = await supabase.from('transactions').update({ status }).eq('id', id);
-      if (error) throw error;
-      toast.success(`Request marked as ${status}`);
+      if (status === 'Completed') {
+        // Re-fetch transaction server-side for idempotency guard
+        const { data: tx, error: fetchErr } = await supabase
+          .from('transactions')
+          .select('id, user_id, amount, status')
+          .eq('id', id)
+          .single();
+        if (fetchErr || !tx) throw new Error('Transaction not found');
+
+        if (tx.status === 'Completed' || tx.status === 'Approved') {
+          toast.info('Deposit already approved — balance unchanged');
+          return;
+        }
+
+        // Mark transaction as Completed
+        const { error: txErr } = await supabase
+          .from('transactions')
+          .update({ status: 'Completed' })
+          .eq('id', id);
+        if (txErr) throw txErr;
+
+        // Credit the client's balance
+        const { data: userRow, error: userFetchErr } = await supabase
+          .from('users')
+          .select('balance')
+          .eq('id', tx.user_id)
+          .single();
+        if (userFetchErr || !userRow) throw new Error('User not found');
+
+        const newBalance = Number(userRow.balance || 0) + Number(tx.amount || 0);
+        const { error: balErr } = await supabase
+          .from('users')
+          .update({ balance: newBalance })
+          .eq('id', tx.user_id);
+        if (balErr) throw balErr;
+
+        toast.success(`Deposit approved — $${Number(tx.amount).toLocaleString()} credited to client`);
+      } else {
+        // Reject / other statuses — never touch the balance
+        const { error } = await supabase.from('transactions').update({ status }).eq('id', id);
+        if (error) throw error;
+        toast.success(`Request marked as ${status}`);
+      }
+
       fetchRequests();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to update request');

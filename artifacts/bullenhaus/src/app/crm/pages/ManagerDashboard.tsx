@@ -100,8 +100,8 @@ export function ManagerDashboard() {
         supabase
           .from('transactions')
           .select('amount')
-          .eq('type', 'DEPOSIT')
-          .eq('status', 'COMPLETED'),
+          .eq('type', 'Deposit')
+          .in('status', ['Completed', 'Approved']),
       ]);
 
       if (teamRes.error)    throw new Error(teamRes.error.message);

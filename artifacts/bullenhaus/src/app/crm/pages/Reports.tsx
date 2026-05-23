@@ -67,22 +67,24 @@ export function Reports() {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
         monthMap[MONTH_NAMES[d.getMonth()]] = { deposits: 0, withdrawals: 0 };
       }
+      const COMPLETED_STATUSES = ['Completed', 'Approved'];
       txns.forEach((tx) => {
+        if (!COMPLETED_STATUSES.includes(tx.status)) return;
         const mo = MONTH_NAMES[new Date(tx.created_at).getMonth()];
         if (monthMap[mo] === undefined) return;
         const amt = Math.abs(Number(tx.amount) || 0);
-        if (tx.type === 'deposit') monthMap[mo].deposits += amt;
-        else if (tx.type === 'withdrawal') monthMap[mo].withdrawals += amt;
+        if (tx.type === 'Deposit') monthMap[mo].deposits += amt;
+        else if (tx.type === 'Withdrawal') monthMap[mo].withdrawals += amt;
       });
       setRevenueData(Object.entries(monthMap).map(([month, v]) => ({ month, ...v })));
 
       // MTD KPIs
-      const mtd = txns.filter((tx) => tx.created_at >= startOfMonth);
+      const mtd = txns.filter((tx) => tx.created_at >= startOfMonth && COMPLETED_STATUSES.includes(tx.status));
       const mtdDep = mtd
-        .filter((tx) => tx.type === 'deposit')
+        .filter((tx) => tx.type === 'Deposit')
         .reduce((s, tx) => s + Math.abs(Number(tx.amount) || 0), 0);
       const mtdWith = mtd
-        .filter((tx) => tx.type === 'withdrawal')
+        .filter((tx) => tx.type === 'Withdrawal')
         .reduce((s, tx) => s + Math.abs(Number(tx.amount) || 0), 0);
       setDepositsMtd(mtdDep);
       setRevenueMtd(mtdDep - mtdWith);
