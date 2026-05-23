@@ -132,7 +132,11 @@ function ClientDrawer({ client, isOpen, onClose }: { client: CRMClient | null; i
               <Button variant="primary" className="w-full justify-start py-4">
                 <Phone className="w-4 h-4" /> Start Secure Call
               </Button>
-              <Button variant="secondary" className="w-full justify-start py-4">
+              <Button
+                variant="secondary"
+                className="w-full justify-start py-4"
+                onClick={() => window.open(`mailto:${client.email}`, '_blank')}
+              >
                 <Mail className="w-4 h-4" /> Draft Encrypted Email
               </Button>
             </div>
