@@ -1,22 +1,30 @@
 -- Atomic deposit approval: status transition + balance credit in one DB transaction.
 -- Uses FOR UPDATE row lock so concurrent approvals cannot double-credit the balance.
--- SECURITY DEFINER: executes as the function owner (bypasses client RLS) so that
--- admin/trade_admin callers can update both transactions and users tables.
--- The calling client still needs execute permission granted below.
+-- SECURITY DEFINER executes as function owner to bypass row-level security on the
+-- underlying tables, but the function enforces its own caller-role check first.
 
-CREATE OR REPLACE FUNCTION approve_deposit(p_transaction_id uuid)
+CREATE OR REPLACE FUNCTION public.approve_deposit(p_transaction_id uuid)
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
-  v_tx RECORD;
+  v_tx   RECORD;
+  v_role text;
 BEGIN
+  -- Explicit caller authorization: only admin and trade_admin may approve deposits.
+  v_role := public.get_my_role();
+  IF v_role NOT IN ('admin', 'trade_admin') THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'unauthorized');
+  END IF;
+
   -- Lock the transaction row for the duration of this transaction.
-  -- Any concurrent call for the same id will wait here until we commit.
+  -- Any concurrent call for the same id will block here until we commit,
+  -- guaranteeing exactly-once credit even under simultaneous approvals.
   SELECT id, user_id, amount, status, type
   INTO v_tx
-  FROM transactions
+  FROM public.transactions
   WHERE id = p_transaction_id
   FOR UPDATE;
 
@@ -24,7 +32,7 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'error', 'not_found');
   END IF;
 
-  -- Only process Deposit type rows (safety guard against misuse).
+  -- Safety guard: only Deposit rows may be approved via this function.
   IF v_tx.type != 'Deposit' THEN
     RETURN jsonb_build_object('ok', false, 'error', 'not_a_deposit');
   END IF;
@@ -35,12 +43,12 @@ BEGIN
   END IF;
 
   -- Transition status to Completed (exactly once, protected by the row lock above).
-  UPDATE transactions
+  UPDATE public.transactions
   SET status = 'Completed', updated_at = now()
   WHERE id = p_transaction_id;
 
-  -- Increment the client's balance atomically (no separate read needed).
-  UPDATE users
+  -- Increment the client's balance atomically (arithmetic in SQL, no read-then-write).
+  UPDATE public.users
   SET balance = balance + v_tx.amount
   WHERE id = v_tx.user_id;
 
@@ -48,7 +56,6 @@ BEGIN
 END;
 $$;
 
--- Allow authenticated users to call this function.
--- Row-level security on transactions (transactions_update_admin) ensures only
--- admin/trade_admin can produce rows that reach the Completed state via this path.
-GRANT EXECUTE ON FUNCTION approve_deposit(uuid) TO authenticated;
+-- Grant execute to authenticated role; the internal role check above restricts
+-- actual execution to admin/trade_admin callers only.
+GRANT EXECUTE ON FUNCTION public.approve_deposit(uuid) TO authenticated;
