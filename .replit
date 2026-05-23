@@ -1,4 +1,4 @@
-modules = ["nodejs-24", "python-3.11"]
+modules = ["nodejs-24", "python-3.11", "postgresql-16"]
 
 [deployment]
 router = "application"
@@ -61,3 +61,6 @@ externalPort = 3000
 VITE_SUPABASE_URL = "https://sgtmwdlycllbbavrqgzm.supabase.co"
 VITE_SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNndG13ZGx5Y2xsYmJhdnJxZ3ptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0NTY1NjMsImV4cCI6MjA5NTAzMjU2M30.OPhDmmejcwR4tDGN5PcHNMaMO91D68Qc2VYSERmTzjo"
 VITE_SUPABASE_PROJECT_ID = "sgtmwdlycllbbavrqgzm"
+
+[nix]
+channel = "stable-25_05"

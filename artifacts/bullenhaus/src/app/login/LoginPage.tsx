@@ -77,13 +77,13 @@ export default function LoginPage() {
     } catch (err: any) {
       const msg = err.message || '';
       if (msg.includes('Email not confirmed') || msg.includes('email_not_confirmed')) {
-        setError('Email не подтверждён. Запустите SQL-скрипт подтверждения в Supabase Dashboard или отключите Email Confirmations в Authentication → Settings.');
+        setError('Account pending activation. Please contact support to verify your account.');
       } else if (msg.includes('Invalid login credentials')) {
-        setError('Неверный email или пароль.');
+        setError('Invalid email or password. Please try again.');
       } else if (msg.includes('Too many requests')) {
-        setError('Слишком много попыток. Подождите несколько минут.');
+        setError('Too many login attempts. Please wait a few minutes and try again.');
       } else {
-        setError(msg || 'Ошибка входа. Проверьте email и пароль.');
+        setError('Unable to sign in. Please check your credentials or contact support.');
       }
     } finally {
       setLoading(false);
