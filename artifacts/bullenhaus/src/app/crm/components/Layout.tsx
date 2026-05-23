@@ -14,8 +14,6 @@ import {
   Menu,
   X,
   BellRing,
-  AlertTriangle,
-  CheckCircle2,
   Megaphone,
   Database,
   Shield
@@ -30,7 +28,7 @@ const getNavForRole = (role: string, t: (key: string) => string) => {
       return [
         { name: t('navDirectorDashboard'), href: '/crm/dashboard', icon: LayoutDashboard },
         { name: t('navClients'),           href: '/crm/clients',   icon: Users },
-        { name: t('navVipClients'),        href: '/crm/workspace', icon: Sparkles },
+        { name: t('navVipClients'),        href: '/crm/vip',       icon: Sparkles },
         { name: t('navManagerDashboard'),  href: '/crm/manager',   icon: TrendingUp },
       ];
     case 'admin':
@@ -38,7 +36,7 @@ const getNavForRole = (role: string, t: (key: string) => string) => {
         { name: t('navAdminPanel'),        href: '/crm/admin',     icon: Settings },
         { name: t('navDirectorDashboard'), href: '/crm/dashboard', icon: LayoutDashboard },
         { name: t('navClients'),           href: '/crm/clients',   icon: Users },
-        { name: t('navVipClients'),        href: '/crm/workspace', icon: Sparkles },
+        { name: t('navVipClients'),        href: '/crm/vip',       icon: Sparkles },
         { name: t('navManagerDashboard'),  href: '/crm/manager',   icon: TrendingUp },
       ];
     case 'manager':
@@ -63,35 +61,11 @@ export function Layout({ children, role, onLogout }: { children: ReactNode, role
   const { t, locale, toggleLocale } = useI18n();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [toast, setToast] = useState<{ id: number, message: string, type: 'alert' | 'success'} | null>(null);
-  
   const navigation = getNavForRole(role, t);
 
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location.pathname]);
-
-  // Simulate WebSocket Events
-  useEffect(() => {
-    const timer1 = setTimeout(() => {
-      setToast({ id: Date.now(), message: "ALERT: Alexander R. triggered Margin Call", type: 'alert' });
-    }, 15000);
-
-    const timer2 = setTimeout(() => {
-      setToast({ id: Date.now(), message: "SUCCESS: $50,000 FTD processed for Elena Volkov", type: 'success' });
-    }, 45000);
-
-    return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!toast) return;
-    const timer = setTimeout(() => setToast(null), 5000);
-    return () => clearTimeout(timer);
-  }, [toast]);
 
   const SidebarContent = () => (
     <>
@@ -186,33 +160,6 @@ export function Layout({ children, role, onLogout }: { children: ReactNode, role
 
   return (
     <div className="min-h-screen bg-aura-black text-aura-platinum flex font-sans selection:bg-aura-gold/30">
-      {/* Toast Notification */}
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            initial={{ opacity: 0, y: -50, x: '-50%' }}
-            animate={{ opacity: 1, y: 0, x: '-50%' }}
-            exit={{ opacity: 0, scale: 0.9, x: '-50%' }}
-            className={`fixed top-6 left-1/2 z-[100] flex items-center gap-4 px-6 py-4 rounded bg-[#121214] border shadow-2xl backdrop-blur-md min-w-[320px] max-w-lg
-              ${toast.type === 'alert' 
-                ? 'border-aura-ruby/50 shadow-[0_10px_40px_rgba(225,29,72,0.15)]' 
-                : 'border-aura-emerald/50 shadow-[0_10px_40px_rgba(16,185,129,0.1)]'
-              }
-            `}
-          >
-             {toast.type === 'alert' ? (
-                <AlertTriangle className="w-5 h-5 text-aura-ruby shrink-0" />
-             ) : (
-                <CheckCircle2 className="w-5 h-5 text-aura-emerald shrink-0" />
-             )}
-             <span className="text-xs font-mono font-medium">{toast.message}</span>
-             <button onClick={() => setToast(null)} className="ml-auto text-aura-platinum/50 hover:text-aura-platinum">
-               <X className="w-4 h-4" />
-             </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Desktop Sidebar */}
       <div className="w-72 bg-[#0A0A0B] border-r border-glass-border flex-col shrink-0 relative overflow-hidden hidden md:flex">
         <SidebarContent />

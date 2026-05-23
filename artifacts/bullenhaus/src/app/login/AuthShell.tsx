@@ -9,10 +9,10 @@ interface AuthShellProps {
 }
 
 /**
- * AuthShell — единая премиум-оболочка для всех публичных страниц
+ * AuthShell — unified premium shell for all public pages
  * (login, register, forgot, reset, unauthorized).
  *
- * Чёрный фон + радиальный gold-glow + золотой логотип сверху + карточка.
+ * Black background + radial gold-glow + gold logo on top + card.
  */
 export const AuthShell: React.FC<AuthShellProps> = ({ title, subtitle, children, footer }) => {
   return (

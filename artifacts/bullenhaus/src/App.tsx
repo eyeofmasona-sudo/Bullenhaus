@@ -56,6 +56,7 @@ const CRMManagerDashboard = React.lazy(() => import('./app/crm/pages/ManagerDash
 const CRMAgentWorkspace = React.lazy(() => import('./app/crm/pages/AgentWorkspace').then(m => ({ default: m.AgentWorkspace })));
 const CRMAdminPanel = React.lazy(() => import('./app/crm/pages/AdminPanel').then(m => ({ default: m.AdminPanel })));
 const CRMVIPClients = React.lazy(() => import('./app/crm/pages/VIPClients').then(m => ({ default: m.VIPClients })));
+const CRMVIPOnly = React.lazy(() => import('./app/crm/pages/VIPClients').then(m => ({ default: m.VIPClientsPage })));
 
 const Fallback = () => (
   <div className="flex h-dvh w-full items-center justify-center bg-bg">
@@ -175,6 +176,7 @@ const AppContent = () => {
                 <Route path="manager" element={<CRMManagerDashboard />} />
                 <Route path="workspace" element={<CRMAgentWorkspace />} />
                 <Route path="clients" element={<CRMVIPClients />} />
+                <Route path="vip" element={<CRMVIPOnly />} />
                 <Route path="admin" element={<CRMAdminPanel />} />
               </Route>
             </Route>

@@ -270,7 +270,11 @@ function ClientDrawer({ client, isOpen, onClose }: { client: CRMClient | null; i
   );
 }
 
-export function VIPClients() {
+export function VIPClientsPage() {
+  return <VIPClients vipOnly />;
+}
+
+export function VIPClients({ vipOnly = false }: { vipOnly?: boolean }) {
   const { t } = useI18n();
   const [search, setSearch] = useState("");
   const [filterTier, setFilterTier] = useState<string | null>(null);
@@ -278,21 +282,29 @@ export function VIPClients() {
 
   const { clients, loading: isLoading, error } = useClients(1, 100, search);
 
-  const filteredClients = clients.filter(c => !filterTier || c.tier === filterTier);
+  const filteredClients = clients.filter(c => {
+    if (vipOnly && c.tier === 'Silver') return false;
+    if (filterTier) return c.tier === filterTier;
+    return true;
+  });
+
+  const title = vipOnly ? t("vipTitle") : "Clients";
+  const subtitle = vipOnly ? t("vipSubtitle") : "All registered clients";
+  const searchPlaceholder = vipOnly ? t("searchVips") : "Search clients...";
 
   return (
     <div className="space-y-8 pb-12">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-glass-border pb-4 mb-6">
         <div>
-          <h2 className="font-serif text-2xl font-light italic tracking-tight text-aura-platinum">{t("vipTitle")}</h2>
-          <p className="text-[10px] font-bold tracking-[0.2em] text-aura-platinum/40 mt-2 uppercase">{t("vipSubtitle")}</p>
+          <h2 className="font-serif text-2xl font-light italic tracking-tight text-aura-platinum">{title}</h2>
+          <p className="text-[10px] font-bold tracking-[0.2em] text-aura-platinum/40 mt-2 uppercase">{subtitle}</p>
         </div>
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
           <div className="relative w-full sm:w-auto">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-aura-platinum/40" />
             <input
               type="text"
-              placeholder={t("searchVips")}
+              placeholder={searchPlaceholder}
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="bg-[#121214] border border-glass-border rounded pl-9 pr-4 py-2 text-xs text-aura-platinum outline-none focus:border-aura-gold/50 transition-colors w-full sm:w-64 focus:shadow-[0_0_15px_rgba(212,175,55,0.1)]"
@@ -302,7 +314,9 @@ export function VIPClients() {
             <Button variant={filterTier === null ? "outline" : "secondary"} size="sm" onClick={() => setFilterTier(null)}>{t("all")}</Button>
             <Button variant={filterTier === "Titanium" ? "outline" : "secondary"} size="sm" onClick={() => setFilterTier("Titanium")}>Titanium</Button>
             <Button variant={filterTier === "Platinum" ? "outline" : "secondary"} size="sm" onClick={() => setFilterTier("Platinum")}>Platinum</Button>
-            <Button variant={filterTier === "Silver" ? "outline" : "secondary"} size="sm" onClick={() => setFilterTier("Silver")}>Silver</Button>
+            {!vipOnly && (
+              <Button variant={filterTier === "Silver" ? "outline" : "secondary"} size="sm" onClick={() => setFilterTier("Silver")}>Silver</Button>
+            )}
           </div>
         </div>
       </div>

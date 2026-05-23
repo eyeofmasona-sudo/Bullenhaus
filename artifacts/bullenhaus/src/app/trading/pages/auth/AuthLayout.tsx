@@ -4,9 +4,9 @@ import { Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
 /**
- * AuthLayout — обёртка для /register, /forgot-password, /reset-password.
- * Использует тот же дизайн, что и AuthShell на /login, но без заголовка
- * (страница-ребёнок сама решает что показывать внутри карточки).
+ * AuthLayout — wrapper for /register, /forgot-password, /reset-password.
+ * Uses the same design as AuthShell on /login, but without a header
+ * (the child page decides what to render inside the card).
  */
 export const AuthLayout: React.FC = () => {
   const { session, loading, role } = useAuth();

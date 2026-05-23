@@ -1,4 +1,4 @@
-export const BACKEND_MIGRATION_MESSAGE = 'Этот модуль временно недоступен: идёт миграция backend на Supabase Edge Functions.';
+export const BACKEND_MIGRATION_MESSAGE = 'This module is temporarily unavailable: backend migration to Supabase Edge Functions is in progress.';
 
 export const isLegacyApiRequest = (url: string) => url.startsWith('/api/');
 
@@ -15,13 +15,5 @@ export async function safeLegacyApiFetch(url: string, init?: RequestInit): Promi
       }),
       { status: 503, headers: { 'Content-Type': 'application/json' } }
     );
-  }
-}
-
-export async function safeJson<T>(response: Response, fallback: T): Promise<T> {
-  try {
-    return (await response.json()) as T;
-  } catch {
-    return fallback;
   }
 }
