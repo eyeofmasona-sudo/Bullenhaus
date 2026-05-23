@@ -29,14 +29,16 @@ const getNavForRole = (role: string, t: (key: string) => string) => {
     case 'director':
       return [
         { name: t('navDirectorDashboard'), href: '/crm/dashboard', icon: LayoutDashboard },
-        { name: t('navVipClients'), href: '/crm/workspace', icon: Users },
-        { name: t('navManagerDashboard'), href: '/crm/manager', icon: TrendingUp },
+        { name: t('navClients'),           href: '/crm/clients',   icon: Users },
+        { name: t('navVipClients'),        href: '/crm/workspace', icon: Sparkles },
+        { name: t('navManagerDashboard'),  href: '/crm/manager',   icon: TrendingUp },
       ];
     case 'admin':
       return [
         { name: t('navAdminPanel'),        href: '/crm/admin',     icon: Settings },
         { name: t('navDirectorDashboard'), href: '/crm/dashboard', icon: LayoutDashboard },
-        { name: t('navVipClients'),        href: '/crm/workspace', icon: Users },
+        { name: t('navClients'),           href: '/crm/clients',   icon: Users },
+        { name: t('navVipClients'),        href: '/crm/workspace', icon: Sparkles },
         { name: t('navManagerDashboard'),  href: '/crm/manager',   icon: TrendingUp },
       ];
     case 'manager':
