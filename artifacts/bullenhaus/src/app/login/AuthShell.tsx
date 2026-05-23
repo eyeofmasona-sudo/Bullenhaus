@@ -16,7 +16,7 @@ interface AuthShellProps {
  */
 export const AuthShell: React.FC<AuthShellProps> = ({ title, subtitle, children, footer }) => {
   return (
-    <div className="min-h-dvh w-full bg-bg relative flex items-center justify-center p-4 overflow-hidden">
+    <div className="min-h-dvh w-full bg-bg relative flex items-center justify-center p-4 overflow-hidden text-center">
       {/* Ambient gold glow */}
       <div
         className="absolute inset-0 pointer-events-none"
@@ -43,7 +43,6 @@ export const AuthShell: React.FC<AuthShellProps> = ({ title, subtitle, children,
             'radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.6) 100%)',
         }}
       />
-
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -55,7 +54,7 @@ export const AuthShell: React.FC<AuthShellProps> = ({ title, subtitle, children,
           <img
             src="/logo.png"
             alt="Bullenhaus"
-            className="h-44 md:h-52 w-auto object-contain drop-shadow-[0_0_28px_rgba(212,175,55,0.45)]"
+            className="h-44 md:h-52 w-auto object-contain drop-shadow-[0_0_28px_rgba(212,175,55,0.45)] ml-[0px] mr-[0px]"
           />
         </div>
 
