@@ -54,7 +54,7 @@ const SidebarItem = ({ icon: Icon, label, active, alert, to, onClick }: SidebarI
     >
       <div className="flex items-center gap-3">
         <Icon size={18} className={cn("transition-colors shrink-0", active ? "text-gold" : "group-hover:text-text")} />
-        <span className="font-medium text-sm tracking-wide">{label}</span>
+        <span className="font-medium text-sm tracking-wide capitalize">{label}</span>
       </div>
       {alert && (
         <span className="bg-gold text-[10px] text-black px-1.5 py-0.5 rounded-full font-bold min-w-[20px] text-center">

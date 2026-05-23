@@ -1,3 +1,4 @@
+import './app/trading/i18n/config';
 import React, { Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet, Link } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
