@@ -20,14 +20,10 @@ export const KYC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [files, setFiles] = useState<Record<DocKey, File | null>>({ passport: null, id_card: null, selfie: null });
 
-  const passportRef = useRef<HTMLInputElement>(null);
-  const idCardRef   = useRef<HTMLInputElement>(null);
-  const selfieRef   = useRef<HTMLInputElement>(null);
-
-  const refMap: Record<DocKey, React.RefObject<HTMLInputElement | null>> = {
-    passport: passportRef,
-    id_card:  idCardRef,
-    selfie:   selfieRef,
+  const fileInputRefs: Record<DocKey, React.RefObject<HTMLInputElement | null>> = {
+    passport: useRef<HTMLInputElement>(null),
+    id_card:  useRef<HTMLInputElement>(null),
+    selfie:   useRef<HTMLInputElement>(null),
   };
 
   const handleFile = (key: DocKey, e: React.ChangeEvent<HTMLInputElement>) => {
@@ -35,17 +31,15 @@ export const KYC = () => {
     if (!file) return;
     if (file.size > 10 * 1024 * 1024) { toast.error('File must be under 10 MB'); return; }
     setFiles(prev => ({ ...prev, [key]: file }));
+    e.target.value = '';
   };
 
   const clearFile = (key: DocKey, e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     setFiles(prev => ({ ...prev, [key]: null }));
-    const ref = refMap[key];
+    const ref = fileInputRefs[key];
     if (ref.current) ref.current.value = '';
-  };
-
-  const triggerUpload = (key: DocKey) => {
-    refMap[key].current?.click();
   };
 
   const handleSubmit = async () => {
@@ -156,13 +150,24 @@ export const KYC = () => {
             return (
               <div
                 key={key}
-                onClick={() => triggerUpload(key)}
-                className={`flex flex-col items-center justify-center gap-3 border-2 border-dashed rounded-2xl p-6 cursor-pointer transition-all min-h-[160px] select-none ${
+                className={`relative flex flex-col items-center justify-center gap-3 border-2 border-dashed rounded-2xl p-6 transition-all min-h-[160px] select-none overflow-hidden ${
                   file
                     ? 'border-emerald-500/50 bg-emerald-500/5'
                     : 'border-white/10 bg-white/5 hover:border-accent-primary/50 active:bg-white/10'
                 }`}
               >
+                {/* Direct overlay input — works on all browsers including mobile */}
+                {!file && (
+                  <input
+                    ref={fileInputRefs[key]}
+                    type="file"
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    accept={camera ? 'image/*' : 'image/*,.pdf'}
+                    {...(camera ? { capture: 'user' as const } : {})}
+                    onChange={e => handleFile(key, e)}
+                  />
+                )}
+
                 {file ? (
                   <>
                     <CheckCircle2 size={32} className="text-emerald-400" />
@@ -171,44 +176,22 @@ export const KYC = () => {
                     </span>
                     <button
                       onClick={e => clearFile(key, e)}
-                      className="flex items-center gap-1 text-[10px] text-slate-500 hover:text-rose-400 transition-colors mt-1"
+                      className="relative z-20 flex items-center gap-1 text-[10px] text-slate-500 hover:text-rose-400 transition-colors mt-1"
                     >
                       <X size={10} /> Remove
                     </button>
                   </>
                 ) : (
                   <>
-                    <div className="text-slate-400">{icon}</div>
-                    <div className="text-center">
+                    <div className="text-slate-400 pointer-events-none">{icon}</div>
+                    <div className="text-center pointer-events-none">
                       <p className="text-sm font-bold text-white mb-0.5">{label}</p>
                       <p className="text-[10px] text-slate-500">{hint}</p>
                     </div>
-                    <div className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[11px] font-bold text-slate-300 uppercase tracking-wider">
+                    <div className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[11px] font-bold text-slate-300 uppercase tracking-wider pointer-events-none">
                       {camera ? <><Camera size={12} /> Open Camera</> : <><Upload size={12} /> Upload File</>}
                     </div>
                   </>
-                )}
-
-                {/* Hidden file inputs — triggered via ref */}
-                {camera ? (
-                  <input
-                    ref={selfieRef}
-                    type="file"
-                    className="hidden"
-                    accept="image/*"
-                    capture="user"
-                    onChange={e => handleFile(key, e)}
-                    onClick={e => e.stopPropagation()}
-                  />
-                ) : (
-                  <input
-                    ref={key === 'passport' ? passportRef : idCardRef}
-                    type="file"
-                    className="hidden"
-                    accept="image/*,.pdf"
-                    onChange={e => handleFile(key, e)}
-                    onClick={e => e.stopPropagation()}
-                  />
                 )}
               </div>
             );
