@@ -89,6 +89,8 @@ interface ForexState {
   globalVolatilityMultiplier: number;
 
   updatePrice: (symbol: string, newPrice: number) => void;
+  /** Pin price: sets price + basePrice, resets change24h to 0, pauses simulation */
+  pinPrice: (symbol: string, newPrice: number) => void;
   setVolatility: (symbol: string, vol: number) => void;
   setSpread: (symbol: string, spread: number) => void;
   setTrend: (symbol: string, trend: ForexTrend) => void;
@@ -103,6 +105,19 @@ export const useForexStore = create<ForexState>((set, get) => ({
 
   updatePrice: (symbol, newPrice) => set(state => ({
     pairs: { ...state.pairs, [symbol]: { ...state.pairs[symbol], price: newPrice } }
+  })),
+
+  pinPrice: (symbol, newPrice) => set(state => ({
+    pairs: {
+      ...state.pairs,
+      [symbol]: {
+        ...state.pairs[symbol],
+        price: newPrice,
+        basePrice: newPrice,
+        change24h: 0,
+        isPaused: true,
+      },
+    },
   })),
 
   setVolatility: (symbol, volatility) => set(state => ({

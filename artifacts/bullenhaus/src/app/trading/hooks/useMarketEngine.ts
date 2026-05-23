@@ -196,13 +196,15 @@ export const useMarketEngine = () => {
     };
     seedFromForex();
 
-    // Fetch real rates and update forexStore + tradingStore
+    // Fetch real rates — skip symbols that are pinned (admin override)
     fetchForexPricesREST().then(prices => {
       if (prices.length === 0) return;
       const { updatePrice: fxUpdate } = useForexStore.getState();
+      const overrides = useTradingStore.getState().priceOverrides;
       prices.forEach(({ symbol, price }) => {
-        fxUpdate(symbol, price); // update forexStore basePrice tracking
-        updatePrice(symbol, price, 0); // push to tradingStore immediately
+        if (overrides[symbol] !== undefined) return; // admin has fixed this price — don't touch it
+        fxUpdate(symbol, price);
+        updatePrice(symbol, price, 0);
       });
     });
 
