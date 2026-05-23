@@ -458,10 +458,10 @@ export const TradingChart: React.FC = () => {
 
   return (
     <div className="w-full h-full min-h-[420px] flex flex-col bg-[#0a0a0a]">
-      {/* Main chart row */}
-      <div className="flex-1 min-h-0 relative flex flex-col sm:flex-row">
-        {/* Top Toolbar */}
-        <div className="relative sm:absolute sm:top-0 sm:left-12 sm:right-0 min-h-12 sm:h-10 border-b border-white/5 bg-surface-bg/95 sm:bg-surface-bg/80 backdrop-blur z-20 flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-3 py-2 sm:px-0 sm:py-0">
+      {/* Main chart area */}
+      <div className="flex-1 min-h-0 flex flex-col">
+        {/* Top Toolbar — in-flow, never overlaps chart */}
+        <div className="min-h-12 sm:h-10 border-b border-white/5 bg-surface-bg/95 z-20 flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-3 py-2 sm:px-0 sm:py-0">
           <div className="flex flex-col sm:flex-row sm:items-center min-w-0 sm:h-full gap-2 sm:gap-0">
             <AssetSelector />
             <div className="flex gap-1 sm:px-4 overflow-x-auto custom-scrollbar pb-1 sm:pb-0">
@@ -546,17 +546,20 @@ export const TradingChart: React.FC = () => {
           </div>
         </div>
 
-        {/* Left Drawing Tools Sidebar */}
-        <div className="hidden sm:flex w-12 h-full border-r border-white/5 flex-col items-center py-4 gap-4 z-10 bg-surface-bg/50 pt-14">
-          {[MousePointer2, Crosshair, Pencil, Move, Crop, Type, Plus].map((Icon, idx) => (
-            <button key={idx} className="p-2 text-slate-500 hover:text-accent-primary hover:bg-accent-primary/10 rounded-lg transition-all">
-              <Icon size={16} />
-            </button>
-          ))}
-        </div>
+        {/* Chart + sidebar row */}
+        <div className="flex-1 min-h-0 relative flex flex-row">
+          {/* Left Drawing Tools Sidebar */}
+          <div className="hidden sm:flex w-12 h-full border-r border-white/5 flex-col items-center py-4 gap-4 z-10 bg-surface-bg/50">
+            {[MousePointer2, Crosshair, Pencil, Move, Crop, Type, Plus].map((Icon, idx) => (
+              <button key={idx} className="p-2 text-slate-500 hover:text-accent-primary hover:bg-accent-primary/10 rounded-lg transition-all">
+                <Icon size={16} />
+              </button>
+            ))}
+          </div>
 
-        <div className="flex-1 relative overflow-hidden min-h-[280px]">
-          <div ref={chartContainerRef} className="w-full h-full absolute inset-0" />
+          <div className="flex-1 relative overflow-hidden min-h-[280px]">
+            <div ref={chartContainerRef} className="w-full h-full absolute inset-0" />
+          </div>
         </div>
       </div>
 
