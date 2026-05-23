@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createChart, ColorType, CandlestickSeries, HistogramSeries, LineSeries } from 'lightweight-charts';
-import { MousePointer2, Settings, Type, Crosshair, Pencil, Move, Crop, Plus, Check } from 'lucide-react';
+import { MousePointer2, Settings, Type, Crosshair, Pencil, Move, Crop, Plus, Check, Trash2 } from 'lucide-react';
 import { useTradingContext } from '../../contexts/TradingContext';
 import { useTradingStore } from '../../stores/tradingStore';
 import { AssetSelector } from './AssetSelector';
@@ -8,6 +8,62 @@ import { AssetSelector } from './AssetSelector';
 type IndicatorKey = 'ema' | 'rsi' | 'macd' | 'sma' | 'bb';
 
 type CandlePoint = { time: number; open: number; high: number; low: number; close: number };
+
+// ── Drawing Tools ──────────────────────────────────────────────────────────────
+type DrawTool = 'pointer' | 'trendline' | 'pencil' | 'hand' | 'rectangle' | 'text' | 'zoom';
+type DrawShape =
+  | { type: 'trendline'; x1: number; y1: number; x2: number; y2: number }
+  | { type: 'pencil'; points: { x: number; y: number }[] }
+  | { type: 'rectangle'; x1: number; y1: number; x2: number; y2: number }
+  | { type: 'text'; x: number; y: number; text: string };
+
+const DRAW_COLOR = '#D4AF37';
+
+function drawShape(ctx: CanvasRenderingContext2D, shape: DrawShape) {
+  ctx.strokeStyle = DRAW_COLOR;
+  ctx.fillStyle   = DRAW_COLOR;
+  ctx.lineWidth   = 1.5;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  if (shape.type === 'trendline') {
+    ctx.beginPath();
+    ctx.moveTo(shape.x1, shape.y1);
+    ctx.lineTo(shape.x2, shape.y2);
+    ctx.stroke();
+    [{ x: shape.x1, y: shape.y1 }, { x: shape.x2, y: shape.y2 }].forEach(p => {
+      ctx.beginPath(); ctx.arc(p.x, p.y, 3.5, 0, Math.PI * 2); ctx.fill();
+    });
+  } else if (shape.type === 'pencil') {
+    if (shape.points.length < 2) return;
+    ctx.beginPath();
+    ctx.moveTo(shape.points[0].x, shape.points[0].y);
+    for (let i = 1; i < shape.points.length; i++) ctx.lineTo(shape.points[i].x, shape.points[i].y);
+    ctx.stroke();
+  } else if (shape.type === 'rectangle') {
+    const w = shape.x2 - shape.x1, h = shape.y2 - shape.y1;
+    ctx.beginPath(); ctx.rect(shape.x1, shape.y1, w, h); ctx.stroke();
+    ctx.fillStyle = 'rgba(212,175,55,0.07)'; ctx.fill();
+  } else if (shape.type === 'text') {
+    ctx.font = 'bold 12px Inter, sans-serif';
+    ctx.fillStyle = DRAW_COLOR;
+    ctx.fillText(shape.text, shape.x, shape.y);
+  }
+}
+
+const CURSOR_MAP: Record<DrawTool, string> = {
+  pointer: 'default', trendline: 'crosshair', pencil: 'crosshair',
+  hand: 'grab', rectangle: 'crosshair', text: 'text', zoom: 'zoom-in',
+};
+
+const TOOLS: { icon: React.ElementType; tool: DrawTool; label: string }[] = [
+  { icon: MousePointer2, tool: 'pointer',   label: 'Select'      },
+  { icon: Crosshair,     tool: 'trendline', label: 'Trend Line'  },
+  { icon: Pencil,        tool: 'pencil',    label: 'Freehand'    },
+  { icon: Move,          tool: 'hand',      label: 'Pan Chart'   },
+  { icon: Crop,          tool: 'rectangle', label: 'Rectangle'   },
+  { icon: Type,          tool: 'text',      label: 'Add Text'    },
+  { icon: Plus,          tool: 'zoom',      label: 'Zoom In'     },
+];
 
 const computeSMAData = (candles: CandlePoint[], period = 20) => {
   const result: { time: number; value: number }[] = [];
@@ -67,6 +123,14 @@ export const TradingChart: React.FC = () => {
   const unsubRef = useRef<(() => void) | null>(null);
   const candleClosesRef = useRef<number[]>([]);
   const candleDataRef = useRef<CandlePoint[]>([]);
+
+  // Drawing tools
+  const drawCanvasRef = useRef<HTMLCanvasElement>(null);
+  const shapesRef     = useRef<DrawShape[]>([]);
+  const activeToolRef = useRef<DrawTool>('pointer');
+  const zoomRef       = useRef(8);
+  const [activeTool,  setActiveTool]  = useState<DrawTool>('pointer');
+  const [hasDrawings, setHasDrawings] = useState(false);
 
   const [showPanel, setShowPanel] = useState(false);
   const [indicators, setIndicators] = useState<Record<IndicatorKey, boolean>>({ ema: true, rsi: false, macd: false, sma: false, bb: false });
@@ -200,6 +264,106 @@ export const TradingChart: React.FC = () => {
       seriesRef.current = null;
     };
   }, []);
+
+  // Keep activeToolRef in sync with state
+  useEffect(() => { activeToolRef.current = activeTool; }, [activeTool]);
+
+  // Canvas drawing engine
+  useEffect(() => {
+    const canvas = drawCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const redraw = (live?: DrawShape | null) => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      shapesRef.current.forEach(s => drawShape(ctx, s));
+      if (live) drawShape(ctx, live);
+    };
+
+    const syncSize = () => {
+      const p = canvas.parentElement;
+      if (!p) return;
+      canvas.width  = p.clientWidth;
+      canvas.height = p.clientHeight;
+      redraw();
+    };
+    syncSize();
+    const ro = new ResizeObserver(syncSize);
+    if (canvas.parentElement) ro.observe(canvas.parentElement);
+
+    let drawing = false;
+    let live: DrawShape | null = null;
+
+    const pos = (e: MouseEvent) => {
+      const r = canvas.getBoundingClientRect();
+      return { x: e.clientX - r.left, y: e.clientY - r.top };
+    };
+
+    const onDown = (e: MouseEvent) => {
+      const tool = activeToolRef.current;
+      if (tool === 'pointer' || tool === 'hand') return;
+      const { x, y } = pos(e);
+
+      if (tool === 'text') {
+        const t = window.prompt('Label:');
+        if (t?.trim()) {
+          shapesRef.current = [...shapesRef.current, { type: 'text', x, y, text: t.trim() }];
+          setHasDrawings(true);
+          redraw();
+        }
+        return;
+      }
+      if (tool === 'zoom') {
+        zoomRef.current = Math.min(60, zoomRef.current * 1.35);
+        chartRef.current?.timeScale().applyOptions({ barSpacing: zoomRef.current });
+        return;
+      }
+
+      drawing = true;
+      if (tool === 'trendline')  live = { type: 'trendline', x1: x, y1: y, x2: x, y2: y };
+      else if (tool === 'pencil')    live = { type: 'pencil', points: [{ x, y }] };
+      else if (tool === 'rectangle') live = { type: 'rectangle', x1: x, y1: y, x2: x, y2: y };
+      e.preventDefault();
+    };
+
+    const onMove = (e: MouseEvent) => {
+      if (!drawing || !live) return;
+      const { x, y } = pos(e);
+      if (live.type === 'trendline')       live = { ...live, x2: x, y2: y };
+      else if (live.type === 'pencil')     live = { ...live, points: [...live.points, { x, y }] };
+      else if (live.type === 'rectangle')  live = { ...live, x2: x, y2: y };
+      redraw(live);
+    };
+
+    const onUp = () => {
+      if (!drawing || !live) return;
+      shapesRef.current = [...shapesRef.current, live];
+      setHasDrawings(true);
+      drawing = false; live = null; redraw();
+    };
+
+    canvas.addEventListener('mousedown', onDown);
+    canvas.addEventListener('mousemove', onMove);
+    canvas.addEventListener('mouseup',   onUp);
+    canvas.addEventListener('mouseleave', onUp);
+    return () => {
+      ro.disconnect();
+      canvas.removeEventListener('mousedown', onDown);
+      canvas.removeEventListener('mousemove', onMove);
+      canvas.removeEventListener('mouseup',   onUp);
+      canvas.removeEventListener('mouseleave', onUp);
+    };
+  }, []);
+
+  const clearDrawings = () => {
+    shapesRef.current = [];
+    setHasDrawings(false);
+    const canvas = drawCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+  };
 
   // Sync EMA visibility
   useEffect(() => {
@@ -549,16 +713,42 @@ export const TradingChart: React.FC = () => {
         {/* Chart + sidebar row */}
         <div className="flex-1 min-h-0 relative flex flex-row">
           {/* Left Drawing Tools Sidebar */}
-          <div className="hidden sm:flex w-12 h-full border-r border-white/5 flex-col items-center py-4 gap-4 z-10 bg-surface-bg/50">
-            {[MousePointer2, Crosshair, Pencil, Move, Crop, Type, Plus].map((Icon, idx) => (
-              <button key={idx} className="p-2 text-slate-500 hover:text-accent-primary hover:bg-accent-primary/10 rounded-lg transition-all">
-                <Icon size={16} />
+          <div className="hidden sm:flex w-12 h-full border-r border-white/5 flex-col items-center py-3 gap-1 z-10 bg-surface-bg/50">
+            {TOOLS.map(({ icon: Icon, tool, label }) => (
+              <button
+                key={tool}
+                title={label}
+                onClick={() => setActiveTool(tool)}
+                className={`p-2 rounded-lg transition-all ${
+                  activeTool === tool
+                    ? 'text-[#D4AF37] bg-[#D4AF37]/15 ring-1 ring-[#D4AF37]/30'
+                    : 'text-slate-500 hover:text-[#D4AF37] hover:bg-[#D4AF37]/8'
+                }`}
+              >
+                <Icon size={15} />
               </button>
             ))}
+            {hasDrawings && (
+              <button
+                title="Clear all drawings"
+                onClick={clearDrawings}
+                className="p-2 mt-auto text-red-500/40 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
+              >
+                <Trash2 size={13} />
+              </button>
+            )}
           </div>
 
           <div className="flex-1 relative overflow-hidden min-h-[280px]">
             <div ref={chartContainerRef} className="w-full h-full absolute inset-0" />
+            <canvas
+              ref={drawCanvasRef}
+              className="absolute inset-0 w-full h-full"
+              style={{
+                pointerEvents: activeTool === 'pointer' || activeTool === 'hand' ? 'none' : 'auto',
+                cursor: CURSOR_MAP[activeTool],
+              }}
+            />
           </div>
         </div>
       </div>
