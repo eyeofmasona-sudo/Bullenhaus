@@ -129,5 +129,12 @@ export async function fetchClientTransactions(userId: string): Promise<ClientTra
     .limit(50);
 
   if (error) throw new Error(error.message);
-  return (data ?? []) as ClientTransaction[];
+
+  return (data ?? []).map((row: any): ClientTransaction => ({
+    id:         row.id,
+    type:       (row.type   as string).toUpperCase() as ClientTransaction['type'],
+    status:     (row.status as string).toUpperCase() as ClientTransaction['status'],
+    amount:     Number(row.amount),
+    created_at: row.created_at,
+  }));
 }
