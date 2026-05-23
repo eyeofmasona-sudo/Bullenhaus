@@ -84,6 +84,31 @@ export function useClients(page = 1, limit = 50, search = '') {
     fetchClients().catch(() => {});
   }, [fetchClients]);
 
+  useEffect(() => {
+    const channel = supabase
+      .channel('crm-useClients-balance')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'users' },
+        (payload) => {
+          const updated = payload.new as any;
+          if (updated.role !== 'client') return;
+          setData(prev => {
+            const idx = prev.findIndex(c => c.id === updated.id);
+            if (idx === -1) return prev;
+            const next = [...prev];
+            next[idx] = mapUser(updated);
+            return next;
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   return { clients: data, meta, loading, error, refetch: fetchClients };
 }
 

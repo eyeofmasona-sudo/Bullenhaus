@@ -246,6 +246,35 @@ export function AgentClients() {
 
   useEffect(() => { load(); }, [load]);
 
+  useEffect(() => {
+    const channel = supabase
+      .channel('crm-agentClients-balance')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'users' },
+        (payload) => {
+          const updated = payload.new as any;
+          if (updated.role !== 'client') return;
+          setClients(prev => {
+            const idx = prev.findIndex(c => c.id === updated.id);
+            if (idx === -1) return prev;
+            const next = [...prev];
+            next[idx] = mapRow(updated);
+            return next;
+          });
+          setSelected(prev => {
+            if (!prev || prev.id !== updated.id) return prev;
+            return mapRow(updated);
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const total      = clients.length;
   const totalBal   = clients.reduce((s, c) => s + c.totalBalance, 0);
   const newClients = clients.filter(c => Date.now() - new Date(c.createdAt).getTime() < 48 * 3600_000).length;

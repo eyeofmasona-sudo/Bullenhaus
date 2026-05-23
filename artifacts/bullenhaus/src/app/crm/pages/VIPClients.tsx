@@ -288,9 +288,11 @@ export function VIPClients({ vipOnly = false }: { vipOnly?: boolean }) {
   const isAgent = role === 'agent';
   const [search, setSearch] = useState("");
   const [filterTier, setFilterTier] = useState<string | null>(null);
-  const [selectedClient, setSelectedClient] = useState<CRMClient | null>(null);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
 
   const { clients, loading: isLoading, error } = useClients(1, 100, search);
+
+  const selectedClient = selectedClientId ? (clients.find(c => c.id === selectedClientId) ?? null) : null;
 
   const filteredClients = clients.filter(c => {
     if (vipOnly && c.tier === 'Silver') return false;
@@ -348,7 +350,7 @@ export function VIPClients({ vipOnly = false }: { vipOnly?: boolean }) {
               key={c.id}
               client={c}
               isAgent={isAgent}
-              onViewProfile={() => setSelectedClient(c)}
+              onViewProfile={() => setSelectedClientId(c.id)}
               onCall={(phone, name, clientId) => openDialer({ phone, name, clientId })}
             />
           ))}
@@ -364,7 +366,7 @@ export function VIPClients({ vipOnly = false }: { vipOnly?: boolean }) {
         </div>
       )}
 
-      <ClientDrawer isOpen={!!selectedClient} onClose={() => setSelectedClient(null)} client={selectedClient} />
+      <ClientDrawer isOpen={!!selectedClient} onClose={() => setSelectedClientId(null)} client={selectedClient} />
     </div>
   );
 }
