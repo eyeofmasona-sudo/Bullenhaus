@@ -109,20 +109,30 @@ export function AdminPanel() {
   const [newPw, setNewPw]             = useState("");
   const [newPwConfirm, setNewPwConfirm] = useState("");
 
+  const [aiProvider, setAiProvider] = useState<"openai" | "openrouter">(
+    (localStorage.getItem("bullenhaus_crm_ai_provider") as "openai" | "openrouter") || "openai"
+  );
   const [aiKey,     setAiKey]     = useState(localStorage.getItem("bullenhaus_crm_ai_key")   || "");
   const [aiModel,   setAiModel]   = useState(localStorage.getItem("bullenhaus_crm_ai_model") || "gpt-4o-mini");
   const [aiShow,    setAiShow]    = useState(false);
   const [aiSaving,  setAiSaving]  = useState(false);
   const [aiSaved,   setAiSaved]   = useState(false);
 
+  const handleAiProviderChange = (p: "openai" | "openrouter") => {
+    setAiProvider(p);
+    setAiModel(p === "openrouter" ? "openai/gpt-4o-mini" : "gpt-4o-mini");
+  };
+
   const saveAiKey = async () => {
     setAiSaving(true);
     await new Promise(r => setTimeout(r, 350));
     if (aiKey.trim()) {
-      localStorage.setItem("bullenhaus_crm_ai_key",   aiKey.trim());
-      localStorage.setItem("bullenhaus_crm_ai_model", aiModel);
+      localStorage.setItem("bullenhaus_crm_ai_key",      aiKey.trim());
+      localStorage.setItem("bullenhaus_crm_ai_model",    aiModel);
+      localStorage.setItem("bullenhaus_crm_ai_provider", aiProvider);
     } else {
       localStorage.removeItem("bullenhaus_crm_ai_key");
+      localStorage.removeItem("bullenhaus_crm_ai_provider");
     }
     setAiSaving(false); setAiSaved(true);
     showToast(aiKey.trim() ? "AI API key saved — AI Core Insights is now active" : "AI API key removed");
@@ -441,33 +451,72 @@ export function AdminPanel() {
         </div>
         <p className="text-[11px] text-aura-platinum/40 mb-5 leading-relaxed pl-11">
           Powers the AI Core Insights module (Client Summary, Lead Scoring, Next Best Action, Communication Analysis).
-          AI outputs are recommendations only — no actions are automated. Charges billed to your OpenAI account.
+          AI outputs are recommendations only — no actions are automated. Connect via OpenAI or OpenRouter.
         </p>
         <div className="space-y-4">
+          {/* Provider selector */}
           <div>
-            <label className="block text-[10px] uppercase tracking-widest text-aura-platinum/50 mb-1.5">OpenAI API Key</label>
+            <label className="block text-[10px] uppercase tracking-widest text-aura-platinum/50 mb-1.5">Provider</label>
+            <div className="grid grid-cols-2 gap-2">
+              {(["openai", "openrouter"] as const).map(p => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => handleAiProviderChange(p)}
+                  className={`py-2 px-4 rounded-lg border text-[11px] font-bold uppercase tracking-wider transition-all ${
+                    aiProvider === p
+                      ? "bg-aura-gold/10 border-aura-gold/40 text-aura-gold"
+                      : "bg-black/20 border-glass-border text-aura-platinum/40 hover:text-aura-platinum/70 hover:border-glass-border/60"
+                  }`}
+                >
+                  {p === "openai" ? "OpenAI" : "OpenRouter"}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="block text-[10px] uppercase tracking-widest text-aura-platinum/50 mb-1.5">
+              {aiProvider === "openrouter" ? "OpenRouter API Key" : "OpenAI API Key"}
+            </label>
             <div className="relative">
               <input
                 type={aiShow ? "text" : "password"}
                 value={aiKey}
                 onChange={e => setAiKey(e.target.value)}
-                placeholder="sk-••••••••••••••••••••••••••••••"
+                placeholder={aiProvider === "openrouter" ? "sk-or-••••••••••••••••••••••" : "sk-••••••••••••••••••••••••••••••"}
                 className="w-full bg-black/40 border border-glass-border rounded-lg px-4 py-2.5 pr-10 text-sm text-aura-platinum font-mono outline-none focus:border-aura-gold/50 transition-colors placeholder:text-aura-platinum/20"
               />
               <button type="button" onClick={() => setAiShow(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-aura-platinum/40 hover:text-aura-platinum transition-colors">
                 {aiShow ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            <p className="text-[10px] text-aura-platinum/25 mt-1">Get your key at platform.openai.com/api-keys</p>
+            <p className="text-[10px] text-aura-platinum/25 mt-1">
+              {aiProvider === "openrouter"
+                ? "Get your key at openrouter.ai/keys"
+                : "Get your key at platform.openai.com/api-keys"}
+            </p>
           </div>
           <div>
             <label className="block text-[10px] uppercase tracking-widest text-aura-platinum/50 mb-1.5">Model</label>
             <div className="relative">
               <select value={aiModel} onChange={e => setAiModel(e.target.value)} className="w-full bg-black/40 border border-glass-border rounded-lg px-4 py-2.5 text-sm text-aura-platinum outline-none focus:border-aura-gold/50 transition-colors appearance-none pr-8 cursor-pointer">
-                <option value="gpt-4o-mini">GPT-4o Mini — Fast &amp; cost-effective (recommended)</option>
-                <option value="gpt-4o">GPT-4o — More capable</option>
-                <option value="gpt-4-turbo">GPT-4 Turbo — High quality</option>
-                <option value="gpt-3.5-turbo">GPT-3.5 Turbo — Economy</option>
+                {aiProvider === "openrouter" ? (
+                  <>
+                    <option value="openai/gpt-4o-mini">OpenAI GPT-4o Mini (recommended)</option>
+                    <option value="openai/gpt-4o">OpenAI GPT-4o</option>
+                    <option value="anthropic/claude-3.5-sonnet">Anthropic Claude 3.5 Sonnet</option>
+                    <option value="anthropic/claude-3-haiku">Anthropic Claude 3 Haiku — Economy</option>
+                    <option value="google/gemini-2.0-flash-001">Google Gemini 2.0 Flash</option>
+                    <option value="meta-llama/llama-3.3-70b-instruct">Meta Llama 3.3 70B</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="gpt-4o-mini">GPT-4o Mini — Fast &amp; cost-effective (recommended)</option>
+                    <option value="gpt-4o">GPT-4o — More capable</option>
+                    <option value="gpt-4-turbo">GPT-4 Turbo — High quality</option>
+                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo — Economy</option>
+                  </>
+                )}
               </select>
               <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-aura-platinum/40 pointer-events-none" />
             </div>

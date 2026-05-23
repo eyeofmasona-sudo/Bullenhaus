@@ -11,8 +11,9 @@ import { fetchClientTransactions } from "../hooks/useClients";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const CRM_AI_KEY   = "bullenhaus_crm_ai_key";
-const CRM_AI_MODEL = "bullenhaus_crm_ai_model";
+const CRM_AI_KEY      = "bullenhaus_crm_ai_key";
+const CRM_AI_MODEL    = "bullenhaus_crm_ai_model";
+const CRM_AI_PROVIDER = "bullenhaus_crm_ai_provider";
 
 const MODELS = [
   { value: "gpt-4o-mini",   label: "GPT-4o Mini — Fast (recommended)" },
@@ -42,14 +43,28 @@ type TabKey = "summary" | "scoring" | "action" | "comm" | "risk" | "productivity
 // ── AI caller ─────────────────────────────────────────────────────────────────
 
 async function callOpenAI(systemPrompt: string, userContent: string): Promise<string> {
-  const key   = localStorage.getItem(CRM_AI_KEY)   || "";
-  const model = localStorage.getItem(CRM_AI_MODEL) || "gpt-4o-mini";
+  const key      = localStorage.getItem(CRM_AI_KEY)      || "";
+  const model    = localStorage.getItem(CRM_AI_MODEL)    || "gpt-4o-mini";
+  const provider = localStorage.getItem(CRM_AI_PROVIDER) || "openai";
 
   if (!key) throw new Error("No API key configured. Please set it in CRM Admin Panel → AI Settings.");
 
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+  const endpoint = provider === "openrouter"
+    ? "https://openrouter.ai/api/v1/chat/completions"
+    : "https://api.openai.com/v1/chat/completions";
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${key}`,
+  };
+  if (provider === "openrouter") {
+    headers["HTTP-Referer"] = window.location.origin;
+    headers["X-Title"] = "Bullenhaus CRM";
+  }
+
+  const res = await fetch(endpoint, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+    headers,
     body: JSON.stringify({
       model,
       messages: [
@@ -1143,20 +1158,30 @@ If the question cannot be answered from the available data, say so clearly.`;
 // ── API Key Settings (inline panel) ──────────────────────────────────────────
 
 function ApiKeyPanel({ onClose }: { onClose: () => void }) {
-  const [key,     setKey]     = useState(localStorage.getItem(CRM_AI_KEY)   || "");
-  const [model,   setModel]   = useState(localStorage.getItem(CRM_AI_MODEL) || "gpt-4o-mini");
-  const [show,    setShow]    = useState(false);
-  const [saving,  setSaving]  = useState(false);
-  const [saved,   setSaved]   = useState(false);
+  const [provider, setProvider] = useState<"openai" | "openrouter">(
+    (localStorage.getItem(CRM_AI_PROVIDER) as "openai" | "openrouter") || "openai"
+  );
+  const [key,    setKey]    = useState(localStorage.getItem(CRM_AI_KEY)   || "");
+  const [model,  setModel]  = useState(localStorage.getItem(CRM_AI_MODEL) || "gpt-4o-mini");
+  const [show,   setShow]   = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved,  setSaved]  = useState(false);
+
+  const handleProvider = (p: "openai" | "openrouter") => {
+    setProvider(p);
+    setModel(p === "openrouter" ? "openai/gpt-4o-mini" : "gpt-4o-mini");
+  };
 
   const save = async () => {
     setSaving(true);
     await new Promise(r => setTimeout(r, 350));
     if (key.trim()) {
-      localStorage.setItem(CRM_AI_KEY,   key.trim());
-      localStorage.setItem(CRM_AI_MODEL, model);
+      localStorage.setItem(CRM_AI_KEY,      key.trim());
+      localStorage.setItem(CRM_AI_MODEL,    model);
+      localStorage.setItem(CRM_AI_PROVIDER, provider);
     } else {
       localStorage.removeItem(CRM_AI_KEY);
+      localStorage.removeItem(CRM_AI_PROVIDER);
     }
     setSaving(false); setSaved(true);
     setTimeout(() => { setSaved(false); onClose(); }, 1200);
@@ -1168,33 +1193,72 @@ function ApiKeyPanel({ onClose }: { onClose: () => void }) {
       className="rounded-xl border border-aura-gold/20 bg-[#0E1012] p-5 space-y-4"
     >
       <div className="flex items-center justify-between">
-        <p className="text-xs font-bold text-aura-platinum uppercase tracking-widest">AI API Key Settings</p>
+        <p className="text-xs font-bold text-aura-platinum uppercase tracking-widest">AI API Settings</p>
         <button onClick={onClose} className="text-[10px] text-aura-platinum/40 hover:text-aura-platinum transition-colors">Close</button>
       </div>
+
+      {/* Provider */}
       <div>
-        <label className="block text-[10px] uppercase tracking-widest text-aura-platinum/50 mb-1.5">OpenAI API Key</label>
+        <label className="block text-[10px] uppercase tracking-widest text-aura-platinum/50 mb-1.5">Provider</label>
+        <div className="grid grid-cols-2 gap-2">
+          {(["openai", "openrouter"] as const).map(p => (
+            <button key={p} type="button" onClick={() => handleProvider(p)}
+              className={`py-1.5 px-3 rounded-lg border text-[10px] font-bold uppercase tracking-wider transition-all ${
+                provider === p
+                  ? "bg-aura-gold/10 border-aura-gold/40 text-aura-gold"
+                  : "bg-black/20 border-glass-border text-aura-platinum/40 hover:text-aura-platinum/70"
+              }`}
+            >
+              {p === "openai" ? "OpenAI" : "OpenRouter"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Key */}
+      <div>
+        <label className="block text-[10px] uppercase tracking-widest text-aura-platinum/50 mb-1.5">
+          {provider === "openrouter" ? "OpenRouter API Key" : "OpenAI API Key"}
+        </label>
         <div className="relative">
           <input
             type={show ? "text" : "password"}
             value={key}
             onChange={e => setKey(e.target.value)}
-            placeholder="sk-••••••••••••••••••••••"
+            placeholder={provider === "openrouter" ? "sk-or-••••••••••••••••••••" : "sk-••••••••••••••••••••••"}
             className={`${inputCls} pr-10 font-mono text-xs`}
           />
           <button type="button" onClick={() => setShow(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-aura-platinum/40 hover:text-aura-platinum transition-colors">
             {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
         </div>
+        <p className="text-[10px] text-aura-platinum/25 mt-1">
+          {provider === "openrouter" ? "openrouter.ai/keys" : "platform.openai.com/api-keys"}
+        </p>
       </div>
+
+      {/* Model */}
       <div>
         <label className="block text-[10px] uppercase tracking-widest text-aura-platinum/50 mb-1.5">Model</label>
         <div className="relative">
           <select value={model} onChange={e => setModel(e.target.value)} className={`${inputCls} appearance-none pr-8 cursor-pointer`}>
-            {MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+            {provider === "openrouter" ? (
+              <>
+                <option value="openai/gpt-4o-mini">OpenAI GPT-4o Mini (recommended)</option>
+                <option value="openai/gpt-4o">OpenAI GPT-4o</option>
+                <option value="anthropic/claude-3.5-sonnet">Anthropic Claude 3.5 Sonnet</option>
+                <option value="anthropic/claude-3-haiku">Anthropic Claude 3 Haiku — Economy</option>
+                <option value="google/gemini-2.0-flash-001">Google Gemini 2.0 Flash</option>
+                <option value="meta-llama/llama-3.3-70b-instruct">Meta Llama 3.3 70B</option>
+              </>
+            ) : (
+              MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)
+            )}
           </select>
           <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-aura-platinum/40 pointer-events-none" />
         </div>
       </div>
+
       <button onClick={save} disabled={saving || saved} className="w-full py-2.5 rounded-lg bg-aura-gold/10 hover:bg-aura-gold text-aura-gold hover:text-black font-bold border border-aura-gold/30 hover:border-aura-gold transition-all text-xs uppercase tracking-wider disabled:opacity-50 flex items-center justify-center gap-2">
         {saved ? <><CheckCircle2 className="w-4 h-4" /> Saved!</> : saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : "Save API Settings"}
       </button>
