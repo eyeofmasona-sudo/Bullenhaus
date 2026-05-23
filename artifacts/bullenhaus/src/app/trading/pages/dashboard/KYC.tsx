@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Upload, ShieldCheck, FileText, Camera, CheckCircle2, AlertCircle, Clock, XCircle } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -8,22 +8,17 @@ import { useAuth } from '../../contexts/AuthContext';
 
 type DocKey = 'passport' | 'id_card' | 'selfie';
 
-const DOC_SLOTS: { key: DocKey; label: string; icon: React.ReactNode; hint: string }[] = [
-  { key: 'passport',  label: 'Passport',       icon: <FileText size={24} className="text-slate-400" />, hint: 'Photo page clearly visible' },
-  { key: 'id_card',   label: 'ID Card',         icon: <FileText size={24} className="text-slate-400" />, hint: 'Front & back if applicable' },
-  { key: 'selfie',    label: 'Selfie with ID',  icon: <Camera  size={24} className="text-slate-400" />, hint: 'Hold document next to your face' },
+const DOC_SLOTS: { key: DocKey; label: string; icon: React.ReactNode; hint: string; camera?: boolean }[] = [
+  { key: 'passport', label: 'Passport',      icon: <FileText size={24} className="text-slate-400" />, hint: 'Photo page clearly visible' },
+  { key: 'id_card',  label: 'ID Card',        icon: <FileText size={24} className="text-slate-400" />, hint: 'Front & back if applicable' },
+  { key: 'selfie',   label: 'Selfie with ID', icon: <Camera  size={24} className="text-slate-400" />, hint: 'Hold document next to your face', camera: true },
 ];
 
 export const KYC = () => {
   const { t } = useTranslation('common');
-  const { kycStatus, refreshProfile } = useAuth();
+  const { kycStatus, refreshProfile, user } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const [files, setFiles] = useState<Record<DocKey, File | null>>({ passport: null, id_card: null, selfie: null });
-  const [user, setUser] = useState<any>(null);
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUser(data.user));
-  }, []);
 
   const handleFile = (key: DocKey, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
@@ -44,19 +39,18 @@ export const KYC = () => {
         if (!file) continue;
         const ext  = file.name.split('.').pop() ?? 'bin';
         const path = `${user.id}/${key}_${Date.now()}.${ext}`;
+
         const { error: upErr } = await supabase.storage
           .from('kyc-documents')
           .upload(path, file, { contentType: file.type, upsert: true });
+
         if (upErr) throw new Error(`Upload failed for ${key}: ${upErr.message}`);
         uploaded.push({ type: key, name: file.name, path, contentType: file.type });
       }
 
       const { error: dbErr } = await supabase
         .from('users')
-        .update({
-          kyc_status:    'PENDING',
-          kyc_documents: uploaded,
-        })
+        .update({ kyc_status: 'PENDING', kyc_documents: uploaded })
         .eq('id', user.id);
       if (dbErr) throw new Error(dbErr.message);
 
@@ -69,7 +63,6 @@ export const KYC = () => {
     }
   };
 
-  // ── Status screens ────────────────────────────────────────────────────────
   if (kycStatus === 'PENDING') {
     return (
       <div className="p-4 lg:p-8 flex items-center justify-center min-h-[60vh]">
@@ -93,10 +86,7 @@ export const KYC = () => {
           </div>
           <h2 className="text-2xl font-bold text-white mb-3">Verification Rejected</h2>
           <p className="text-slate-400 text-sm mb-8">Your documents did not meet our requirements. Please re-submit with clearer, valid documents.</p>
-          <button
-            onClick={() => setFiles({ passport: null, id_card: null, selfie: null })}
-            className="btn-gold px-8 py-3 rounded-xl"
-          >
+          <button onClick={() => setFiles({ passport: null, id_card: null, selfie: null })} className="btn-gold px-8 py-3 rounded-xl">
             Re-submit Documents
           </button>
         </div>
@@ -122,7 +112,6 @@ export const KYC = () => {
     );
   }
 
-  // ── Upload form ───────────────────────────────────────────────────────────
   return (
     <div className="p-4 lg:p-8 animate-in fade-in duration-500">
       <div className="max-w-3xl mx-auto">
@@ -137,7 +126,7 @@ export const KYC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          {DOC_SLOTS.map(({ key, label, icon, hint }) => (
+          {DOC_SLOTS.map(({ key, label, icon, hint, camera }) => (
             <label
               key={key}
               className={`flex flex-col items-center justify-center gap-3 border-2 border-dashed rounded-2xl p-6 cursor-pointer transition-all min-h-[160px] ${
@@ -149,7 +138,7 @@ export const KYC = () => {
               {files[key] ? (
                 <>
                   <CheckCircle2 size={32} className="text-accent-secondary" />
-                  <span className="text-xs font-bold text-accent-secondary text-center">{files[key]!.name}</span>
+                  <span className="text-xs font-bold text-accent-secondary text-center break-all">{files[key]!.name}</span>
                   <span className="text-[10px] text-slate-500">Click to replace</span>
                 </>
               ) : (
@@ -160,11 +149,26 @@ export const KYC = () => {
                     <p className="text-[10px] text-slate-500">{hint}</p>
                   </div>
                   <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    <Upload size={11} /> Upload file
+                    {camera ? <><Camera size={11} /> Open Camera</> : <><Upload size={11} /> Upload file</>}
                   </div>
                 </>
               )}
-              <input type="file" className="hidden" accept="image/*,.pdf" onChange={e => handleFile(key, e)} />
+              {camera ? (
+                <input
+                  type="file"
+                  className="hidden"
+                  accept="image/*"
+                  capture="user"
+                  onChange={e => handleFile(key, e)}
+                />
+              ) : (
+                <input
+                  type="file"
+                  className="hidden"
+                  accept="image/*,.pdf"
+                  onChange={e => handleFile(key, e)}
+                />
+              )}
             </label>
           ))}
         </div>
