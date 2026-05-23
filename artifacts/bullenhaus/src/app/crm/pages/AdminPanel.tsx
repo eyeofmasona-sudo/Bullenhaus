@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import {
   Users, Shield, Database, Settings, Search,
   Edit2, Lock, Plus, Trash2, RefreshCw, KeyRound,
-  Loader2, AlertCircle, CheckCircle2, ChevronDown
+  Loader2, AlertCircle, CheckCircle2, ChevronDown,
+  Bot, Eye, EyeOff,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Modal } from "../components/ui/Modal";
@@ -107,6 +108,26 @@ export function AdminPanel() {
 
   const [newPw, setNewPw]             = useState("");
   const [newPwConfirm, setNewPwConfirm] = useState("");
+
+  const [aiKey,     setAiKey]     = useState(localStorage.getItem("bullenhaus_crm_ai_key")   || "");
+  const [aiModel,   setAiModel]   = useState(localStorage.getItem("bullenhaus_crm_ai_model") || "gpt-4o-mini");
+  const [aiShow,    setAiShow]    = useState(false);
+  const [aiSaving,  setAiSaving]  = useState(false);
+  const [aiSaved,   setAiSaved]   = useState(false);
+
+  const saveAiKey = async () => {
+    setAiSaving(true);
+    await new Promise(r => setTimeout(r, 350));
+    if (aiKey.trim()) {
+      localStorage.setItem("bullenhaus_crm_ai_key",   aiKey.trim());
+      localStorage.setItem("bullenhaus_crm_ai_model", aiModel);
+    } else {
+      localStorage.removeItem("bullenhaus_crm_ai_key");
+    }
+    setAiSaving(false); setAiSaved(true);
+    showToast(aiKey.trim() ? "AI API key saved — AI Core Insights is now active" : "AI API key removed");
+    setTimeout(() => setAiSaved(false), 2500);
+  };
 
   const showToast = (msg: string, type: ToastType = "success") => {
     const id = Date.now();
@@ -408,6 +429,63 @@ export function AdminPanel() {
           </div>
         </div>
       </Modal>
+
+      {/* ── AI Core Insights — API Key Configuration ── */}
+      <div className="rounded-2xl border border-glass-border bg-black/20 p-6">
+        <div className="flex items-center gap-3 mb-1">
+          <div className="w-8 h-8 rounded-xl bg-aura-gold/10 border border-aura-gold/20 flex items-center justify-center">
+            <Bot className="w-4 h-4 text-aura-gold" />
+          </div>
+          <h3 className="text-sm font-bold text-aura-platinum uppercase tracking-widest">AI Core Insights — API Settings</h3>
+          <div className={`ml-auto w-2 h-2 rounded-full ${localStorage.getItem("bullenhaus_crm_ai_key") ? "bg-aura-emerald" : "bg-aura-platinum/20"}`} />
+        </div>
+        <p className="text-[11px] text-aura-platinum/40 mb-5 leading-relaxed pl-11">
+          Powers the AI Core Insights module (Client Summary, Lead Scoring, Next Best Action, Communication Analysis).
+          AI outputs are recommendations only — no actions are automated. Charges billed to your OpenAI account.
+        </p>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-[10px] uppercase tracking-widest text-aura-platinum/50 mb-1.5">OpenAI API Key</label>
+            <div className="relative">
+              <input
+                type={aiShow ? "text" : "password"}
+                value={aiKey}
+                onChange={e => setAiKey(e.target.value)}
+                placeholder="sk-••••••••••••••••••••••••••••••"
+                className="w-full bg-black/40 border border-glass-border rounded-lg px-4 py-2.5 pr-10 text-sm text-aura-platinum font-mono outline-none focus:border-aura-gold/50 transition-colors placeholder:text-aura-platinum/20"
+              />
+              <button type="button" onClick={() => setAiShow(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-aura-platinum/40 hover:text-aura-platinum transition-colors">
+                {aiShow ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            <p className="text-[10px] text-aura-platinum/25 mt-1">Get your key at platform.openai.com/api-keys</p>
+          </div>
+          <div>
+            <label className="block text-[10px] uppercase tracking-widest text-aura-platinum/50 mb-1.5">Model</label>
+            <div className="relative">
+              <select value={aiModel} onChange={e => setAiModel(e.target.value)} className="w-full bg-black/40 border border-glass-border rounded-lg px-4 py-2.5 text-sm text-aura-platinum outline-none focus:border-aura-gold/50 transition-colors appearance-none pr-8 cursor-pointer">
+                <option value="gpt-4o-mini">GPT-4o Mini — Fast &amp; cost-effective (recommended)</option>
+                <option value="gpt-4o">GPT-4o — More capable</option>
+                <option value="gpt-4-turbo">GPT-4 Turbo — High quality</option>
+                <option value="gpt-3.5-turbo">GPT-3.5 Turbo — Economy</option>
+              </select>
+              <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-aura-platinum/40 pointer-events-none" />
+            </div>
+          </div>
+          <button
+            onClick={saveAiKey}
+            disabled={aiSaving || aiSaved}
+            className="px-6 py-2.5 rounded-lg bg-aura-gold/10 hover:bg-aura-gold text-aura-gold hover:text-black font-bold border border-aura-gold/30 hover:border-aura-gold transition-all text-xs uppercase tracking-wider disabled:opacity-50 flex items-center gap-2"
+          >
+            {aiSaved
+              ? <><CheckCircle2 className="w-3.5 h-3.5" /> Saved!</>
+              : aiSaving
+              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…</>
+              : <><KeyRound className="w-3.5 h-3.5" /> Save AI Settings</>
+            }
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

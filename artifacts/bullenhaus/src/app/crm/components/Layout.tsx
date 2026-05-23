@@ -18,7 +18,8 @@ import {
   BellRing,
   Megaphone,
   Database,
-  Shield
+  Shield,
+  Brain,
 } from "lucide-react";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "motion/react";
@@ -34,6 +35,7 @@ const getNavForRole = (role: string, t: (key: string) => string) => {
         { name: t('navManagerDashboard'),  href: '/crm/manager',     icon: TrendingUp },
         { name: 'Call History',            href: '/crm/calls',       icon: PhoneCall },
         { name: 'Telephony',               href: '/crm/telephony',   icon: Phone },
+        { name: 'AI Core Insights',        href: '/crm/ai-insights', icon: Brain },
       ];
     case 'admin':
       return [
@@ -44,6 +46,7 @@ const getNavForRole = (role: string, t: (key: string) => string) => {
         { name: t('navManagerDashboard'),  href: '/crm/manager',     icon: TrendingUp },
         { name: 'Call History',            href: '/crm/calls',       icon: PhoneCall },
         { name: 'Telephony',               href: '/crm/telephony',   icon: Phone },
+        { name: 'AI Core Insights',        href: '/crm/ai-insights', icon: Brain },
       ];
     case 'manager':
       return [
@@ -52,6 +55,7 @@ const getNavForRole = (role: string, t: (key: string) => string) => {
         { name: t('navClients'),          href: '/crm/clients',     icon: ShieldCheck },
         { name: t('navDirectorDashboard'),href: '/crm/dashboard',   icon: TrendingUp },
         { name: 'Call History',           href: '/crm/calls',       icon: PhoneCall },
+        { name: 'AI Core Insights',       href: '/crm/ai-insights', icon: Brain },
       ];
     case 'agent':
       return [
@@ -60,6 +64,7 @@ const getNavForRole = (role: string, t: (key: string) => string) => {
         { name: t('navClients'),          href: '/crm/clients',     icon: ShieldCheck },
         { name: 'Call History',           href: '/crm/calls',       icon: PhoneCall },
         { name: t('navManagerDashboard'), href: '/crm/dashboard',   icon: TrendingUp },
+        { name: 'AI Core Insights',       href: '/crm/ai-insights', icon: Brain },
       ];
     default:
       return [

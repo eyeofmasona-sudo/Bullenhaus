@@ -68,6 +68,7 @@ const CRMVIPOnly = React.lazy(() => import('./app/crm/pages/VIPClients').then(m 
 const CRMCallHistory = React.lazy(() => import('./app/crm/pages/CallHistory').then(m => ({ default: m.CallHistory })));
 const CRMAgentClients = React.lazy(() => import('./app/crm/pages/AgentClients').then(m => ({ default: m.AgentClients })));
 const CRMTelephonySettings = React.lazy(() => import('./app/crm/pages/TelephonySettings').then(m => ({ default: m.TelephonySettings })));
+const CRMAIInsights = React.lazy(() => import('./app/crm/pages/AIInsights').then(m => ({ default: m.AIInsights })));
 
 const Fallback = () => (
   <div className="flex h-dvh w-full items-center justify-center bg-bg">
@@ -195,6 +196,7 @@ const AppContent = () => {
                 <Route path="my-clients" element={<CRMAgentClients />} />
                 <Route path="telephony" element={<CRMTelephonySettings />} />
                 <Route path="admin" element={<CRMAdminPanel />} />
+                <Route path="ai-insights" element={<CRMAIInsights />} />
               </Route>
             </Route>
           </Route>
