@@ -481,7 +481,12 @@ function ClientCard({ client, onViewProfile, onCall, isAgent }: { client: CRMCli
             <Phone className="w-3.5 h-3.5" /> {client.phone ? "Call" : "No phone"}
           </Button>
         )}
-        <Button variant="secondary" className="flex-1 text-[10px]">
+        <Button
+          variant="secondary"
+          className="flex-1 text-[10px]"
+          onClick={() => window.open(`mailto:${client.email}`, '_blank')}
+          title={client.email}
+        >
           <Mail className="w-3.5 h-3.5" /> Email
         </Button>
         <Button variant="outline" className="flex-1 text-[10px]" onClick={onViewProfile}>

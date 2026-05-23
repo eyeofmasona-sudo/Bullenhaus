@@ -16,8 +16,18 @@ interface DashboardStats {
   clientCount: number;
   totalDeposits: number;
   totalWithdrawals: number;
-  crmWorkers: { full_name: string | null; role: string; email: string }[];
+  crmWorkers: { full_name: string | null; role: string; email: string; last_seen_at: string | null }[];
   weeklyFlow: { name: string; deposit: number; withdrawal: number }[];
+}
+
+function getOnlineStatus(lastSeen: string | null) {
+  if (!lastSeen) return { label: 'Offline', dotClass: 'bg-aura-platinum/20', textClass: 'text-aura-platinum/30' };
+  const mins = (Date.now() - new Date(lastSeen).getTime()) / 60_000;
+  if (mins < 5)  return { label: 'Online',             dotClass: 'bg-aura-emerald shadow-[0_0_6px_rgba(16,185,129,0.6)]', textClass: 'text-aura-emerald' };
+  if (mins < 60) return { label: `${Math.floor(mins)}m ago`, dotClass: 'bg-yellow-400', textClass: 'text-yellow-400' };
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24)  return { label: `${hrs}h ago`,        dotClass: 'bg-aura-platinum/30', textClass: 'text-aura-platinum/40' };
+  return           { label: new Date(lastSeen).toLocaleDateString(), dotClass: 'bg-aura-platinum/20', textClass: 'text-aura-platinum/30' };
 }
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -25,7 +35,7 @@ const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 async function loadStats(): Promise<DashboardStats> {
   const [clientsRes, workersRes, txRes] = await Promise.all([
     supabase.from("users").select("id", { count: "exact", head: true }).eq("role", "client"),
-    supabase.from("users").select("full_name, role, email").in("role", ["agent", "manager", "director"]).order("role"),
+    supabase.from("users").select("full_name, role, email, last_seen_at").in("role", ["agent", "manager", "director"]).order("role"),
     supabase.from("transactions").select("type, amount, created_at").eq("status", "COMPLETED"),
   ]);
 
@@ -203,10 +213,15 @@ export function Dashboard() {
                     <div className="text-xs font-medium text-aura-platinum">{w.full_name || w.email.split("@")[0]}</div>
                     <div className="text-[9px] text-aura-platinum/40 tracking-wider uppercase mt-0.5">{w.role}</div>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-aura-emerald shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
-                    <span className="text-[9px] text-aura-emerald font-bold">Online</span>
-                  </div>
+                  {(() => {
+                    const s = getOnlineStatus(w.last_seen_at);
+                    return (
+                      <div className="flex items-center gap-1.5">
+                        <span className={`w-1.5 h-1.5 rounded-full ${s.dotClass}`} />
+                        <span className={`text-[9px] font-bold ${s.textClass}`}>{s.label}</span>
+                      </div>
+                    );
+                  })()}
                 </div>
               ))}
               {(stats?.crmWorkers ?? []).length === 0 && (
