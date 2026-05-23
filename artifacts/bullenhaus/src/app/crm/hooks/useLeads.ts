@@ -1,7 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../../lib/supabase/browserClient';
 
-const LEADS_SELECT = 'id, firstName, lastName, email, phone, stage, capacity, acquisitionSource, notes, created_at';
+const LEADS_SELECT = 'id, first_name, last_name, email, phone, stage, capacity, acquisition_source, notes, created_at';
+
+function mapLead(row: any) {
+  return {
+    ...row,
+    firstName: row.first_name ?? '',
+    lastName: row.last_name ?? '',
+    acquisitionSource: row.acquisition_source ?? {},
+  };
+}
 
 export function useLeads(page = 1, limit = 50, search = '') {
   const [data, setData]       = useState<any[]>([]);
@@ -20,13 +29,13 @@ export function useLeads(page = 1, limit = 50, search = '') {
         .range((page - 1) * limit, page * limit - 1);
 
       if (search) {
-        q = q.or(`firstName.ilike.%${search}%,lastName.ilike.%${search}%,email.ilike.%${search}%`);
+        q = q.or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%`);
       }
 
       const { data: leads, error: dbError } = await q;
       if (dbError) throw new Error(dbError.message);
 
-      const rows = leads ?? [];
+      const rows = (leads ?? []).map(mapLead);
       const grouped = {
         'New Inquiries': rows.filter((l: any) => l.stage === 'NEW_INQUIRY'),
         'In Discussion': rows.filter((l: any) => l.stage === 'IN_DISCUSSION'),
