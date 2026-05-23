@@ -36,7 +36,7 @@ async function loadStats(): Promise<DashboardStats> {
   const [clientsRes, workersRes, txRes] = await Promise.all([
     supabase.from("users").select("id", { count: "exact", head: true }).eq("role", "client"),
     supabase.from("users").select("full_name, role, email, last_seen_at").in("role", ["agent", "manager", "director"]).order("role"),
-    supabase.from("transactions").select("type, amount, created_at").eq("status", "COMPLETED"),
+    supabase.from("transactions").select("type, amount, created_at").eq("status", "Completed"),
   ]);
 
   const txData = (txRes.data ?? []) as { type: string; amount: number; created_at: string }[];
@@ -57,13 +57,13 @@ async function loadStats(): Promise<DashboardStats> {
 
     return {
       name,
-      deposit: dayTx.filter(t => t.type === "DEPOSIT").reduce((s, t) => s + Number(t.amount), 0),
-      withdrawal: dayTx.filter(t => t.type === "WITHDRAWAL").reduce((s, t) => s + Number(t.amount), 0),
+      deposit:    dayTx.filter(t => t.type === "Deposit").reduce((s, t) => s + Number(t.amount), 0),
+      withdrawal: dayTx.filter(t => t.type === "Withdrawal").reduce((s, t) => s + Number(t.amount), 0),
     };
   });
 
-  const totalDeposits = txData.filter(t => t.type === "DEPOSIT").reduce((s, t) => s + Number(t.amount), 0);
-  const totalWithdrawals = txData.filter(t => t.type === "WITHDRAWAL").reduce((s, t) => s + Number(t.amount), 0);
+  const totalDeposits    = txData.filter(t => t.type === "Deposit").reduce((s, t) => s + Number(t.amount), 0);
+  const totalWithdrawals = txData.filter(t => t.type === "Withdrawal").reduce((s, t) => s + Number(t.amount), 0);
 
   return {
     clientCount: clientsRes.count ?? 0,
