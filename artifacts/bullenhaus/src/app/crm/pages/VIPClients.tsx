@@ -387,12 +387,22 @@ function ClientCardSkeleton() {
 function ClientCard({ client, onViewProfile }: { client: CRMClient; onViewProfile: () => void }) {
   const clientName = `${client.firstName} ${client.lastName}`;
   const initials = `${client.firstName.charAt(0)}${client.lastName.charAt(0)}`.toUpperCase() || "?";
+  const isNew = (Date.now() - new Date(client.createdAt).getTime()) < 48 * 60 * 60 * 1000;
 
   return (
-    <div className={`rounded-xl border border-glass-border bg-[#121214] p-6 relative group transition-all duration-300 hover:bg-white/5 ${
-      client.riskScore === "CRITICAL" ? "border-aura-ruby/30 hover:border-aura-ruby/50" : "hover:border-aura-gold/20"
+    <div className={`rounded-xl border bg-[#121214] p-6 relative group transition-all duration-300 hover:bg-white/5 ${
+      isNew
+        ? "border-aura-emerald/50 shadow-[0_0_20px_rgba(16,185,129,0.08)] hover:border-aura-emerald/70"
+        : client.riskScore === "CRITICAL"
+        ? "border-aura-ruby/30 hover:border-aura-ruby/50"
+        : "border-glass-border hover:border-aura-gold/20"
     }`}>
-      {client.riskScore === "CRITICAL" && (
+      {isNew && (
+        <div className="absolute top-0 left-0 bg-aura-emerald text-black text-[9px] font-bold uppercase tracking-widest px-3 py-1 rounded-br flex items-center gap-1 shadow-[0_0_10px_rgba(16,185,129,0.4)]">
+          <span className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" /> New
+        </div>
+      )}
+      {!isNew && client.riskScore === "CRITICAL" && (
         <div className="absolute top-0 right-0 bg-aura-ruby text-white text-[9px] font-bold uppercase tracking-widest px-3 py-1 rounded-bl flex items-center gap-1 shadow-[0_0_10px_rgba(251,113,133,0.3)]">
           <ShieldAlert className="w-3 h-3" /> Churn Risk
         </div>

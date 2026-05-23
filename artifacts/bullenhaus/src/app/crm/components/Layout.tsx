@@ -1,5 +1,6 @@
 import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { supabase } from "../../../lib/supabase/browserClient";
 import { 
   Building2, 
   LayoutDashboard, 
@@ -41,14 +42,16 @@ const getNavForRole = (role: string, t: (key: string) => string) => {
       ];
     case 'manager':
       return [
-        { name: t('navManagerDashboard'), href: '/crm/manager', icon: LayoutDashboard },
-        { name: t('navTeamPipeline'), href: '/crm/workspace', icon: Users },
-        { name: t('navDirectorDashboard'), href: '/crm/dashboard', icon: PhoneCall },
+        { name: t('navManagerDashboard'), href: '/crm/manager',    icon: LayoutDashboard },
+        { name: t('navTeamPipeline'),     href: '/crm/workspace',  icon: Users },
+        { name: t('navClients'),          href: '/crm/clients',    icon: ShieldCheck },
+        { name: t('navDirectorDashboard'),href: '/crm/dashboard',  icon: PhoneCall },
       ];
     case 'agent':
       return [
-        { name: t('navAgentWorkspace'), href: '/crm/workspace', icon: LayoutDashboard },
-        { name: t('navManagerDashboard'), href: '/crm/dashboard', icon: PhoneCall },
+        { name: t('navAgentWorkspace'),   href: '/crm/workspace',  icon: LayoutDashboard },
+        { name: t('navClients'),          href: '/crm/clients',    icon: ShieldCheck },
+        { name: t('navManagerDashboard'), href: '/crm/dashboard',  icon: PhoneCall },
       ];
     default:
       return [
@@ -66,6 +69,22 @@ export function Layout({ children, role, onLogout }: { children: ReactNode, role
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location.pathname]);
+
+  // Ping last_seen_at so managers can see real online status
+  useEffect(() => {
+    const ping = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from('users')
+          .update({ last_seen_at: new Date().toISOString() })
+          .eq('id', user.id);
+      }
+    };
+    ping();
+    const iv = setInterval(ping, 2 * 60 * 1000);
+    return () => clearInterval(iv);
+  }, []);
 
   const SidebarContent = () => (
     <>
