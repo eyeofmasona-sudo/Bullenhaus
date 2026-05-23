@@ -174,7 +174,10 @@ export const TradingChart: React.FC = () => {
     chartRef.current = chart;
     seriesRef.current = { candlestick: candlestickSeries, volume: volumeSeries, ema: emaSeries, sma: smaSeries, bbUpper: bbUpperSeries, bbLower: bbLowerSeries };
 
+    let disposed = false;
+
     const resizeChart = () => {
+      if (disposed) return;
       const container = chartContainerRef.current;
       if (!container) return;
       chart.applyOptions({
@@ -189,10 +192,12 @@ export const TradingChart: React.FC = () => {
     resizeChart();
 
     return () => {
+      disposed = true;
       resizeObserver.disconnect();
       window.removeEventListener('resize', resizeChart);
       chart.remove();
       chartRef.current = null;
+      seriesRef.current = null;
     };
   }, []);
 
@@ -232,6 +237,8 @@ export const TradingChart: React.FC = () => {
 
     if (wsRef.current) { wsRef.current.close(); wsRef.current = null; }
     if (unsubRef.current) { unsubRef.current(); unsubRef.current = null; }
+
+    let cancelled = false;
 
     const { candlestick, volume, ema, sma, bbUpper, bbLower } = seriesRef.current;
 
@@ -371,6 +378,8 @@ export const TradingChart: React.FC = () => {
           }
         }
 
+        if (cancelled || !seriesRef.current) return;
+
         if (raw && raw.length > 0) {
           const { cData, vData, eData } = parseKlines(raw);
           candleClosesRef.current = cData.map((c: any) => c.close);
@@ -382,25 +391,28 @@ export const TradingChart: React.FC = () => {
           if (indicators.bb) { const { upper, lower } = computeBBData(cData as CandlePoint[]); bbUpper.setData(upper as any); bbLower.setData(lower as any); }
 
           // Live WebSocket for real-time tick updates
-          try {
-            const ws = new WebSocket(`wss://stream.binance.com:9443/ws/${symbol.toLowerCase()}@kline_${binanceInterval}`);
-            wsRef.current = ws;
-            ws.onmessage = (event) => {
-              const msg = JSON.parse(event.data);
-              if (msg?.k) {
-                const k = msg.k;
-                const time = Math.floor(k.t / 1000);
-                const open  = parseFloat(k.o);
-                const high  = parseFloat(k.h);
-                const low   = parseFloat(k.l);
-                const close = parseFloat(k.c);
-                const vol   = parseFloat(k.v);
-                candlestick.update({ time: time as any, open, high, low, close });
-                const isUp = close >= open;
-                volume.update({ time: time as any, value: vol, color: isUp ? 'rgba(0, 230, 118, 0.3)' : 'rgba(255, 61, 0, 0.3)' });
-              }
-            };
-          } catch { /* static history still shown */ }
+          if (!cancelled) {
+            try {
+              const ws = new WebSocket(`wss://stream.binance.com:9443/ws/${symbol.toLowerCase()}@kline_${binanceInterval}`);
+              wsRef.current = ws;
+              ws.onmessage = (event) => {
+                if (cancelled || !seriesRef.current) return;
+                const msg = JSON.parse(event.data);
+                if (msg?.k) {
+                  const k = msg.k;
+                  const time = Math.floor(k.t / 1000);
+                  const open  = parseFloat(k.o);
+                  const high  = parseFloat(k.h);
+                  const low   = parseFloat(k.l);
+                  const close = parseFloat(k.c);
+                  const vol   = parseFloat(k.v);
+                  candlestick.update({ time: time as any, open, high, low, close });
+                  const isUp = close >= open;
+                  volume.update({ time: time as any, value: vol, color: isUp ? 'rgba(0, 230, 118, 0.3)' : 'rgba(255, 61, 0, 0.3)' });
+                }
+              };
+            } catch { /* static history still shown */ }
+          }
         } else {
           const { cData, vData, eData } = buildDemoCandles(fallbackPrice, tfSeconds, 500);
           candleClosesRef.current = cData.map((c: any) => c.close);
@@ -414,6 +426,7 @@ export const TradingChart: React.FC = () => {
       };
 
       loadHistory().catch(() => {
+        if (cancelled || !seriesRef.current) return;
         const { cData, vData, eData } = buildDemoCandles(fallbackPrice, tfSeconds, 500);
         candleClosesRef.current = cData.map((c: any) => c.close);
         candleDataRef.current = cData as CandlePoint[];
@@ -426,8 +439,9 @@ export const TradingChart: React.FC = () => {
     }
 
     return () => {
-      if (wsRef.current) wsRef.current.close();
-      if (unsubRef.current) unsubRef.current();
+      cancelled = true;
+      if (wsRef.current) { wsRef.current.close(); wsRef.current = null; }
+      if (unsubRef.current) { unsubRef.current(); unsubRef.current = null; }
     };
   }, [currentPair, currentTimeframe]);
 
