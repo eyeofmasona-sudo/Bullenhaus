@@ -105,7 +105,12 @@
     color: #fff;
   }
 
-  /* Focus ring — always gold */
+  /* Remove browser default blue outline on mouse focus */
+  *:focus {
+    outline: none;
+  }
+
+  /* Focus ring — gold only for keyboard navigation */
   *:focus-visible {
     outline: 2px solid var(--color-gold);
     outline-offset: 2px;

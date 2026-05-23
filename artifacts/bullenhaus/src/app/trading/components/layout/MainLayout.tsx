@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Sidebar } from './Sidebar';
 import { TradingFooter } from './TradingFooter';
+import { LiveChat } from '../chat/LiveChat';
 import { Bell, Search, Globe, ArrowRight, Menu, ShieldAlert, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
@@ -245,6 +246,7 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
           <div className="relative z-10 w-full p-4 md:p-8">{children}</div>
         </main>
         <TradingFooter />
+        <LiveChat />
       </div>
     </div>
   );
