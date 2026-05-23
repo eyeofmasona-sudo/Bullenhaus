@@ -66,6 +66,7 @@
   --color-sidebar-bg: #0A0A0B;
   --color-card-bg: #121214;
   --color-glass-border: rgba(255, 255, 255, 0.06);
+  --color-ring: transparent;
 
   /* Shadows */
   --shadow-gold-glow: 0 0 24px rgba(212, 175, 55, 0.25);
