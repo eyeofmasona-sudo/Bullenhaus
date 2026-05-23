@@ -34,9 +34,31 @@ export const AdminWithdrawals = () => {
 
   const handleAction = async (id: string, status: TxStatus) => {
     try {
-      const { error } = await supabase.from('transactions').update({ status }).eq('id', id);
-      if (error) throw error;
-      toast.success(`Request marked as ${status}`);
+      if (status === 'Completed') {
+        // Atomic approve+debit via DB function — prevents double-debit under concurrent requests
+        const { data: result, error: rpcErr } = await supabase.rpc('approve_withdrawal', {
+          p_transaction_id: id,
+        });
+        if (rpcErr) throw rpcErr;
+
+        const res = result as { ok: boolean; error?: string; amount?: number };
+        if (!res.ok) {
+          if (res.error === 'already_approved') {
+            toast.info('Withdrawal already approved — balance unchanged');
+          } else {
+            throw new Error(res.error ?? 'Approval failed');
+          }
+          return;
+        }
+
+        toast.success(`Withdrawal approved — $${Number(res.amount ?? 0).toLocaleString()} debited from client`);
+      } else {
+        // Reject / other statuses — never touch the balance
+        const { error } = await supabase.from('transactions').update({ status }).eq('id', id);
+        if (error) throw error;
+        toast.success(`Request marked as ${status}`);
+      }
+
       fetchRequests();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to update request');
