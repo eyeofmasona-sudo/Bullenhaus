@@ -39,7 +39,7 @@ function mapUser(u: any): CRMClient {
     firstName,
     lastName,
     email: u.email,
-    phone: u.phone ?? null,
+    phone: (u.phone as string | null) ?? null,
     company: null,
     totalBalance: balance,
     tier,
@@ -62,7 +62,7 @@ export function useClients(page = 1, limit = 50, search = '') {
     try {
       let q = supabase
         .from('users')
-        .select('id, email, full_name, balance, kyc_status, created_at, updated_at')
+        .select('id, email, full_name, phone, balance, kyc_status, created_at, updated_at')
         .eq('role', 'client')
         .order('created_at', { ascending: false })
         .range((page - 1) * limit, page * limit - 1);

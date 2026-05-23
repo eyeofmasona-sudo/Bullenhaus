@@ -83,6 +83,7 @@ const TradeAppWrapper = () => {
 // Wrapper for CRM to inject the role into the old Layout component.
 // CRM pages (and Layout itself) use useI18n() which requires LanguageProvider.
 import { LanguageProvider } from './app/crm/lib/i18n';
+import { PhoneDialerProvider } from './app/crm/contexts/PhoneDialerContext';
 
 const CRMAppWrapper = () => {
   const { role, signOut } = useAuth();
@@ -92,9 +93,11 @@ const CRMAppWrapper = () => {
   return (
     <LanguageProvider>
       <Suspense fallback={<Fallback />}>
-        <CRMLayout role={role} onLogout={signOut}>
-          <Outlet />
-        </CRMLayout>
+        <PhoneDialerProvider>
+          <CRMLayout role={role} onLogout={signOut}>
+            <Outlet />
+          </CRMLayout>
+        </PhoneDialerProvider>
       </Suspense>
     </LanguageProvider>
   );

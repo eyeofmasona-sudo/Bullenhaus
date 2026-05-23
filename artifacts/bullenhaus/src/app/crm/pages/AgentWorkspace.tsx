@@ -4,6 +4,7 @@ import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
 import { useLeads } from "../hooks/useLeads";
 import { useI18n } from "../lib/i18n";
+import { usePhoneDialer } from "../contexts/PhoneDialerContext";
 
 interface LocalTask {
   name: string;
@@ -12,7 +13,7 @@ interface LocalTask {
   urgent: boolean;
 }
 
-function LeadPipeline({ leads, meta, loading, error }: { leads: any[]; meta: any; loading: boolean; error: string | null }) {
+function LeadPipeline({ leads, meta, loading, error, onCall }: { leads: any[]; meta: any; loading: boolean; error: string | null; onCall: (phone: string, name: string) => void }) {
   const stages = meta?.grouped || {
     'New Inquiries': [],
     'In Discussion': [],
@@ -96,8 +97,13 @@ function LeadPipeline({ leads, meta, loading, error }: { leads: any[]; meta: any
                             <button className="w-6 h-6 rounded bg-black/40 border border-white/5 flex items-center justify-center hover:bg-white/10 hover:border-white/10 transition-colors">
                               <FileText className="w-3 h-3 text-aura-platinum/60" />
                             </button>
-                            <button className="w-6 h-6 rounded bg-black/40 border border-white/5 flex items-center justify-center hover:bg-white/10 hover:border-white/10 transition-colors">
-                              <Phone className="w-3 h-3 text-aura-platinum/60" />
+                            <button
+                              title={lead.phone ? `Call ${lead.firstName}` : "No phone number"}
+                              disabled={!lead.phone}
+                              onClick={() => lead.phone && onCall(lead.phone, `${lead.firstName} ${lead.lastName}`.trim())}
+                              className="w-6 h-6 rounded bg-black/40 border border-white/5 flex items-center justify-center hover:bg-aura-emerald/20 hover:border-aura-emerald/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                              <Phone className={`w-3 h-3 ${lead.phone ? 'text-aura-emerald' : 'text-aura-platinum/30'}`} />
                             </button>
                           </div>
                        </div>
@@ -119,6 +125,7 @@ function LeadPipeline({ leads, meta, loading, error }: { leads: any[]; meta: any
 
 export function AgentWorkspace() {
   const { t } = useI18n();
+  const { openDialer } = usePhoneDialer();
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [localTasks, setLocalTasks] = useState<LocalTask[]>([]);
   const [taskName, setTaskName] = useState('');
@@ -341,7 +348,13 @@ export function AgentWorkspace() {
 
       </div>
 
-      <LeadPipeline leads={leads} meta={meta} loading={loading} error={error} />
+      <LeadPipeline
+        leads={leads}
+        meta={meta}
+        loading={loading}
+        error={error}
+        onCall={(phone, name) => openDialer({ phone, name })}
+      />
 
       <Modal 
         isOpen={isTaskModalOpen} 

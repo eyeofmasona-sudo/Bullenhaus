@@ -4,7 +4,7 @@ import {
   LayoutList, CheckCircle2, AlertTriangle, TrendingUp, ArrowDownLeft,
   ArrowUpRight, Loader2, AlertCircle, DollarSign, Clock, ShieldCheck
 } from "lucide-react";
-import { PhoneDialer } from "../components/PhoneDialer";
+import { usePhoneDialer } from "../contexts/PhoneDialerContext";
 import { Button } from "../components/ui/Button";
 import { Drawer } from "../components/ui/Drawer";
 import { EmptyState } from "../components/ui/EmptyState";
@@ -277,10 +277,10 @@ export function VIPClientsPage() {
 
 export function VIPClients({ vipOnly = false }: { vipOnly?: boolean }) {
   const { t } = useI18n();
+  const { openDialer } = usePhoneDialer();
   const [search, setSearch] = useState("");
   const [filterTier, setFilterTier] = useState<string | null>(null);
   const [selectedClient, setSelectedClient] = useState<CRMClient | null>(null);
-  const [dialerPrefill, setDialerPrefill] = useState<{ phone: string; name?: string; clientId?: string } | null>(null);
 
   const { clients, loading: isLoading, error } = useClients(1, 100, search);
 
@@ -340,7 +340,7 @@ export function VIPClients({ vipOnly = false }: { vipOnly?: boolean }) {
               key={c.id}
               client={c}
               onViewProfile={() => setSelectedClient(c)}
-              onCall={(phone, name, clientId) => setDialerPrefill({ phone, name, clientId })}
+              onCall={(phone, name, clientId) => openDialer({ phone, name, clientId })}
             />
           ))}
         </div>
@@ -356,7 +356,6 @@ export function VIPClients({ vipOnly = false }: { vipOnly?: boolean }) {
       )}
 
       <ClientDrawer isOpen={!!selectedClient} onClose={() => setSelectedClient(null)} client={selectedClient} />
-      <PhoneDialer prefill={dialerPrefill} onClearPrefill={() => setDialerPrefill(null)} />
     </div>
   );
 }
