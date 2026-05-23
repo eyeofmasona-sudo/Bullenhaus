@@ -73,19 +73,19 @@ const AdminSidebar = ({ onClose }: any) => {
         <AdminSidebarItem icon={History} label="Transactions" to="/admin/transactions" active={currentPath === '/admin/transactions'} />
         <AdminSidebarItem icon={Settings} label="System Config" to="/admin/settings" active={currentPath === '/admin/settings'} />
 
-        {/* Zone switcher */}
-        <div className="pt-3 mt-3 border-t border-rose-500/10">
-          <p className="text-[9px] font-bold tracking-[0.2em] text-slate-600 uppercase px-4 mb-2">Switch Zone</p>
-          <Link to="/trade/dashboard">
-            <motion.div
-              whileHover={{ x: 4 }}
-              className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-200 text-sky-400/70 hover:text-sky-400 hover:bg-sky-400/10 border border-sky-400/0 hover:border-sky-400/20"
-            >
-              <BarChart2 size={18} />
-              <span className="font-bold text-xs tracking-wider uppercase">Trade Platform</span>
-            </motion.div>
-          </Link>
-          {role === 'admin' && (
+        {/* Zone switcher — superadmin only */}
+        {role === 'admin' && (
+          <div className="pt-3 mt-3 border-t border-rose-500/10">
+            <p className="text-[9px] font-bold tracking-[0.2em] text-slate-600 uppercase px-4 mb-2">Switch Zone</p>
+            <Link to="/trade/dashboard">
+              <motion.div
+                whileHover={{ x: 4 }}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-200 text-sky-400/70 hover:text-sky-400 hover:bg-sky-400/10 border border-sky-400/0 hover:border-sky-400/20"
+              >
+                <BarChart2 size={18} />
+                <span className="font-bold text-xs tracking-wider uppercase">Trade Platform</span>
+              </motion.div>
+            </Link>
             <Link to="/crm/admin">
               <motion.div
                 whileHover={{ x: 4 }}
@@ -95,8 +95,8 @@ const AdminSidebar = ({ onClose }: any) => {
                 <span className="font-bold text-xs tracking-wider uppercase">CRM Admin</span>
               </motion.div>
             </Link>
-          )}
-        </div>
+          </div>
+        )}
       </nav>
 
       <div className="mt-auto border-t border-rose-500/10 pt-4">
