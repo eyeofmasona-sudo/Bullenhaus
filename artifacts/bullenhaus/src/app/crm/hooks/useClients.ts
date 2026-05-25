@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../../../lib/supabase/browserClient';
 
 export interface CRMClient {
@@ -46,11 +46,15 @@ function mapUser(u: any): CRMClient {
   };
 }
 
+export type BalanceFlashDirection = 'up' | 'down';
+
 export function useClients(page = 1, limit = 50, search = '') {
-  const [data, setData]       = useState<CRMClient[]>([]);
-  const [meta, setMeta]       = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState<string | null>(null);
+  const [data, setData]           = useState<CRMClient[]>([]);
+  const [meta, setMeta]           = useState<any>(null);
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState<string | null>(null);
+  const [flashMap, setFlashMap]   = useState<Record<string, BalanceFlashDirection>>({});
+  const flashTimers               = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const fetchClients = useCallback(async () => {
     setLoading(true);
@@ -85,6 +89,7 @@ export function useClients(page = 1, limit = 50, search = '') {
   }, [fetchClients]);
 
   useEffect(() => {
+    const timers = flashTimers.current;
     const channel = supabase
       .channel('crm-useClients-balance')
       .on(
@@ -96,6 +101,20 @@ export function useClients(page = 1, limit = 50, search = '') {
           setData(prev => {
             const idx = prev.findIndex(c => c.id === updated.id);
             if (idx === -1) return prev;
+            const oldBalance = prev[idx].totalBalance;
+            const newBalance = Number(updated.balance) || 0;
+            if (newBalance !== oldBalance) {
+              const direction: BalanceFlashDirection = newBalance > oldBalance ? 'up' : 'down';
+              setFlashMap(m => ({ ...m, [updated.id]: direction }));
+              if (timers[updated.id]) clearTimeout(timers[updated.id]);
+              timers[updated.id] = setTimeout(() => {
+                setFlashMap(m => {
+                  const next = { ...m };
+                  delete next[updated.id];
+                  return next;
+                });
+              }, 1500);
+            }
             const next = [...prev];
             next[idx] = mapUser(updated);
             return next;
@@ -106,10 +125,11 @@ export function useClients(page = 1, limit = 50, search = '') {
 
     return () => {
       supabase.removeChannel(channel);
+      Object.values(timers).forEach(clearTimeout);
     };
   }, []);
 
-  return { clients: data, meta, loading, error, refetch: fetchClients };
+  return { clients: data, meta, loading, error, refetch: fetchClients, flashMap };
 }
 
 export interface ClientTransaction {

@@ -12,7 +12,7 @@ import { Drawer } from "../components/ui/Drawer";
 import { EmptyState } from "../components/ui/EmptyState";
 import { Badge } from "../components/ui/Badge";
 import { Skeleton } from "../components/ui/Skeleton";
-import { useClients, fetchClientTransactions, type CRMClient, type ClientTransaction } from "../hooks/useClients";
+import { useClients, fetchClientTransactions, type CRMClient, type ClientTransaction, type BalanceFlashDirection } from "../hooks/useClients";
 import { useI18n } from "../lib/i18n";
 
 function fmt(n: number) {
@@ -291,7 +291,7 @@ export function VIPClients({ vipOnly = false }: { vipOnly?: boolean }) {
   const [filterTier, setFilterTier] = useState<string | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
 
-  const { clients, loading: isLoading, error } = useClients(1, 100, search);
+  const { clients, loading: isLoading, error, flashMap } = useClients(1, 100, search);
 
   const selectedClient = selectedClientId ? (clients.find(c => c.id === selectedClientId) ?? null) : null;
 
@@ -351,6 +351,7 @@ export function VIPClients({ vipOnly = false }: { vipOnly?: boolean }) {
               key={c.id}
               client={c}
               isAgent={isAgent}
+              flashDir={flashMap[c.id]}
               onViewProfile={() => setSelectedClientId(c.id)}
               onCall={(phone, name, clientId) => openDialer({ phone, name, clientId })}
             />
@@ -480,7 +481,7 @@ function ClientCardMenu({ client, onViewProfile, onCall, isAgent }: {
   );
 }
 
-function ClientCard({ client, onViewProfile, onCall, isAgent }: { client: CRMClient; onViewProfile: () => void; onCall: (phone: string, name: string, clientId: string) => void; isAgent: boolean }) {
+function ClientCard({ client, onViewProfile, onCall, isAgent, flashDir }: { client: CRMClient; onViewProfile: () => void; onCall: (phone: string, name: string, clientId: string) => void; isAgent: boolean; flashDir?: BalanceFlashDirection }) {
   const clientName = `${client.firstName} ${client.lastName}`;
   const initials = `${client.firstName.charAt(0)}${client.lastName.charAt(0)}`.toUpperCase() || "?";
   const isNew = (Date.now() - new Date(client.createdAt).getTime()) < 48 * 60 * 60 * 1000;
@@ -525,7 +526,7 @@ function ClientCard({ client, onViewProfile, onCall, isAgent }: { client: CRMCli
       </div>
 
       <div className="grid grid-cols-2 gap-4 mt-6 mb-3">
-        <div className="bg-black/40 px-4 py-3 rounded border border-aura-gold/20">
+        <div className={`bg-black/40 px-4 py-3 rounded border border-aura-gold/20 transition-all duration-300 ${flashDir === 'up' ? 'balance-flash-up' : flashDir === 'down' ? 'balance-flash-down' : ''}`}>
           <div className="text-[9px] text-aura-platinum/40 uppercase tracking-[0.2em] mb-1">Balance</div>
           <div className="text-lg font-light font-mono text-aura-gold">{fmt(client.totalBalance)}</div>
         </div>

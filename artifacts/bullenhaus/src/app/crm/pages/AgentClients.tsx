@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import type { BalanceFlashDirection } from "../hooks/useClients";
 import {
   Search, Phone, Mail, Globe, Loader2, AlertCircle, RefreshCw,
   DollarSign, User, TrendingUp, ArrowDownLeft, ArrowUpRight, X
@@ -217,6 +218,8 @@ export function AgentClients() {
   const [error, setError]         = useState<string | null>(null);
   const [search, setSearch]       = useState('');
   const [selected, setSelected]   = useState<AgentClient | null>(null);
+  const [flashMap, setFlashMap]   = useState<Record<string, BalanceFlashDirection>>({});
+  const flashTimers               = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -247,6 +250,7 @@ export function AgentClients() {
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
+    const timers = flashTimers.current;
     const channel = supabase
       .channel('crm-agentClients-balance')
       .on(
@@ -258,6 +262,20 @@ export function AgentClients() {
           setClients(prev => {
             const idx = prev.findIndex(c => c.id === updated.id);
             if (idx === -1) return prev;
+            const oldBalance = prev[idx].totalBalance;
+            const newBalance = Number(updated.balance) || 0;
+            if (newBalance !== oldBalance) {
+              const direction: BalanceFlashDirection = newBalance > oldBalance ? 'up' : 'down';
+              setFlashMap(m => ({ ...m, [updated.id]: direction }));
+              if (timers[updated.id]) clearTimeout(timers[updated.id]);
+              timers[updated.id] = setTimeout(() => {
+                setFlashMap(m => {
+                  const next = { ...m };
+                  delete next[updated.id];
+                  return next;
+                });
+              }, 1500);
+            }
             const next = [...prev];
             next[idx] = mapRow(updated);
             return next;
@@ -272,6 +290,7 @@ export function AgentClients() {
 
     return () => {
       supabase.removeChannel(channel);
+      Object.values(timers).forEach(clearTimeout);
     };
   }, []);
 
@@ -371,7 +390,7 @@ export function AgentClients() {
 
                 {/* Info row */}
                 <div className="grid grid-cols-2 gap-2 mb-4 text-xs">
-                  <div className="bg-black/40 rounded p-2 border border-aura-gold/10">
+                  <div className={`bg-black/40 rounded p-2 border border-aura-gold/10 transition-all duration-300 ${flashMap[c.id] === 'up' ? 'balance-flash-up' : flashMap[c.id] === 'down' ? 'balance-flash-down' : ''}`}>
                     <div className="text-[8px] text-aura-platinum/40 uppercase tracking-wider">Balance</div>
                     <div className="font-mono text-aura-gold font-medium mt-0.5">{fmt(c.totalBalance)}</div>
                   </div>
