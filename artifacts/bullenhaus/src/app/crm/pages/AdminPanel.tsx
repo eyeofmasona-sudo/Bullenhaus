@@ -3,7 +3,7 @@ import {
   Users, Shield, Database, Settings, Search,
   Edit2, Lock, Plus, Trash2, RefreshCw, KeyRound,
   Loader2, AlertCircle, CheckCircle2, ChevronDown,
-  Bot, Eye, EyeOff,
+  Bot,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Modal } from "../components/ui/Modal";
@@ -109,33 +109,30 @@ export function AdminPanel() {
   const [newPw, setNewPw]             = useState("");
   const [newPwConfirm, setNewPwConfirm] = useState("");
 
-  const [aiProvider, setAiProvider] = useState<"openai" | "openrouter">(
-    (localStorage.getItem("bullenhaus_crm_ai_provider") as "openai" | "openrouter") || "openai"
-  );
-  const [aiKey,     setAiKey]     = useState(localStorage.getItem("bullenhaus_crm_ai_key")   || "");
-  const [aiModel,   setAiModel]   = useState(localStorage.getItem("bullenhaus_crm_ai_model") || "gpt-4o-mini");
-  const [aiShow,    setAiShow]    = useState(false);
+  const [aiOnline,  setAiOnline]  = useState<boolean | null>(null);
+  const [aiModel,   setAiModel]   = useState(localStorage.getItem("bullenhaus_crm_ai_model") || "deepseek/deepseek-v4-flash:free");
   const [aiSaving,  setAiSaving]  = useState(false);
   const [aiSaved,   setAiSaved]   = useState(false);
 
-  const handleAiProviderChange = (p: "openai" | "openrouter") => {
-    setAiProvider(p);
-    setAiModel(p === "openrouter" ? "openai/gpt-4o-mini" : "gpt-4o-mini");
-  };
+  const CRM_FREE_MODELS = [
+    { value: "deepseek/deepseek-v4-flash:free", label: "DeepSeek V4 Flash — Free (recommended)" },
+    { value: "openai/gpt-oss-20b:free",         label: "OpenAI GPT-OSS 20B — Free" },
+    { value: "openai/gpt-oss-120b:free",        label: "OpenAI GPT-OSS 120B — Free (slowest)" },
+  ];
 
-  const saveAiKey = async () => {
+  useEffect(() => {
+    fetch("/api/ai/status")
+      .then(r => r.json())
+      .then((d: { configured: boolean }) => setAiOnline(d.configured))
+      .catch(() => setAiOnline(false));
+  }, []);
+
+  const saveAiModel = async () => {
     setAiSaving(true);
     await new Promise(r => setTimeout(r, 350));
-    if (aiKey.trim()) {
-      localStorage.setItem("bullenhaus_crm_ai_key",      aiKey.trim());
-      localStorage.setItem("bullenhaus_crm_ai_model",    aiModel);
-      localStorage.setItem("bullenhaus_crm_ai_provider", aiProvider);
-    } else {
-      localStorage.removeItem("bullenhaus_crm_ai_key");
-      localStorage.removeItem("bullenhaus_crm_ai_provider");
-    }
+    localStorage.setItem("bullenhaus_crm_ai_model", aiModel);
     setAiSaving(false); setAiSaved(true);
-    showToast(aiKey.trim() ? "AI API key saved — AI Core Insights is now active" : "AI API key removed");
+    showToast("AI model preference saved");
     setTimeout(() => setAiSaved(false), 2500);
   };
 
@@ -447,82 +444,32 @@ export function AdminPanel() {
             <Bot className="w-4 h-4 text-aura-gold" />
           </div>
           <h3 className="text-sm font-bold text-aura-platinum uppercase tracking-widest">AI Core Insights — API Settings</h3>
-          <div className={`ml-auto w-2 h-2 rounded-full ${localStorage.getItem("bullenhaus_crm_ai_key") ? "bg-aura-emerald" : "bg-aura-platinum/20"}`} />
+          <div className={`ml-auto w-2 h-2 rounded-full transition-colors ${aiOnline === null ? "bg-aura-platinum/20 animate-pulse" : aiOnline ? "bg-aura-emerald" : "bg-rose-500/60"}`} />
         </div>
         <p className="text-[11px] text-aura-platinum/40 mb-5 leading-relaxed pl-11">
-          Powers the AI Core Insights module (Client Summary, Lead Scoring, Next Best Action, Communication Analysis).
-          AI outputs are recommendations only — no actions are automated. Connect via OpenAI or OpenRouter.
+          Powers AI Core Insights (Client Summary, Lead Scoring, Next Best Action, Communication Analysis).
+          API key secured server-side via OpenRouter — never exposed to the browser.
         </p>
         <div className="space-y-4">
-          {/* Provider selector */}
-          <div>
-            <label className="block text-[10px] uppercase tracking-widest text-aura-platinum/50 mb-1.5">Provider</label>
-            <div className="grid grid-cols-2 gap-2">
-              {(["openai", "openrouter"] as const).map(p => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => handleAiProviderChange(p)}
-                  className={`py-2 px-4 rounded-lg border text-[11px] font-bold uppercase tracking-wider transition-all ${
-                    aiProvider === p
-                      ? "bg-aura-gold/10 border-aura-gold/40 text-aura-gold"
-                      : "bg-black/20 border-glass-border text-aura-platinum/40 hover:text-aura-platinum/70 hover:border-glass-border/60"
-                  }`}
-                >
-                  {p === "openai" ? "OpenAI" : "OpenRouter"}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <label className="block text-[10px] uppercase tracking-widest text-aura-platinum/50 mb-1.5">
-              {aiProvider === "openrouter" ? "OpenRouter API Key" : "OpenAI API Key"}
-            </label>
-            <div className="relative">
-              <input
-                type={aiShow ? "text" : "password"}
-                value={aiKey}
-                onChange={e => setAiKey(e.target.value)}
-                placeholder={aiProvider === "openrouter" ? "sk-or-••••••••••••••••••••••" : "sk-••••••••••••••••••••••••••••••"}
-                className="w-full bg-black/40 border border-glass-border rounded-lg px-4 py-2.5 pr-10 text-sm text-aura-platinum font-mono outline-none focus:border-aura-gold/50 transition-colors placeholder:text-aura-platinum/20"
-              />
-              <button type="button" onClick={() => setAiShow(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-aura-platinum/40 hover:text-aura-platinum transition-colors">
-                {aiShow ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-            <p className="text-[10px] text-aura-platinum/25 mt-1">
-              {aiProvider === "openrouter"
-                ? "Get your key at openrouter.ai/keys"
-                : "Get your key at platform.openai.com/api-keys"}
-            </p>
+          {/* Status */}
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-black/30 border border-glass-border">
+            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${aiOnline === null ? "bg-aura-platinum/30 animate-pulse" : aiOnline ? "bg-aura-emerald" : "bg-rose-500/60"}`} />
+            <span className="text-[11px] text-aura-platinum/70">
+              {aiOnline === null ? "Checking server…" : aiOnline ? "OpenRouter — Server key active · Free tier" : "AI service not configured on server"}
+            </span>
+            {aiOnline && <CheckCircle2 className="w-3.5 h-3.5 text-aura-emerald ml-auto flex-shrink-0" />}
           </div>
           <div>
             <label className="block text-[10px] uppercase tracking-widest text-aura-platinum/50 mb-1.5">Model</label>
             <div className="relative">
               <select value={aiModel} onChange={e => setAiModel(e.target.value)} className="w-full bg-black/40 border border-glass-border rounded-lg px-4 py-2.5 text-sm text-aura-platinum outline-none focus:border-aura-gold/50 transition-colors appearance-none pr-8 cursor-pointer">
-                {aiProvider === "openrouter" ? (
-                  <>
-                    <option value="openai/gpt-4o-mini">OpenAI GPT-4o Mini (recommended)</option>
-                    <option value="openai/gpt-4o">OpenAI GPT-4o</option>
-                    <option value="anthropic/claude-3.5-sonnet">Anthropic Claude 3.5 Sonnet</option>
-                    <option value="anthropic/claude-3-haiku">Anthropic Claude 3 Haiku — Economy</option>
-                    <option value="google/gemini-2.0-flash-001">Google Gemini 2.0 Flash</option>
-                    <option value="meta-llama/llama-3.3-70b-instruct">Meta Llama 3.3 70B</option>
-                  </>
-                ) : (
-                  <>
-                    <option value="gpt-4o-mini">GPT-4o Mini — Fast &amp; cost-effective (recommended)</option>
-                    <option value="gpt-4o">GPT-4o — More capable</option>
-                    <option value="gpt-4-turbo">GPT-4 Turbo — High quality</option>
-                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo — Economy</option>
-                  </>
-                )}
+                {CRM_FREE_MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
               </select>
               <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-aura-platinum/40 pointer-events-none" />
             </div>
           </div>
           <button
-            onClick={saveAiKey}
+            onClick={saveAiModel}
             disabled={aiSaving || aiSaved}
             className="px-6 py-2.5 rounded-lg bg-aura-gold/10 hover:bg-aura-gold text-aura-gold hover:text-black font-bold border border-aura-gold/30 hover:border-aura-gold transition-all text-xs uppercase tracking-wider disabled:opacity-50 flex items-center gap-2"
           >
@@ -530,7 +477,7 @@ export function AdminPanel() {
               ? <><CheckCircle2 className="w-3.5 h-3.5" /> Saved!</>
               : aiSaving
               ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…</>
-              : <><KeyRound className="w-3.5 h-3.5" /> Save AI Settings</>
+              : <><KeyRound className="w-3.5 h-3.5" /> Save Model Preference</>
             }
           </button>
         </div>

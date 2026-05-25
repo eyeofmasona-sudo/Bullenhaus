@@ -30,9 +30,8 @@ Non-negotiable rules:
 If uncertain, refuse by using the support message.
 For disallowed requests, output exactly one sentence and nothing more.`;
 
-const AI_KEY_STORAGE      = 'bullenhaus_ai_key';
-const AI_MODEL_STORAGE    = 'bullenhaus_ai_model';
-const AI_PROVIDER_STORAGE = 'bullenhaus_ai_provider';
+const AI_MODEL_STORAGE = 'bullenhaus_ai_model';
+const DEFAULT_MODEL    = 'deepseek/deepseek-v4-flash:free';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -47,25 +46,26 @@ const STARTERS = [
 ];
 
 export const LiveChat: React.FC = () => {
-  const [open, setOpen] = useState(false);
+  const [open,     setOpen]     = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [input,    setInput]    = useState('');
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState<string | null>(null);
+  const [online,   setOnline]   = useState<boolean | null>(null);
+  const bottomRef  = useRef<HTMLDivElement>(null);
+  const inputRef   = useRef<HTMLInputElement>(null);
 
-  const getApiKey  = () => localStorage.getItem(AI_KEY_STORAGE)      || '';
-  const getModel   = () => localStorage.getItem(AI_MODEL_STORAGE)     || 'gpt-4o-mini';
-  const getProvider= () => localStorage.getItem(AI_PROVIDER_STORAGE)  || 'openai';
+  const getModel = () => localStorage.getItem(AI_MODEL_STORAGE) || DEFAULT_MODEL;
 
   useEffect(() => {
-    if (open) {
-      setTimeout(() => {
-        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-        inputRef.current?.focus();
-      }, 150);
-    }
+    fetch('/api/ai/status')
+      .then(r => r.json())
+      .then((d: { configured: boolean }) => setOnline(d.configured))
+      .catch(() => setOnline(false));
+  }, []);
+
+  useEffect(() => {
+    if (open) setTimeout(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); inputRef.current?.focus(); }, 150);
   }, [open]);
 
   useEffect(() => {
@@ -76,38 +76,19 @@ export const LiveChat: React.FC = () => {
     const content = (text ?? input).trim();
     if (!content || loading) return;
 
-    const apiKey = getApiKey();
-    if (!apiKey) {
-      setError('No API key configured. Please set your API key in Admin → Settings → AI Live Chat.');
-      return;
-    }
-
     const userMsg: Message = { role: 'user', content };
-    const updatedMessages = [...messages, userMsg];
-    setMessages(updatedMessages);
+    const updated = [...messages, userMsg];
+    setMessages(updated);
     setInput('');
     setLoading(true);
     setError(null);
 
-    const chatHistory = updatedMessages.map(m => ({ role: m.role, content: m.content }));
-    const provider = getProvider();
-    const endpoint = provider === 'openrouter'
-      ? 'https://openrouter.ai/api/v1/chat/completions'
-      : 'https://api.openai.com/v1/chat/completions';
-
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    };
-    if (provider === 'openrouter') {
-      headers['HTTP-Referer'] = window.location.origin;
-      headers['X-Title'] = 'Bullenhaus Trading Platform';
-    }
+    const chatHistory = updated.map(m => ({ role: m.role, content: m.content }));
 
     try {
-      const res = await fetch(endpoint, {
+      const res = await fetch('/api/ai/chat', {
         method: 'POST',
-        headers,
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: getModel(),
           messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...chatHistory],
@@ -117,50 +98,42 @@ export const LiveChat: React.FC = () => {
       });
 
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error((err as any)?.error?.message || `API error ${res.status}`);
+        const err = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(err?.error || `Error ${res.status}`);
       }
 
-      const data = await res.json();
-      const reply: string = data.choices?.[0]?.message?.content || 'Sorry, I could not generate a response.';
-      setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
-    } catch (err: any) {
-      setError(err.message || 'Failed to connect to AI service. Check your API key in Admin Settings.');
+      const data = await res.json() as { reply: string };
+      setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to connect to AI service.');
     } finally {
       setLoading(false);
     }
   };
 
-  const apiKey = getApiKey();
+  const statusDot = online === null ? 'bg-slate-600' : online ? 'bg-emerald-500' : 'bg-rose-500';
+  const statusText = online === null ? 'Connecting…' : online ? 'Online' : 'Offline';
 
   return (
     <>
-      {/* Floating button */}
       <motion.button
         onClick={() => setOpen(o => !o)}
-        whileHover={{ scale: 1.06 }}
-        whileTap={{ scale: 0.94 }}
+        whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.94 }}
         className="fixed bottom-20 right-5 z-50 w-14 h-14 rounded-2xl bg-accent-primary text-black shadow-neon-gold flex items-center justify-center"
         title="Platform Navigation Assistant"
       >
         <AnimatePresence mode="wait">
           {open
-            ? <motion.div key="x" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.15 }}>
-                <X size={22} strokeWidth={2.5} />
-              </motion.div>
-            : <motion.div key="chat" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.15 }}>
-                <MessageSquare size={22} strokeWidth={2.5} />
-              </motion.div>
+            ? <motion.div key="x" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.15 }}><X size={22} strokeWidth={2.5} /></motion.div>
+            : <motion.div key="chat" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.15 }}><MessageSquare size={22} strokeWidth={2.5} /></motion.div>
           }
         </AnimatePresence>
       </motion.button>
 
-      {/* Unread dot when closed */}
       {!open && messages.length === 0 && (
         <span className="fixed bottom-[4.8rem] right-5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-[#07070A] z-50 pointer-events-none" />
       )}
 
-      {/* Chat panel */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -184,8 +157,8 @@ export const LiveChat: React.FC = () => {
                 <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">Platform navigation only</p>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className={`w-2 h-2 rounded-full ${apiKey ? 'bg-emerald-500' : 'bg-slate-600'}`} />
-                <span className="text-[10px] text-slate-500">{apiKey ? 'Online' : 'No key'}</span>
+                <div className={`w-2 h-2 rounded-full ${statusDot}`} />
+                <span className="text-[10px] text-slate-500">{statusText}</span>
               </div>
             </div>
 
@@ -197,47 +170,25 @@ export const LiveChat: React.FC = () => {
                     <Bot size={22} className="text-accent-primary" />
                   </div>
                   <p className="text-xs font-bold text-white mb-1">How can I help you navigate?</p>
-                  <p className="text-[11px] text-slate-500 leading-relaxed text-center mb-4 px-2">
-                    I can help you find any page, section, or feature in the platform.
-                  </p>
+                  <p className="text-[11px] text-slate-500 leading-relaxed text-center mb-4 px-2">I can help you find any page, section, or feature in the platform.</p>
                   <div className="w-full space-y-1.5">
                     {STARTERS.map(s => (
-                      <button
-                        key={s}
-                        onClick={() => sendMessage(s)}
-                        disabled={!apiKey}
+                      <button key={s} onClick={() => sendMessage(s)} disabled={!online}
                         className="w-full text-left text-[11px] text-slate-400 hover:text-white px-3 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.07] border border-white/5 hover:border-white/10 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        {s}
-                      </button>
+                      >{s}</button>
                     ))}
                   </div>
                 </div>
               )}
 
               {messages.map((m, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.15 }}
+                <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }}
                   className={`flex gap-2.5 ${m.role === 'user' ? 'flex-row-reverse' : ''}`}
                 >
-                  <div className={`w-6 h-6 rounded-lg flex-shrink-0 flex items-center justify-center mt-0.5 ${
-                    m.role === 'user'
-                      ? 'bg-white/10'
-                      : 'bg-accent-primary/20 border border-accent-primary/30'
-                  }`}>
-                    {m.role === 'user'
-                      ? <User size={12} className="text-slate-300" />
-                      : <Bot  size={12} className="text-accent-primary" />
-                    }
+                  <div className={`w-6 h-6 rounded-lg flex-shrink-0 flex items-center justify-center mt-0.5 ${m.role === 'user' ? 'bg-white/10' : 'bg-accent-primary/20 border border-accent-primary/30'}`}>
+                    {m.role === 'user' ? <User size={12} className="text-slate-300" /> : <Bot size={12} className="text-accent-primary" />}
                   </div>
-                  <div className={`max-w-[82%] px-3 py-2 rounded-xl text-[12px] leading-relaxed whitespace-pre-wrap ${
-                    m.role === 'user'
-                      ? 'bg-accent-primary/12 text-white border border-accent-primary/20 rounded-tr-sm'
-                      : 'bg-white/[0.05] text-slate-300 border border-white/5 rounded-tl-sm'
-                  }`}>
+                  <div className={`max-w-[82%] px-3 py-2 rounded-xl text-[12px] leading-relaxed whitespace-pre-wrap ${m.role === 'user' ? 'bg-accent-primary/12 text-white border border-accent-primary/20 rounded-tr-sm' : 'bg-white/[0.05] text-slate-300 border border-white/5 rounded-tl-sm'}`}>
                     {m.content}
                   </div>
                 </motion.div>
@@ -277,16 +228,14 @@ export const LiveChat: React.FC = () => {
                   value={input}
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-                  placeholder={apiKey ? 'Ask how to find anything in the platform…' : 'API key not configured in Admin Settings'}
-                  disabled={loading || !apiKey}
+                  placeholder={online ? 'Ask how to find anything in the platform…' : 'AI service unavailable'}
+                  disabled={loading || online === false}
                   className="flex-1 bg-white/[0.05] border border-white/8 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-accent-primary/30 transition-all disabled:opacity-40"
                 />
-                <button
-                  onClick={() => sendMessage()}
-                  disabled={!input.trim() || loading || !apiKey}
+                <button onClick={() => sendMessage()} disabled={!input.trim() || loading || !online}
                   className="w-9 h-9 rounded-xl bg-accent-primary text-black flex items-center justify-center hover:bg-accent-secondary transition-all disabled:opacity-35 disabled:cursor-not-allowed flex-shrink-0"
                 >
-                  <Send size={13} strokeWidth={2.5} />
+                  {loading ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} strokeWidth={2.5} />}
                 </button>
               </div>
               <p className="text-[9px] text-slate-700 text-center mt-2 uppercase tracking-widest">
