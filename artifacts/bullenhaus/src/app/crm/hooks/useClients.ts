@@ -49,12 +49,16 @@ function mapUser(u: any): CRMClient {
 export type BalanceFlashDirection = 'up' | 'down';
 
 export function useClients(page = 1, limit = 50, search = '') {
-  const [data, setData]           = useState<CRMClient[]>([]);
-  const [meta, setMeta]           = useState<any>(null);
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState<string | null>(null);
-  const [flashMap, setFlashMap]   = useState<Record<string, BalanceFlashDirection>>({});
-  const flashTimers               = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const [data, setData]               = useState<CRMClient[]>([]);
+  const [meta, setMeta]               = useState<any>(null);
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState<string | null>(null);
+  const [flashMap, setFlashMap]       = useState<Record<string, BalanceFlashDirection>>({});
+  const [reconnecting, setReconnecting] = useState(false);
+  const flashTimers                   = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const retryTimer                    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const channelRef                    = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const destroyed                     = useRef(false);
 
   const fetchClients = useCallback(async () => {
     setLoading(true);
@@ -90,46 +94,73 @@ export function useClients(page = 1, limit = 50, search = '') {
 
   useEffect(() => {
     const timers = flashTimers.current;
-    const channel = supabase
-      .channel('crm-useClients-balance')
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'users' },
-        (payload) => {
-          const updated = payload.new as any;
-          if (updated.role !== 'client') return;
-          setData(prev => {
-            const idx = prev.findIndex(c => c.id === updated.id);
-            if (idx === -1) return prev;
-            const oldBalance = prev[idx].totalBalance;
-            const newBalance = Number(updated.balance) || 0;
-            if (newBalance !== oldBalance) {
-              const direction: BalanceFlashDirection = newBalance > oldBalance ? 'up' : 'down';
-              setFlashMap(m => ({ ...m, [updated.id]: direction }));
-              if (timers[updated.id]) clearTimeout(timers[updated.id]);
-              timers[updated.id] = setTimeout(() => {
-                setFlashMap(m => {
-                  const next = { ...m };
-                  delete next[updated.id];
-                  return next;
-                });
-              }, 1500);
-            }
-            const next = [...prev];
-            next[idx] = mapUser(updated);
-            return next;
-          });
+    destroyed.current = false;
+
+    function handlePayload(payload: any) {
+      const updated = payload.new as any;
+      if (updated.role !== 'client') return;
+      setData(prev => {
+        const idx = prev.findIndex(c => c.id === updated.id);
+        if (idx === -1) return prev;
+        const oldBalance = prev[idx].totalBalance;
+        const newBalance = Number(updated.balance) || 0;
+        if (newBalance !== oldBalance) {
+          const direction: BalanceFlashDirection = newBalance > oldBalance ? 'up' : 'down';
+          setFlashMap(m => ({ ...m, [updated.id]: direction }));
+          if (timers[updated.id]) clearTimeout(timers[updated.id]);
+          timers[updated.id] = setTimeout(() => {
+            setFlashMap(m => {
+              const next = { ...m };
+              delete next[updated.id];
+              return next;
+            });
+          }, 1500);
         }
-      )
-      .subscribe();
+        const next = [...prev];
+        next[idx] = mapUser(updated);
+        return next;
+      });
+    }
+
+    function subscribe() {
+      if (destroyed.current) return;
+
+      const ch = supabase
+        .channel('crm-useClients-balance')
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'users' },
+          handlePayload
+        )
+        .subscribe((status) => {
+          if (destroyed.current) return;
+          if (status === 'SUBSCRIBED') {
+            setReconnecting(false);
+          } else if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
+            setReconnecting(true);
+            if (retryTimer.current) clearTimeout(retryTimer.current);
+            retryTimer.current = setTimeout(() => {
+              if (destroyed.current) return;
+              supabase.removeChannel(ch).catch(() => {});
+              subscribe();
+            }, 3000);
+          }
+        });
+
+      channelRef.current = ch;
+    }
+
+    subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      destroyed.current = true;
+      if (retryTimer.current) clearTimeout(retryTimer.current);
+      if (channelRef.current) supabase.removeChannel(channelRef.current).catch(() => {});
       Object.values(timers).forEach(clearTimeout);
     };
   }, []);
 
-  return { clients: data, meta, loading, error, refetch: fetchClients, flashMap };
+  return { clients: data, meta, loading, error, refetch: fetchClients, flashMap, reconnecting };
 }
 
 export interface ClientTransaction {

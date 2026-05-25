@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import type { BalanceFlashDirection } from "../hooks/useClients";
 import {
   Search, Phone, Mail, Globe, Loader2, AlertCircle, RefreshCw,
-  DollarSign, User, TrendingUp, ArrowDownLeft, ArrowUpRight, X
+  DollarSign, User, TrendingUp, ArrowDownLeft, ArrowUpRight, X, WifiOff
 } from "lucide-react";
 import { supabase } from "../../../lib/supabase/browserClient";
 import { usePhoneDialer } from "../contexts/PhoneDialerContext";
@@ -218,8 +218,12 @@ export function AgentClients() {
   const [error, setError]         = useState<string | null>(null);
   const [search, setSearch]       = useState('');
   const [selected, setSelected]   = useState<AgentClient | null>(null);
-  const [flashMap, setFlashMap]   = useState<Record<string, BalanceFlashDirection>>({});
-  const flashTimers               = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const [flashMap, setFlashMap]       = useState<Record<string, BalanceFlashDirection>>({});
+  const [reconnecting, setReconnecting] = useState(false);
+  const flashTimers                   = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const retryTimer                    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const channelRef                    = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const destroyed                     = useRef(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -251,45 +255,72 @@ export function AgentClients() {
 
   useEffect(() => {
     const timers = flashTimers.current;
-    const channel = supabase
-      .channel('crm-agentClients-balance')
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'users' },
-        (payload) => {
-          const updated = payload.new as any;
-          if (updated.role !== 'client') return;
-          setClients(prev => {
-            const idx = prev.findIndex(c => c.id === updated.id);
-            if (idx === -1) return prev;
-            const oldBalance = prev[idx].totalBalance;
-            const newBalance = Number(updated.balance) || 0;
-            if (newBalance !== oldBalance) {
-              const direction: BalanceFlashDirection = newBalance > oldBalance ? 'up' : 'down';
-              setFlashMap(m => ({ ...m, [updated.id]: direction }));
-              if (timers[updated.id]) clearTimeout(timers[updated.id]);
-              timers[updated.id] = setTimeout(() => {
-                setFlashMap(m => {
-                  const next = { ...m };
-                  delete next[updated.id];
-                  return next;
-                });
-              }, 1500);
-            }
-            const next = [...prev];
-            next[idx] = mapRow(updated);
-            return next;
-          });
-          setSelected(prev => {
-            if (!prev || prev.id !== updated.id) return prev;
-            return mapRow(updated);
-          });
+    destroyed.current = false;
+
+    function handlePayload(payload: any) {
+      const updated = payload.new as any;
+      if (updated.role !== 'client') return;
+      setClients(prev => {
+        const idx = prev.findIndex(c => c.id === updated.id);
+        if (idx === -1) return prev;
+        const oldBalance = prev[idx].totalBalance;
+        const newBalance = Number(updated.balance) || 0;
+        if (newBalance !== oldBalance) {
+          const direction: BalanceFlashDirection = newBalance > oldBalance ? 'up' : 'down';
+          setFlashMap(m => ({ ...m, [updated.id]: direction }));
+          if (timers[updated.id]) clearTimeout(timers[updated.id]);
+          timers[updated.id] = setTimeout(() => {
+            setFlashMap(m => {
+              const next = { ...m };
+              delete next[updated.id];
+              return next;
+            });
+          }, 1500);
         }
-      )
-      .subscribe();
+        const next = [...prev];
+        next[idx] = mapRow(updated);
+        return next;
+      });
+      setSelected(prev => {
+        if (!prev || prev.id !== updated.id) return prev;
+        return mapRow(updated);
+      });
+    }
+
+    function subscribe() {
+      if (destroyed.current) return;
+
+      const ch = supabase
+        .channel('crm-agentClients-balance')
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'users' },
+          handlePayload
+        )
+        .subscribe((status) => {
+          if (destroyed.current) return;
+          if (status === 'SUBSCRIBED') {
+            setReconnecting(false);
+          } else if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
+            setReconnecting(true);
+            if (retryTimer.current) clearTimeout(retryTimer.current);
+            retryTimer.current = setTimeout(() => {
+              if (destroyed.current) return;
+              supabase.removeChannel(ch).catch(() => {});
+              subscribe();
+            }, 3000);
+          }
+        });
+
+      channelRef.current = ch;
+    }
+
+    subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      destroyed.current = true;
+      if (retryTimer.current) clearTimeout(retryTimer.current);
+      if (channelRef.current) supabase.removeChannel(channelRef.current).catch(() => {});
       Object.values(timers).forEach(clearTimeout);
     };
   }, []);
@@ -333,6 +364,11 @@ export function AgentClients() {
             placeholder="Search by name, email…"
             className="w-full bg-black/40 border border-glass-border rounded-xl pl-9 pr-4 py-2.5 text-xs text-aura-platinum placeholder:text-aura-platinum/30 outline-none focus:border-aura-gold/40 transition-colors" />
         </div>
+        {reconnecting && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-[10px] font-bold uppercase tracking-wider animate-pulse">
+            <WifiOff className="w-3 h-3" /> Reconnecting…
+          </div>
+        )}
         <button onClick={load} disabled={loading}
           className="p-2.5 rounded-xl border border-glass-border bg-black/20 hover:bg-white/5 text-aura-platinum/40 hover:text-aura-platinum transition-colors disabled:opacity-30">
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
