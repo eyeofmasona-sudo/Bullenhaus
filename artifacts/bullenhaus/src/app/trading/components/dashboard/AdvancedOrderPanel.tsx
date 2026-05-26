@@ -111,6 +111,18 @@ export const AdvancedOrderPanel: React.FC = () => {
         return;
       }
 
+      // Warn if the order would execute immediately (price already satisfied)
+      if (currentPrice) {
+        const wouldFillNow =
+          (orderType === 'Limit' && type === 'Long'  && orderPrice >= currentPrice) ||
+          (orderType === 'Limit' && type === 'Short' && orderPrice <= currentPrice) ||
+          (orderType === 'Stop'  && type === 'Long'  && orderPrice <= currentPrice) ||
+          (orderType === 'Stop'  && type === 'Short' && orderPrice >= currentPrice);
+        if (wouldFillNow) {
+          toast.info(`⚡ Price already met — order will execute immediately. Check Order History.`, { duration: 5000 });
+        }
+      }
+
       const placed = placeOrder({
         symbol: currentPair,
         type: orderType as any,
@@ -256,6 +268,29 @@ export const AdvancedOrderPanel: React.FC = () => {
                 <Target size={10}/> {t(orderType.toLowerCase())} {t('price')}
               </label>
             </div>
+
+            {/* Direction hint */}
+            {currentPrice && (
+              <div className="mb-2 text-[10px] text-slate-500 leading-relaxed space-y-0.5">
+                {orderType === 'Limit' && (
+                  <p>
+                    <span className="text-accent-secondary font-bold">Long (Buy):</span> below current&nbsp;
+                    <span className="font-mono text-slate-400">${currentPrice.toLocaleString()}</span>
+                    &nbsp;·&nbsp;
+                    <span className="text-accent-quaternary font-bold">Short (Sell):</span> above current
+                  </p>
+                )}
+                {orderType === 'Stop' && (
+                  <p>
+                    <span className="text-accent-secondary font-bold">Long (Buy):</span> above current&nbsp;
+                    <span className="font-mono text-slate-400">${currentPrice.toLocaleString()}</span>
+                    &nbsp;·&nbsp;
+                    <span className="text-accent-quaternary font-bold">Short (Sell):</span> below current
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="relative group">
               <input
                  type="text"
@@ -266,6 +301,7 @@ export const AdvancedOrderPanel: React.FC = () => {
               />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-500 group-focus-within:text-accent-primary transition-colors">{t('price')}</span>
             </div>
+
           </div>
         )}
 

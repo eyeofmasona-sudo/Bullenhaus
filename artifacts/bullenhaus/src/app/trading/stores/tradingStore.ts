@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase } from '../lib/supabase';
+import { toast } from 'sonner';
 
 export type PositionType = 'Long' | 'Short';
 export type OrderType = 'Market' | 'Limit' | 'Stop';
@@ -582,6 +583,14 @@ export const useTradingStore = create<TradingState>()(
             };
           }
           return state;
+        });
+
+        // Notify user for each filled order
+        filledJobs.forEach(job => {
+          toast.success(
+            `✅ ${job.order.type} order filled: ${job.order.positionType} ${job.order.symbol} at $${job.order.price.toLocaleString()}`,
+            { duration: 6000 }
+          );
         });
 
         // Trigger background db updates for each filled order
