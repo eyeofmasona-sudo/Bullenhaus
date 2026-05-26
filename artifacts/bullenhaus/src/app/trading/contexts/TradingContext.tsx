@@ -41,9 +41,15 @@ const TradingContext = createContext<(TradingState & TradingActions) | null>(nul
 
 export const TradingProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, setState] = useState(defaultState);
-  
+
   const currentPrice = useTradingStore(s => s.prices[state.currentPair]) || null;
   const priceChangePercent24h = useTradingStore(s => s.priceChanges[state.currentPair]) || null;
+  const initPriceOverrideSync = useTradingStore(s => s.initPriceOverrideSync);
+
+  useEffect(() => {
+    initPriceOverrideSync();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const actions: TradingActions = {
     setCurrentPair: (pair) => setState(s => ({ ...s, currentPair: pair })),

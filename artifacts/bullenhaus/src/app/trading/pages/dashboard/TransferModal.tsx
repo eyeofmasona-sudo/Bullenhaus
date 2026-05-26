@@ -71,6 +71,21 @@ export const TransferModal: React.FC<{
     if (!numAmount || numAmount <= 0)           { toast.error('Invalid amount');        return; }
     if (!isDeposit && numAmount > wallet.balance) { toast.error('Insufficient balance'); return; }
 
+    // Prevent duplicate deposit while one is still pending
+    if (isDeposit && user) {
+      const { data: pendingDeposits } = await supabase
+        .from('transactions')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('type', 'Deposit')
+        .eq('status', 'Pending')
+        .limit(1);
+      if (pendingDeposits && pendingDeposits.length > 0) {
+        toast.error('You already have a pending deposit. Please wait for it to be approved or rejected before submitting a new one.');
+        return;
+      }
+    }
+
     setLoading(true);
 
     const localReqId = addRequest({

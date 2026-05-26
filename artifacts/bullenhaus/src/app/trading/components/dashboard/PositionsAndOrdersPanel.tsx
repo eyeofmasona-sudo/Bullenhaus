@@ -4,10 +4,23 @@ import { useTradingContext } from '../../contexts/TradingContext';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
 
+type HistoryEntry = {
+  id: string;
+  symbol: string;
+  direction: string;
+  price: number;
+  size: number;
+  leverage: number;
+  pnl?: number;
+  status: string;
+  kind: 'position' | 'order';
+  orderKind: string;
+};
+
 export const PositionsAndOrdersPanel = () => {
   const [activeTab, setActiveTab] = useState<'positions' | 'orders' | 'history'>('positions');
   const [hideOtherSymbols, setHideOtherSymbols] = useState(false);
-  
+
   const { currentPair } = useTradingContext();
   const positions = useTradingStore(s => s.positions);
   const orders = useTradingStore(s => s.orders);
@@ -19,8 +32,40 @@ export const PositionsAndOrdersPanel = () => {
 
   const openPositions = positions.filter(p => p.status === 'open' && filterBySymbol(p));
   const pendingOrders = orders.filter(o => o.status === 'pending' && filterBySymbol(o));
-  const orderHistory = orders.filter(o => o.status !== 'pending' && filterBySymbol(o)).slice(-20); // last 20
-  
+
+  // Combined history: closed positions + filled/canceled orders
+  const closedPositions: HistoryEntry[] = positions
+    .filter(p => p.status === 'closed' && filterBySymbol(p))
+    .map(p => ({
+      id: p.id,
+      symbol: p.symbol,
+      direction: p.type,
+      price: p.entryPrice,
+      size: p.size,
+      leverage: p.leverage,
+      pnl: p.unrealizedPnL,
+      status: 'closed',
+      kind: 'position' as const,
+      orderKind: 'Market',
+    }));
+
+  const nonPendingOrders: HistoryEntry[] = orders
+    .filter(o => o.status !== 'pending' && filterBySymbol(o))
+    .map(o => ({
+      id: o.id,
+      symbol: o.symbol,
+      direction: o.positionType,
+      price: o.price,
+      size: o.size,
+      leverage: o.leverage,
+      pnl: undefined,
+      status: o.status,
+      kind: 'order' as const,
+      orderKind: o.type,
+    }));
+
+  const orderHistory = [...closedPositions, ...nonPendingOrders].slice(-30).reverse();
+
   const handleClosePosition = (id: string, price: number) => {
     closePositionAction(id, price);
     supabase.from('positions')
@@ -40,37 +85,37 @@ export const PositionsAndOrdersPanel = () => {
   };
 
   return (
-    <div className="glass-card p-6 relative overflow-hidden flex-1 flex flex-col h-full min-h-[400px]">
+    <div className="glass-card p-6 relative overflow-x-hidden flex-1 flex flex-col h-full min-h-[400px]">
       <div className="absolute top-0 right-0 w-32 h-32 bg-accent-primary/5 rounded-full blur-3xl pointer-events-none" />
-      
+
       <div className="flex items-center justify-between mb-6 relative z-10 border-b border-white/5 pb-2">
         <div className="flex space-x-6">
-          <button 
+          <button
             className={`text-sm font-bold tracking-wide transition-colors relative pb-2 ${activeTab === 'positions' ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}
             onClick={() => setActiveTab('positions')}
           >
             Open Positions ({openPositions.length})
             {activeTab === 'positions' && <div className="absolute bottom-0 left-0 w-full h-[2px] bg-accent-primary shadow-neon-gold" />}
           </button>
-          <button 
+          <button
             className={`text-sm font-bold tracking-wide transition-colors relative pb-2 ${activeTab === 'orders' ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}
             onClick={() => setActiveTab('orders')}
           >
             Pending Orders ({pendingOrders.length})
             {activeTab === 'orders' && <div className="absolute bottom-0 left-0 w-full h-[2px] bg-accent-primary shadow-neon-gold" />}
           </button>
-          <button 
+          <button
             className={`text-sm font-bold tracking-wide transition-colors relative pb-2 ${activeTab === 'history' ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}
             onClick={() => setActiveTab('history')}
           >
-            Order History
+            Order History ({orderHistory.length})
             {activeTab === 'history' && <div className="absolute bottom-0 left-0 w-full h-[2px] bg-accent-primary shadow-neon-gold" />}
           </button>
         </div>
         <div className="flex items-center gap-4">
           <label className="flex items-center gap-2 cursor-pointer group">
-            <input 
-               type="checkbox" 
+            <input
+               type="checkbox"
                checked={hideOtherSymbols}
                onChange={(e) => setHideOtherSymbols(e.target.checked)}
                className="peer sr-only"
@@ -82,33 +127,32 @@ export const PositionsAndOrdersPanel = () => {
             </div>
             <span className="text-[10px] uppercase tracking-widest font-bold text-slate-500 group-hover:text-white transition-colors">Hide other symbols</span>
           </label>
-          <button className="text-[10px] font-bold text-accent-primary hover:underline shadow-none bg-transparent mb-2">
-            View Detail
-          </button>
         </div>
       </div>
 
       <div className="overflow-x-auto relative z-10 flex-1 custom-scrollbar">
         {activeTab === 'positions' && (
-          <table className="w-full relative">
+          <table className="w-full relative" style={{ minWidth: '580px' }}>
             <thead className="text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 sticky top-0 bg-surface-card z-20">
               <tr>
                 <th className="text-left pb-4 pt-2">Market</th>
-                <th className="text-left pb-4 pt-2">Size / Lev</th>
+                <th className="text-left pb-4 pt-2">Side / Lev</th>
+                <th className="text-left pb-4 pt-2">Size (USD)</th>
                 <th className="text-left pb-4 pt-2">Entry / Mark</th>
-                <th className="text-right pb-4 pt-2">Unrealized P&L</th>
-                <th className="text-right pb-4 pt-2">Actions</th>
+                <th className="text-right pb-4 pt-2">P&L</th>
+                <th className="text-right pb-4 pt-2 sticky right-0 bg-surface-card">Actions</th>
               </tr>
             </thead>
             <tbody className="text-sm">
               {openPositions.length === 0 ? (
-                <tr><td colSpan={5} className="py-8 text-center text-slate-500">No open positions</td></tr>
+                <tr><td colSpan={6} className="py-8 text-center text-slate-500">No open positions</td></tr>
               ) : (
                 openPositions.map((pos) => {
                   const currentPrice = prices[pos.symbol] || pos.entryPrice;
                   const pnlPct = pos.margin > 0 ? (pos.unrealizedPnL / pos.margin) * 100 : 0;
                   const isPositive = pos.unrealizedPnL >= 0;
-                  
+                  const notionalUSD = pos.size * pos.entryPrice;
+
                   return (
                     <tr key={pos.id} className="group hover:bg-white/5 transition-all duration-200">
                       <td className="py-4 whitespace-nowrap">
@@ -123,12 +167,15 @@ export const PositionsAndOrdersPanel = () => {
                         </div>
                       </td>
                       <td className="py-4 whitespace-nowrap">
-                        <div className="text-xs font-bold transition-all flex flex-col">
-                            <div>
-                                <span className={`${pos.type === 'Long' ? 'text-accent-secondary' : 'text-accent-quaternary'} mr-2`}>{pos.type}</span>
-                                <span className="text-slate-300">{pos.size}</span>
-                            </div>
-                            <span className="text-[10px] text-slate-500">{pos.leverage}x</span>
+                        <div className="flex flex-col text-xs font-bold">
+                          <span className={pos.type === 'Long' ? 'text-accent-secondary' : 'text-accent-quaternary'}>{pos.type}</span>
+                          <span className="text-[10px] text-slate-500">{pos.leverage}x</span>
+                        </div>
+                      </td>
+                      <td className="py-4 whitespace-nowrap">
+                        <div className="flex flex-col">
+                          <p className="text-xs font-bold text-slate-300">{pos.size}</p>
+                          <p className="text-[10px] font-mono text-accent-primary">${notionalUSD.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
                         </div>
                       </td>
                       <td className="py-4 whitespace-nowrap">
@@ -140,15 +187,15 @@ export const PositionsAndOrdersPanel = () => {
                       <td className="py-4 text-right whitespace-nowrap">
                         <div className="flex flex-col items-end">
                             <span className={`text-xs font-bold ${isPositive ? 'text-accent-secondary drop-shadow-[0_0_5px_rgba(0,230,118,0.3)]' : 'text-accent-quaternary drop-shadow-[0_0_5px_rgba(255,61,0,0.3)]'}`}>
-                               {isPositive ? '+' : ''}{pos.unrealizedPnL.toFixed(2)} USDT
+                               {isPositive ? '+' : ''}{pos.unrealizedPnL.toFixed(2)} USD
                             </span>
                             <span className={`text-[10px] font-bold ${isPositive ? 'text-accent-secondary/60' : 'text-accent-quaternary/60'}`}>
                                {isPositive ? '+' : ''}{pnlPct.toFixed(2)}%
                             </span>
                         </div>
                       </td>
-                      <td className="py-4 text-right whitespace-nowrap">
-                        <button 
+                      <td className="py-4 text-right whitespace-nowrap sticky right-0 bg-surface-card group-hover:bg-white/5">
+                        <button
                           onClick={() => handleClosePosition(pos.id, currentPrice)}
                           className="px-3 py-1.5 bg-white/5 hover:bg-accent-quaternary hover:text-white border border-white/10 rounded text-[10px] font-bold text-slate-400 transition-colors"
                         >
@@ -164,96 +211,128 @@ export const PositionsAndOrdersPanel = () => {
         )}
 
         {activeTab === 'orders' && (
-          <table className="w-full relative">
+          <table className="w-full relative" style={{ minWidth: '560px' }}>
             <thead className="text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 sticky top-0 bg-surface-card z-20">
               <tr>
                 <th className="text-left pb-4 pt-2">Market</th>
                 <th className="text-left pb-4 pt-2">Type</th>
                 <th className="text-left pb-4 pt-2">Order Price</th>
-                <th className="text-left pb-4 pt-2">Size / Lev</th>
-                <th className="text-right pb-4 pt-2">Actions</th>
+                <th className="text-left pb-4 pt-2">Size (USD)</th>
+                <th className="text-right pb-4 pt-2 sticky right-0 bg-surface-card">Actions</th>
               </tr>
             </thead>
             <tbody className="text-sm">
               {pendingOrders.length === 0 ? (
                 <tr><td colSpan={5} className="py-8 text-center text-slate-500">No pending orders</td></tr>
               ) : (
-                pendingOrders.map((order) => (
-                  <tr key={order.id} className="group hover:bg-white/5 transition-all duration-200">
-                    <td className="py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-[#111] border border-white/10 flex items-center justify-center font-bold text-white text-[10px]">
-                              {order.symbol.substring(0, 3)}
-                          </div>
-                          <div>
-                            <p className="font-bold text-white text-xs leading-none mb-1 group-hover:text-accent-primary transition-colors">{order.symbol}</p>
-                            <p className="text-[10px] text-slate-500 font-medium">{order.marginType}</p>
-                          </div>
-                      </div>
-                    </td>
-                    <td className="py-4 whitespace-nowrap">
-                        <div className="text-xs font-bold transition-all flex flex-col">
+                pendingOrders.map((order) => {
+                  const notionalUSD = order.size * order.price;
+                  return (
+                    <tr key={order.id} className="group hover:bg-white/5 transition-all duration-200">
+                      <td className="py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-[#111] border border-white/10 flex items-center justify-center font-bold text-white text-[10px]">
+                                {order.symbol.substring(0, 3)}
+                            </div>
                             <div>
-                                <span className={`${order.positionType === 'Long' ? 'text-accent-secondary' : 'text-accent-quaternary'} mr-2`}>{order.positionType}</span>
-                                <span className="text-slate-300">{order.type}</span>
+                              <p className="font-bold text-white text-xs leading-none mb-1 group-hover:text-accent-primary transition-colors">{order.symbol}</p>
+                              <p className="text-[10px] text-slate-500 font-medium">{order.marginType}</p>
                             </div>
                         </div>
-                    </td>
-                    <td className="py-4 whitespace-nowrap">
-                        <span className="text-xs font-mono font-bold text-slate-400">{order.price.toLocaleString(undefined, { maximumFractionDigits: 4 })}</span>
-                    </td>
-                    <td className="py-4 whitespace-nowrap">
-                       <div className="text-xs font-bold flex flex-col">
-                          <span className="text-white">{order.size}</span>
-                          <span className="text-[10px] text-slate-500">{order.leverage}x</span>
-                       </div>
-                    </td>
-                    <td className="py-4 text-right whitespace-nowrap">
-                      <button 
-                        onClick={() => handleCancelOrder(order.id)}
-                        className="px-3 py-1.5 bg-white/5 hover:bg-zinc-700 hover:text-white border border-white/10 rounded text-[10px] font-bold text-slate-400 transition-colors"
-                      >
-                        Cancel
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td className="py-4 whitespace-nowrap">
+                          <div className="text-xs font-bold transition-all flex flex-col">
+                              <div>
+                                  <span className={`${order.positionType === 'Long' ? 'text-accent-secondary' : 'text-accent-quaternary'} mr-2`}>{order.positionType}</span>
+                                  <span className="text-slate-300">{order.type}</span>
+                              </div>
+                              <span className="text-[10px] text-slate-500">{order.leverage}x</span>
+                          </div>
+                      </td>
+                      <td className="py-4 whitespace-nowrap">
+                          <span className="text-xs font-mono font-bold text-slate-400">{order.price.toLocaleString(undefined, { maximumFractionDigits: 4 })}</span>
+                      </td>
+                      <td className="py-4 whitespace-nowrap">
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold text-white">{order.size}</span>
+                          <span className="text-[10px] font-mono text-accent-primary">${notionalUSD.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                        </div>
+                      </td>
+                      <td className="py-4 text-right whitespace-nowrap sticky right-0 bg-surface-card group-hover:bg-white/5">
+                        <button
+                          onClick={() => handleCancelOrder(order.id)}
+                          className="px-3 py-1.5 bg-white/5 hover:bg-zinc-700 hover:text-white border border-white/10 rounded text-[10px] font-bold text-slate-400 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         )}
 
         {activeTab === 'history' && (
-          <table className="w-full relative">
+          <table className="w-full relative" style={{ minWidth: '620px' }}>
             <thead className="text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 sticky top-0 bg-surface-card z-20">
               <tr>
                 <th className="text-left pb-4 pt-2">Market</th>
                 <th className="text-left pb-4 pt-2">Type</th>
+                <th className="text-left pb-4 pt-2">Size (USD)</th>
                 <th className="text-left pb-4 pt-2">Price</th>
+                <th className="text-right pb-4 pt-2">P&L</th>
                 <th className="text-right pb-4 pt-2">Status</th>
               </tr>
             </thead>
             <tbody className="text-sm">
               {orderHistory.length === 0 ? (
-                <tr><td colSpan={4} className="py-8 text-center text-slate-500">No recent order history</td></tr>
+                <tr><td colSpan={6} className="py-8 text-center text-slate-500">No recent order history</td></tr>
               ) : (
-                orderHistory.map((order) => (
-                  <tr key={order.id} className="group hover:bg-white/5 transition-all duration-200 opacity-80 hover:opacity-100">
-                    <td className="py-4 whitespace-nowrap text-xs font-bold text-white">{order.symbol}</td>
-                    <td className="py-4 whitespace-nowrap text-xs text-slate-400">
-                      <span className={`${order.positionType === 'Long' ? 'text-accent-secondary' : 'text-accent-quaternary'} mr-1`}>{order.positionType}</span>
-                      {order.type}
-                    </td>
-                    <td className="py-4 whitespace-nowrap text-xs font-mono text-slate-400">{order.price.toLocaleString(undefined, { maximumFractionDigits: 4 })}</td>
-                    <td className="py-4 whitespace-nowrap text-right">
-                      <span className={`text-[10px] px-2 py-1 rounded font-bold uppercase tracking-wider ${
-                         order.status === 'filled' ? 'bg-accent-secondary/10 text-accent-secondary border border-accent-secondary/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'
-                      }`}>
-                         {order.status}
-                      </span>
-                    </td>
-                  </tr>
-                )).reverse()
+                orderHistory.map((entry) => {
+                  const notionalUSD = entry.size * entry.price;
+                  const isPnlPositive = (entry.pnl ?? 0) >= 0;
+                  return (
+                    <tr key={entry.id} className="group hover:bg-white/5 transition-all duration-200 opacity-80 hover:opacity-100">
+                      <td className="py-4 whitespace-nowrap text-xs font-bold text-white">{entry.symbol}</td>
+                      <td className="py-4 whitespace-nowrap text-xs text-slate-400">
+                        <div className="flex flex-col">
+                          <div>
+                            <span className={`${entry.direction === 'Long' ? 'text-accent-secondary' : 'text-accent-quaternary'} mr-1`}>{entry.direction}</span>
+                            <span>{entry.orderKind}</span>
+                          </div>
+                          <span className="text-[10px] text-slate-500">{entry.leverage}x</span>
+                        </div>
+                      </td>
+                      <td className="py-4 whitespace-nowrap">
+                        <div className="flex flex-col">
+                          <span className="text-xs text-slate-300">{entry.size}</span>
+                          <span className="text-[10px] font-mono text-accent-primary">${notionalUSD.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                        </div>
+                      </td>
+                      <td className="py-4 whitespace-nowrap text-xs font-mono text-slate-400">{entry.price.toLocaleString(undefined, { maximumFractionDigits: 4 })}</td>
+                      <td className="py-4 whitespace-nowrap text-right">
+                        {entry.pnl !== undefined ? (
+                          <span className={`text-xs font-bold ${isPnlPositive ? 'text-accent-secondary' : 'text-accent-quaternary'}`}>
+                            {isPnlPositive ? '+' : ''}{entry.pnl.toFixed(2)} USD
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-slate-600">—</span>
+                        )}
+                      </td>
+                      <td className="py-4 whitespace-nowrap text-right">
+                        <span className={`text-[10px] px-2 py-1 rounded font-bold uppercase tracking-wider ${
+                           entry.status === 'filled' ? 'bg-accent-secondary/10 text-accent-secondary border border-accent-secondary/20' :
+                           entry.status === 'closed' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                           'bg-red-500/10 text-red-500 border border-red-500/20'
+                        }`}>
+                           {entry.status}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

@@ -3,6 +3,7 @@ import { useForexStore, ForexTrend } from '../../stores/forexStore';
 import { useTradingStore } from '../../stores/tradingStore';
 import { Activity, Play, Pause, Zap, BarChart2, Hash, Edit3, Lock, Unlock } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '../../lib/supabase';
 
 // Dynamic slider ranges per symbol type
 function volRange(symbol: string) {
@@ -49,7 +50,7 @@ export const MarketControlPanel = () => {
   const [globalPrice, setGlobalPrice] = useState('');
 
   // Global override (any symbol including crypto)
-  const handleSetGlobalOverride = () => {
+  const handleSetGlobalOverride = async () => {
     if (!globalSymbol.trim()) {
       toast.error('Symbol required');
       return;
@@ -57,14 +58,15 @@ export const MarketControlPanel = () => {
     const sym = globalSymbol.trim().toUpperCase();
     if (!globalPrice) {
       setPriceOverride(sym, null);
+      await supabase.from('price_overrides').delete().eq('symbol', sym);
       toast.success(`Removed override for ${sym}`);
     } else {
       const price = parseFloat(globalPrice);
       setPriceOverride(sym, price);
-      // Also pin forex/metal pairs in forexStore so simulation doesn't drift
       if (pairs[sym]) {
         pinPrice(sym, price);
       }
+      await supabase.from('price_overrides').upsert({ symbol: sym, price }, { onConflict: 'symbol' });
       toast.success(`Override set: ${sym} = ${globalPrice}`);
     }
     setGlobalSymbol('');
@@ -129,10 +131,10 @@ export const MarketControlPanel = () => {
               <Lock size={10} />
               <span className="uppercase">{sym}</span> = {pr}
               <button
-                onClick={() => {
+                onClick={async () => {
                   setPriceOverride(sym, null);
-                  // Un-pause forex pairs when override removed
                   if (pairs[sym]?.isPaused) togglePause(sym);
+                  await supabase.from('price_overrides').delete().eq('symbol', sym);
                   toast.success(`Override removed for ${sym}`);
                 }}
                 className="ml-1 hover:text-white transition-colors"
@@ -241,14 +243,13 @@ export const MarketControlPanel = () => {
                       className="flex-1 bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-accent-primary"
                     />
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         const el = document.getElementById(`override-${pair.symbol}`) as HTMLInputElement;
                         if (el?.value) {
                           const price = parseFloat(el.value);
-                          // 1. Update forexStore: pin price + pause simulation
                           pinPrice(pair.symbol, price);
-                          // 2. Pin in tradingStore so REST/WS won't override it
                           setPriceOverride(pair.symbol, price);
+                          await supabase.from('price_overrides').upsert({ symbol: pair.symbol, price }, { onConflict: 'symbol' });
                           toast.success(`${pair.symbol} fixed at ${fmtPrice(pair.symbol, price)}`);
                           el.value = '';
                         } else {
@@ -261,10 +262,10 @@ export const MarketControlPanel = () => {
                     </button>
                     {isPinned && (
                       <button
-                        onClick={() => {
+                        onClick={async () => {
                           setPriceOverride(pair.symbol, null);
-                          // Resume simulation when removing fix
                           if (pair.isPaused) togglePause(pair.symbol);
+                          await supabase.from('price_overrides').delete().eq('symbol', pair.symbol);
                           toast.success(`${pair.symbol} unfixed — simulation resumed`);
                         }}
                         className="px-3 py-2 bg-white/10 hover:bg-white/20 text-slate-300 font-bold rounded-lg text-xs transition-colors flex items-center gap-1"

@@ -29,6 +29,7 @@ export const AdvancedOrderPanel: React.FC = () => {
   const wallet = useTradingStore(s => s.wallet);
 
   const [user, setUser] = useState<any>(null);
+  const [conditionalPrice, setConditionalPrice] = useState('');
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
   }, []);
@@ -104,13 +105,24 @@ export const AdvancedOrderPanel: React.FC = () => {
 
       toast.success(t('marketOrderOpened', { defaultValue: `Market ${type} opened` }));
     } else {
-      const priceEl = document.getElementById('conditional-price') as HTMLInputElement;
-      const orderPrice = parseFloat(priceEl?.value || '');
-      if (!orderPrice) {
+      const orderPrice = parseFloat(conditionalPrice);
+      if (!orderPrice || orderPrice <= 0) {
         toast.error(t('invalidPrice', { defaultValue: `Please enter a valid ${orderType} price` }));
         return;
       }
-      
+
+      // Warn if the order would execute immediately (price already satisfied)
+      if (currentPrice) {
+        const wouldFillNow =
+          (orderType === 'Limit' && type === 'Long'  && orderPrice >= currentPrice) ||
+          (orderType === 'Limit' && type === 'Short' && orderPrice <= currentPrice) ||
+          (orderType === 'Stop'  && type === 'Long'  && orderPrice <= currentPrice) ||
+          (orderType === 'Stop'  && type === 'Short' && orderPrice >= currentPrice);
+        if (wouldFillNow) {
+          toast.info(`⚡ Price already met — order will execute immediately. Check Order History.`, { duration: 5000 });
+        }
+      }
+
       const placed = placeOrder({
         symbol: currentPair,
         type: orderType as any,
@@ -121,16 +133,17 @@ export const AdvancedOrderPanel: React.FC = () => {
         marginType,
         stopLoss: sl,
         takeProfit: tp
-      })
+      });
       if (!placed) {
         toast.error(t('insufficientMargin', { defaultValue: 'Insufficient available margin' }));
         return;
       }
       toast.success(t('orderPlaced', { defaultValue: `${orderType} order placed` }));
     }
-    
+
     setTakeProfit('');
     setStopLoss('');
+    setConditionalPrice('');
   };
 
   return (
@@ -224,16 +237,27 @@ export const AdvancedOrderPanel: React.FC = () => {
         <div>
            <div className="flex justify-between items-end mb-2">
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none">{t('orderSize')}</label>
+              {parsedAmount > 0 && currentPrice && (
+                <span className="text-[10px] font-bold text-accent-primary font-mono">
+                  ≈ ${(parsedAmount * currentPrice).toLocaleString(undefined, { maximumFractionDigits: 2 })} USD
+                </span>
+              )}
            </div>
            <div className="relative group">
-              <input 
-                 type="text" 
+              <input
+                 type="text"
                  value={amount}
                  onChange={(e) => setAmount(e.target.value)}
-                 className="w-full p-3 bg-[#111] border border-white/10 rounded-xl text-sm font-mono font-bold text-white focus:outline-none focus:border-accent-primary/50 transition-all pr-12" 
+                 className="w-full p-3 bg-[#111] border border-white/10 rounded-xl text-sm font-mono font-bold text-white focus:outline-none focus:border-accent-primary/50 transition-all pr-12"
               />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-500 group-focus-within:text-accent-primary transition-colors">{t('amount')}</span>
            </div>
+           {parsedAmount > 0 && currentPrice && (
+             <div className="mt-1.5 flex gap-3 text-[10px] font-mono">
+               <span className="text-slate-500">Position: <span className="text-white font-bold">${(parsedAmount * currentPrice).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span></span>
+               <span className="text-slate-500">Margin: <span className="text-accent-primary font-bold">${((parsedAmount * currentPrice) / leverage).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span></span>
+             </div>
+           )}
         </div>
 
         {/* Limit/Stop Price */}
@@ -244,15 +268,40 @@ export const AdvancedOrderPanel: React.FC = () => {
                 <Target size={10}/> {t(orderType.toLowerCase())} {t('price')}
               </label>
             </div>
+
+            {/* Direction hint */}
+            {currentPrice && (
+              <div className="mb-2 text-[10px] text-slate-500 leading-relaxed space-y-0.5">
+                {orderType === 'Limit' && (
+                  <p>
+                    <span className="text-accent-secondary font-bold">Long (Buy):</span> below current&nbsp;
+                    <span className="font-mono text-slate-400">${currentPrice.toLocaleString()}</span>
+                    &nbsp;·&nbsp;
+                    <span className="text-accent-quaternary font-bold">Short (Sell):</span> above current
+                  </p>
+                )}
+                {orderType === 'Stop' && (
+                  <p>
+                    <span className="text-accent-secondary font-bold">Long (Buy):</span> above current&nbsp;
+                    <span className="font-mono text-slate-400">${currentPrice.toLocaleString()}</span>
+                    &nbsp;·&nbsp;
+                    <span className="text-accent-quaternary font-bold">Short (Sell):</span> below current
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="relative group">
-              <input 
-                 type="text" 
-                 id="conditional-price"
+              <input
+                 type="text"
+                 value={conditionalPrice}
+                 onChange={(e) => setConditionalPrice(e.target.value)}
                  placeholder={currentPrice?.toLocaleString() || '0.00'}
-                 className="w-full p-3 bg-[#111] border border-white/10 rounded-xl text-sm font-mono font-bold text-white focus:outline-none focus:border-accent-primary/50 transition-all pr-12" 
+                 className="w-full p-3 bg-[#111] border border-white/10 rounded-xl text-sm font-mono font-bold text-white focus:outline-none focus:border-accent-primary/50 transition-all pr-12"
               />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-500 group-focus-within:text-accent-primary transition-colors">{t('price')}</span>
             </div>
+
           </div>
         )}
 
