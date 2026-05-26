@@ -84,6 +84,16 @@ export const OpenPositionsTable = () => {
                 <div className="flex flex-col">
                     <p className="text-xs font-mono font-bold text-text-muted">{pos.entryPrice.toLocaleString(undefined, { maximumFractionDigits: 4 })}</p>
                     <p className="text-[10px] font-mono text-text-dim">{currentPrice.toLocaleString(undefined, { maximumFractionDigits: 4 })}</p>
+                    {pos.takeProfit && (
+                      <p className="text-[9px] font-mono text-emerald-500/80 font-bold mt-0.5">
+                        TP: ${pos.takeProfit.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                      </p>
+                    )}
+                    {pos.stopLoss && (
+                      <p className="text-[9px] font-mono text-rose-500/80 font-bold">
+                        SL: ${pos.stopLoss.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                      </p>
+                    )}
                 </div>
               </td>
               <td className="py-4 text-right">

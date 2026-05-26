@@ -52,6 +52,8 @@ interface TradingState {
   
   // Actions
   fetchPositionsAndOrders: () => Promise<void>;
+  setPositions: (positions: Position[]) => void;
+  setOrders: (orders: Order[]) => void;
   setPriceOverride: (symbol: string, price: number | null) => void;
   setWallet: (wallet: Partial<Wallet>) => void;
   updatePrice: (symbol: string, price: number, change24h: number) => void;
@@ -134,6 +136,9 @@ export const useTradingStore = create<TradingState>()(
           console.error('Failed to load positions/orders:', err);
         }
       },
+
+      setPositions: (positions) => set({ positions }),
+      setOrders: (orders) => set({ orders }),
 
       setWallet: (wallet) => {
         set((state) => ({
@@ -304,6 +309,8 @@ export const useTradingStore = create<TradingState>()(
       },
 
       updatePositionPnL: (symbol, currentPrice) => {
+        const closedJobs: { pos: Position; pnl: number; reason: string }[] = [];
+
         set((state) => {
           let marginFreed = 0;
           let balanceChange = 0;
@@ -316,22 +323,39 @@ export const useTradingStore = create<TradingState>()(
               ? (currentPrice - pos.entryPrice) * pos.size
               : (pos.entryPrice - currentPrice) * pos.size;
 
-            // Liquidation check
             let isLiquidated = false;
+            let reason = 'Liquidation';
+
+            // Liquidation check
             if (pos.type === 'Long' && currentPrice <= pos.liquidationPrice) isLiquidated = true;
             if (pos.type === 'Short' && currentPrice >= pos.liquidationPrice) isLiquidated = true;
 
             // SL / TP check
-            if (pos.stopLoss && pos.type === 'Long' && currentPrice <= pos.stopLoss) isLiquidated = true;
-            if (pos.stopLoss && pos.type === 'Short' && currentPrice >= pos.stopLoss) isLiquidated = true;
-            if (pos.takeProfit && pos.type === 'Long' && currentPrice >= pos.takeProfit) isLiquidated = true;
-            if (pos.takeProfit && pos.type === 'Short' && currentPrice <= pos.takeProfit) isLiquidated = true;
+            if (pos.stopLoss && pos.type === 'Long' && currentPrice <= pos.stopLoss) {
+              isLiquidated = true;
+              reason = 'Stop Loss';
+            }
+            if (pos.stopLoss && pos.type === 'Short' && currentPrice >= pos.stopLoss) {
+              isLiquidated = true;
+              reason = 'Stop Loss';
+            }
+            if (pos.takeProfit && pos.type === 'Long' && currentPrice >= pos.takeProfit) {
+              isLiquidated = true;
+              reason = 'Take Profit';
+            }
+            if (pos.takeProfit && pos.type === 'Short' && currentPrice <= pos.takeProfit) {
+              isLiquidated = true;
+              reason = 'Take Profit';
+            }
 
             if (isLiquidated) {
                marginFreed += pos.margin;
                balanceChange += pnl;
                realizedPnLChange += pnl;
-               return { ...pos, unrealizedPnL: pnl, status: 'closed' as const };
+               
+               const closedPos = { ...pos, unrealizedPnL: pnl, status: 'closed' as const };
+               closedJobs.push({ pos: closedPos, pnl, reason });
+               return closedPos;
             }
 
             return { ...pos, unrealizedPnL: pnl };
@@ -351,6 +375,47 @@ export const useTradingStore = create<TradingState>()(
 
           return { positions: updatedPositions };
         });
+
+        // Trigger background db updates for each closed position (SL/TP/Liq)
+        if (closedJobs.length > 0) {
+          (async () => {
+            try {
+              const { data: { user } } = await supabase.auth.getUser();
+              if (!user) return;
+
+              for (const job of closedJobs) {
+                // 1. Update position status to closed
+                await supabase.from('positions').update({
+                  status: 'closed',
+                  unrealized_pnl: job.pnl,
+                }).eq('id', job.pos.id);
+
+                // 2. Log close trade transaction
+                await supabase.from('transactions').insert({
+                  user_id: user.id,
+                  user_email: user.email,
+                  user_name: user.user_metadata?.full_name || user.email,
+                  type: 'Trade',
+                  amount: Math.max(0.01, Math.abs(job.pnl)),
+                  currency: 'USD',
+                  method: 'Other',
+                  status: 'Completed',
+                  instructions: `Closed ${job.pos.type} position on ${job.pos.symbol} at $${currentPrice.toLocaleString()} via ${job.reason}. P&L: ${job.pnl >= 0 ? '+' : ''}$${job.pnl.toLocaleString()}`,
+                });
+              }
+
+              // 3. Update user balance
+              const currentWallet = get().wallet;
+              await supabase.from('users').update({
+                balance: currentWallet.balance,
+                margin_used: currentWallet.marginUsed,
+                realized_pnl: currentWallet.realizedPnL,
+              }).eq('id', user.id);
+            } catch (err) {
+              console.error('[updatePositionPnL] Failed to persist closed positions to Supabase:', err);
+            }
+          })();
+        }
       },
 
       placeOrder: (orderData) => {
