@@ -1,4 +1,4 @@
-import { getAdminClient, requireAdmin } from "../../../_lib/supabase.js";
+import { getAdminClient, requireAdmin } from "../../_lib/supabase.js";
 
 const CRM_ROLES = ["agent", "manager", "director", "admin"] as const;
 type CrmRole = (typeof CRM_ROLES)[number];

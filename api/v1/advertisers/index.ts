@@ -1,4 +1,4 @@
-import { getAdminClient, requireCrmAdmin } from "../../../_lib/supabase.js";
+import { getAdminClient, requireCrmAdmin } from "../../_lib/supabase.js";
 
 function mapCode(c: any) {
   return {
