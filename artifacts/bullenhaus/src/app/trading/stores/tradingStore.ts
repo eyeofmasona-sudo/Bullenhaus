@@ -49,9 +49,10 @@ interface TradingState {
   prices: Record<string, number>;
   priceChanges: Record<string, number>;
   priceOverrides: Record<string, number>;
-  
+
   // Actions
   fetchPositionsAndOrders: () => Promise<void>;
+  initPriceOverrideSync: () => Promise<void>;
   setPositions: (positions: Position[]) => void;
   setOrders: (orders: Order[]) => void;
   setPriceOverride: (symbol: string, price: number | null) => void;
@@ -80,6 +81,39 @@ export const useTradingStore = create<TradingState>()(
       prices: {},
       priceChanges: {},
       priceOverrides: {},
+
+      initPriceOverrideSync: async () => {
+        // Fetch all existing admin price overrides and apply them locally
+        try {
+          const { data } = await supabase.from('price_overrides').select('symbol, price');
+          if (data && data.length > 0) {
+            const overrides: Record<string, number> = {};
+            data.forEach((row: { symbol: string; price: number }) => {
+              overrides[row.symbol] = Number(row.price);
+            });
+            set({ priceOverrides: overrides });
+          }
+        } catch {
+          // table may not exist yet — silently skip
+        }
+
+        // Subscribe to realtime changes on price_overrides
+        supabase
+          .channel('price-overrides-sync')
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'price_overrides' }, (payload) => {
+            const row = payload.new as { symbol: string; price: number };
+            get().setPriceOverride(row.symbol, Number(row.price));
+          })
+          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'price_overrides' }, (payload) => {
+            const row = payload.new as { symbol: string; price: number };
+            get().setPriceOverride(row.symbol, Number(row.price));
+          })
+          .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'price_overrides' }, (payload) => {
+            const row = payload.old as { symbol: string };
+            get().setPriceOverride(row.symbol, null);
+          })
+          .subscribe();
+      },
 
       fetchPositionsAndOrders: async () => {
         try {

@@ -164,7 +164,8 @@ export const AdminUsers = () => {
       </div>
 
       <div className="glass-card overflow-hidden">
-        <table className="w-full text-left">
+        <div className="overflow-x-auto">
+        <table className="w-full text-left" style={{ minWidth: '900px' }}>
           <thead>
             <tr className="border-b border-border text-[10px] font-bold text-text-dim uppercase tracking-widest bg-surface/60">
               <th className="px-6 py-4 font-bold">Identity</th>
@@ -286,6 +287,7 @@ export const AdminUsers = () => {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {selectedUser && (

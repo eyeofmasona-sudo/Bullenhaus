@@ -224,16 +224,27 @@ export const AdvancedOrderPanel: React.FC = () => {
         <div>
            <div className="flex justify-between items-end mb-2">
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none">{t('orderSize')}</label>
+              {parsedAmount > 0 && currentPrice && (
+                <span className="text-[10px] font-bold text-accent-primary font-mono">
+                  ≈ ${(parsedAmount * currentPrice).toLocaleString(undefined, { maximumFractionDigits: 2 })} USD
+                </span>
+              )}
            </div>
            <div className="relative group">
-              <input 
-                 type="text" 
+              <input
+                 type="text"
                  value={amount}
                  onChange={(e) => setAmount(e.target.value)}
-                 className="w-full p-3 bg-[#111] border border-white/10 rounded-xl text-sm font-mono font-bold text-white focus:outline-none focus:border-accent-primary/50 transition-all pr-12" 
+                 className="w-full p-3 bg-[#111] border border-white/10 rounded-xl text-sm font-mono font-bold text-white focus:outline-none focus:border-accent-primary/50 transition-all pr-12"
               />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-500 group-focus-within:text-accent-primary transition-colors">{t('amount')}</span>
            </div>
+           {parsedAmount > 0 && currentPrice && (
+             <div className="mt-1.5 flex gap-3 text-[10px] font-mono">
+               <span className="text-slate-500">Position: <span className="text-white font-bold">${(parsedAmount * currentPrice).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span></span>
+               <span className="text-slate-500">Margin: <span className="text-accent-primary font-bold">${((parsedAmount * currentPrice) / leverage).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span></span>
+             </div>
+           )}
         </div>
 
         {/* Limit/Stop Price */}
