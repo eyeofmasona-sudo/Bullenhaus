@@ -151,6 +151,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [session, role]);
 
+  // Real-time subscription to sync kyc_status when admin changes it
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const subscription = supabase
+      .channel(`user-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'users',
+          filter: `id=eq.${user.id}`,
+        },
+        (payload) => {
+          const { kyc_status, role: newRole } = payload.new as any;
+          if (kyc_status) {
+            setKycStatus((kyc_status as any) || 'UNVERIFIED');
+          }
+          if (newRole) {
+            setRole((newRole as UnifiedRole) || null);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [user?.id]);
+
   const signOut = async () => {
     setSession(null);
     setUser(null);

@@ -22,16 +22,26 @@ export const AdvancedOrderPanel: React.FC = () => {
     orderType, setOrderType,
     setCurrentPair
   } = useTradingContext();
-  const { kycStatus } = useAuth();
+  const { kycStatus: contextKycStatus, refreshProfile } = useAuth();
+  const [kycStatus, setKycStatus] = useState(contextKycStatus);
   
   const openPosition = useTradingStore(s => s.openPosition);
   const placeOrder = useTradingStore(s => s.placeOrder);
   const wallet = useTradingStore(s => s.wallet);
 
   const [user, setUser] = useState<any>(null);
+  
+  // Sync local kycStatus with context
+  useEffect(() => {
+    setKycStatus(contextKycStatus);
+  }, [contextKycStatus]);
+  
+  // Initial sync and setup when component mounts
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
-  }, []);
+    // Sync kyc_status when entering trading page
+    refreshProfile();
+  }, [refreshProfile]);
 
   const isPositive = (priceChangePercent24h || 0) >= 0;
 
@@ -41,6 +51,9 @@ export const AdvancedOrderPanel: React.FC = () => {
   const estLiqShort = currentPrice ? currentPrice * (1 + 1/leverage - 0.005) : 0;
   
   const handleExecute = async (type: 'Long' | 'Short') => {
+    // Ensure kyc_status is up-to-date before checking
+    await refreshProfile();
+    
     if (kycStatus !== 'VERIFIED') {
       toast.error('KYC Verification required to trade');
       return;
