@@ -1,0 +1,6 @@
+{
+  "buildCommand": "pnpm --filter @workspace/bullenhaus build",
+  "outputDirectory": "artifacts/bullenhaus/dist/public",
+  "installCommand": "pnpm install",
+  "framework": null
+}
