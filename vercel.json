@@ -1,6 +1,7 @@
 {
-  "buildCommand": "pnpm --filter @workspace/bullenhaus build",
+  "buildCommand": "pnpm --filter @workspace/bullenhaus run build",
   "outputDirectory": "artifacts/bullenhaus/dist/public",
-  "installCommand": "pnpm install",
-  "framework": null
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }

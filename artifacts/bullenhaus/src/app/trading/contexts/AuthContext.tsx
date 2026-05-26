@@ -146,7 +146,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   useEffect(() => {
-    if (!session || (session && role)) {
+    if (session && role) {
       setLoading(false);
     }
   }, [session, role]);
