@@ -85,7 +85,7 @@ export const PositionsAndOrdersPanel = () => {
   };
 
   return (
-    <div className="glass-card p-6 relative overflow-hidden flex-1 flex flex-col h-full min-h-[400px]">
+    <div className="glass-card p-6 relative overflow-x-hidden flex-1 flex flex-col h-full min-h-[400px]">
       <div className="absolute top-0 right-0 w-32 h-32 bg-accent-primary/5 rounded-full blur-3xl pointer-events-none" />
 
       <div className="flex items-center justify-between mb-6 relative z-10 border-b border-white/5 pb-2">
@@ -132,15 +132,15 @@ export const PositionsAndOrdersPanel = () => {
 
       <div className="overflow-x-auto relative z-10 flex-1 custom-scrollbar">
         {activeTab === 'positions' && (
-          <table className="w-full relative" style={{ minWidth: '600px' }}>
+          <table className="w-full relative" style={{ minWidth: '580px' }}>
             <thead className="text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 sticky top-0 bg-surface-card z-20">
               <tr>
                 <th className="text-left pb-4 pt-2">Market</th>
                 <th className="text-left pb-4 pt-2">Side / Lev</th>
                 <th className="text-left pb-4 pt-2">Size (USD)</th>
                 <th className="text-left pb-4 pt-2">Entry / Mark</th>
-                <th className="text-right pb-4 pt-2">Unrealized P&L</th>
-                <th className="text-right pb-4 pt-2">Actions</th>
+                <th className="text-right pb-4 pt-2">P&L</th>
+                <th className="text-right pb-4 pt-2 sticky right-0 bg-surface-card">Actions</th>
               </tr>
             </thead>
             <tbody className="text-sm">
@@ -194,7 +194,7 @@ export const PositionsAndOrdersPanel = () => {
                             </span>
                         </div>
                       </td>
-                      <td className="py-4 text-right whitespace-nowrap">
+                      <td className="py-4 text-right whitespace-nowrap sticky right-0 bg-surface-card group-hover:bg-white/5">
                         <button
                           onClick={() => handleClosePosition(pos.id, currentPrice)}
                           className="px-3 py-1.5 bg-white/5 hover:bg-accent-quaternary hover:text-white border border-white/10 rounded text-[10px] font-bold text-slate-400 transition-colors"
@@ -218,7 +218,7 @@ export const PositionsAndOrdersPanel = () => {
                 <th className="text-left pb-4 pt-2">Type</th>
                 <th className="text-left pb-4 pt-2">Order Price</th>
                 <th className="text-left pb-4 pt-2">Size (USD)</th>
-                <th className="text-right pb-4 pt-2">Actions</th>
+                <th className="text-right pb-4 pt-2 sticky right-0 bg-surface-card">Actions</th>
               </tr>
             </thead>
             <tbody className="text-sm">
@@ -258,7 +258,7 @@ export const PositionsAndOrdersPanel = () => {
                           <span className="text-[10px] font-mono text-accent-primary">${notionalUSD.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                         </div>
                       </td>
-                      <td className="py-4 text-right whitespace-nowrap">
+                      <td className="py-4 text-right whitespace-nowrap sticky right-0 bg-surface-card group-hover:bg-white/5">
                         <button
                           onClick={() => handleCancelOrder(order.id)}
                           className="px-3 py-1.5 bg-white/5 hover:bg-zinc-700 hover:text-white border border-white/10 rounded text-[10px] font-bold text-slate-400 transition-colors"
