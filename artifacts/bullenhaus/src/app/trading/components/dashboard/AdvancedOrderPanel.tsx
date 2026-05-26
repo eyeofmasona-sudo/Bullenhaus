@@ -26,6 +26,7 @@ export const AdvancedOrderPanel: React.FC = () => {
   
   const openPosition = useTradingStore(s => s.openPosition);
   const placeOrder = useTradingStore(s => s.placeOrder);
+  const wallet = useTradingStore(s => s.wallet);
 
   const [user, setUser] = useState<any>(null);
   useEffect(() => {
@@ -57,11 +58,20 @@ export const AdvancedOrderPanel: React.FC = () => {
     const sl = parseFloat(stopLoss) || null;
 
     if (orderType === 'Market') {
+      const available = wallet.balance - wallet.marginUsed;
+      if (available < marginRequired) {
+        toast.error(`Insufficient balance. Required: $${marginRequired.toFixed(2)}, Available: $${available.toFixed(2)}`);
+        return;
+      }
+
       const liqPrice = type === 'Long'
         ? currentPrice * (1 - 1/leverage + 0.005)
         : currentPrice * (1 + 1/leverage - 0.005);
 
-      openPosition({
+      const posId = crypto.randomUUID();
+
+      const opened = openPosition({
+        id: posId,
         symbol: currentPair,
         type,
         entryPrice: currentPrice,
@@ -74,20 +84,39 @@ export const AdvancedOrderPanel: React.FC = () => {
         takeProfit: tp,
       });
 
+      if (!opened) {
+        toast.error('Failed to open position. Check your balance.');
+        return;
+      }
+
       if (user) {
-        try {
-          await crmService.activity({
-            external_trader_id: user.id,
-            external_trade_id: crypto.randomUUID(),
-            symbol: currentPair,
-            side: type === 'Long' ? 'buy' : 'sell',
-            volume: parsedAmount,
-            open_price: currentPrice,
-            opened_at: new Date().toISOString(),
-          });
-        } catch (err) {
-          console.error(err);
-        }
+        supabase.from('positions').insert({
+          id: posId,
+          user_id: user.id,
+          symbol: currentPair,
+          type,
+          entry_price: currentPrice,
+          size: parsedAmount,
+          leverage,
+          margin_type: marginType,
+          margin: marginRequired,
+          liquidation_price: Math.max(0, liqPrice),
+          stop_loss: sl,
+          take_profit: tp,
+          status: 'open',
+        }).then(({ error }) => {
+          if (error) console.error('[trade] failed to persist position:', error);
+        });
+
+        crmService.activity({
+          external_trader_id: user.id,
+          external_trade_id: posId,
+          symbol: currentPair,
+          side: type === 'Long' ? 'buy' : 'sell',
+          volume: parsedAmount,
+          open_price: currentPrice,
+          opened_at: new Date().toISOString(),
+        }).catch((err: unknown) => console.error(err));
       }
 
       toast.success(t('marketOrderOpened', { defaultValue: `Market ${type} opened` }));
@@ -98,8 +127,11 @@ export const AdvancedOrderPanel: React.FC = () => {
         toast.error(t('invalidPrice', { defaultValue: `Please enter a valid ${orderType} price` }));
         return;
       }
-      
+
+      const orderId = crypto.randomUUID();
+
       placeOrder({
+        id: orderId,
         symbol: currentPair,
         type: orderType as any,
         positionType: type,
@@ -108,8 +140,28 @@ export const AdvancedOrderPanel: React.FC = () => {
         leverage,
         marginType,
         stopLoss: sl,
-        takeProfit: tp
-      })
+        takeProfit: tp,
+      });
+
+      if (user) {
+        supabase.from('orders').insert({
+          id: orderId,
+          user_id: user.id,
+          symbol: currentPair,
+          type: orderType,
+          position_type: type,
+          price: orderPrice,
+          size: parsedAmount,
+          leverage,
+          margin_type: marginType,
+          stop_loss: sl,
+          take_profit: tp,
+          status: 'pending',
+        }).then(({ error }) => {
+          if (error) console.error('[trade] failed to persist order:', error);
+        });
+      }
+
       toast.success(t('orderPlaced', { defaultValue: `${orderType} order placed` }));
     }
     

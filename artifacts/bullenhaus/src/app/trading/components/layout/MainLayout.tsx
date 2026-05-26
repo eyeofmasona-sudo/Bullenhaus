@@ -27,7 +27,7 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
 
   const navigate = useNavigate();
   const { t, i18n } = useTranslation('common');
-  const { user, role } = useAuth();
+  const { user, role, kycStatus } = useAuth();
   const { profile, fetchProfile } = useUserStore();
 
   useEffect(() => {
@@ -227,9 +227,9 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
               <div className="text-right hidden sm:block">
                 <p className="text-xs font-bold text-white leading-none mb-1 group-hover:text-accent-primary transition-colors">{displayName}</p>
                 <div className="flex items-center justify-end gap-1">
-                  <span className={`w-1.5 h-1.5 rounded-full ${profile?.kyc_status === 'VERIFIED' ? 'bg-accent-secondary shadow-neon-emerald' : 'bg-orange-500'}`} />
+                  <span className={`w-1.5 h-1.5 rounded-full ${kycStatus === 'VERIFIED' ? 'bg-accent-secondary shadow-neon-emerald' : 'bg-orange-500'}`} />
                   <p className="text-[9px] font-bold text-accent-secondary uppercase tracking-tighter">
-                    {profile?.role || 'LITE'} • {profile?.kyc_status || 'UNVERIFIED'}
+                    {role?.toUpperCase() || 'CLIENT'} • {kycStatus || 'UNVERIFIED'}
                   </p>
                 </div>
               </div>

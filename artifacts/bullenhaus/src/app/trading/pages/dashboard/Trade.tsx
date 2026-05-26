@@ -5,12 +5,17 @@ import { TradingChart } from '../../components/dashboard/TradingChart';
 import { AdvancedOrderPanel as OrderPanel } from '../../components/dashboard/AdvancedOrderPanel';
 import { PositionsAndOrdersPanel } from '../../components/dashboard/PositionsAndOrdersPanel';
 import { useTradingStore } from '../../stores/tradingStore';
+import { useWalletSync } from '../../hooks/useWalletSync';
+import { useTradingSync } from '../../hooks/useTradingSync';
 import { motion } from 'motion/react';
 
 const TradeContent = () => {
   const [searchParams] = useSearchParams();
   const { setCurrentPair, currentPair } = useTradingContext();
   const prices = useTradingStore(s => s.prices);
+
+  useWalletSync();
+  useTradingSync();
 
   useEffect(() => {
     const sym = searchParams.get('symbol');

@@ -51,11 +51,13 @@ interface TradingState {
   // Actions
   setPriceOverride: (symbol: string, price: number | null) => void;
   setWallet: (wallet: Partial<Wallet>) => void;
+  setPositions: (positions: Position[]) => void;
+  setOrders: (orders: Order[]) => void;
   updatePrice: (symbol: string, price: number, change24h: number) => void;
-  openPosition: (pos: Omit<Position, 'id' | 'unrealizedPnL' | 'status'>) => void;
+  openPosition: (pos: Omit<Position, 'unrealizedPnL' | 'status'> & { id?: string }) => boolean;
   closePosition: (id: string, closePrice: number) => void;
   updatePositionPnL: (symbol: string, currentPrice: number) => void;
-  placeOrder: (order: Omit<Order, 'id' | 'status'>) => void;
+  placeOrder: (order: Omit<Order, 'status'> & { id?: string }) => void;
   cancelOrder: (id: string) => void;
   checkOrders: () => void; // checks limit/stop orders against current prices
   addBalance: (amount: number) => void;
@@ -81,6 +83,14 @@ export const useTradingStore = create<TradingState>((set, get) => ({
         ...wallet,
       },
     }));
+  },
+
+  setPositions: (positions) => {
+    set({ positions });
+  },
+
+  setOrders: (orders) => {
+    set({ orders });
   },
 
   setPriceOverride: (symbol, price) => {
@@ -110,27 +120,27 @@ export const useTradingStore = create<TradingState>((set, get) => ({
   },
 
   openPosition: (posData) => {
+    let success = false;
     set((state) => {
-      // Basic check if enough balance
       if (state.wallet.balance - state.wallet.marginUsed < posData.margin) {
-        return state; // In real app, throw error
+        return state;
       }
-      
+      success = true;
       const newPos: Position = {
         ...posData,
-        id: crypto.randomUUID(),
+        id: posData.id ?? crypto.randomUUID(),
         unrealizedPnL: 0,
         status: 'open',
       };
-      
       return {
         positions: [...state.positions, newPos],
         wallet: {
           ...state.wallet,
           marginUsed: state.wallet.marginUsed + posData.margin,
-        }
+        },
       };
     });
+    return success;
   },
 
   closePosition: (id, closePrice) => {
@@ -208,7 +218,7 @@ export const useTradingStore = create<TradingState>((set, get) => ({
 
   placeOrder: (orderData) => {
     set((state) => ({
-      orders: [...state.orders, { ...orderData, id: crypto.randomUUID(), status: 'pending' }]
+      orders: [...state.orders, { ...orderData, id: orderData.id ?? crypto.randomUUID(), status: 'pending' }],
     }));
   },
 

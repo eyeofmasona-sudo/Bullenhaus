@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useTradingStore } from '../../stores/tradingStore';
 import { useTradingContext } from '../../contexts/TradingContext';
+import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
 
 export const PositionsAndOrdersPanel = () => {
@@ -22,11 +23,19 @@ export const PositionsAndOrdersPanel = () => {
   
   const handleClosePosition = (id: string, price: number) => {
     closePositionAction(id, price);
+    supabase.from('positions')
+      .update({ status: 'closed', closed_at: new Date().toISOString() })
+      .eq('id', id)
+      .then(({ error }) => { if (error) console.error('[trade] close position sync:', error); });
     toast.success('Position closed successfully');
   };
 
   const handleCancelOrder = (id: string) => {
     cancelOrderAction(id);
+    supabase.from('orders')
+      .update({ status: 'canceled', updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .then(({ error }) => { if (error) console.error('[trade] cancel order sync:', error); });
     toast.success('Order canceled successfully');
   };
 
