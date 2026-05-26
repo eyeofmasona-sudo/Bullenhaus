@@ -1,0 +1,7 @@
+{
+  "buildCommand": "pnpm --filter @workspace/bullenhaus run build",
+  "outputDirectory": "artifacts/bullenhaus/dist/public",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
