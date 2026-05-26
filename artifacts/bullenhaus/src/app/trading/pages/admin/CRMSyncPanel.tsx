@@ -13,7 +13,7 @@ export const CRMSyncPanel: React.FC = () => {
   const [isSecretVisible, setIsSecretVisible] = useState(false);
 
   return (
-    <div className="col-span-12 grid grid-cols-12 gap-6 animate-in fade-in duration-500">
+    <div className="col-span-12 grid grid-cols-12 gap-6 animate-in fade-in duration-150">
       
       {/* Top Metrics Map */}
       <div className="col-span-12 grid grid-cols-1 md:grid-cols-4 gap-6">

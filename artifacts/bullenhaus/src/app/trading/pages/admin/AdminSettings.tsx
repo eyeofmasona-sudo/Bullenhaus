@@ -33,7 +33,7 @@ export const AdminSettings = () => {
   };
 
   return (
-    <div className="p-8 max-w-[1600px] mx-auto animate-in fade-in duration-500">
+    <div className="p-8 max-w-[1600px] mx-auto animate-in fade-in duration-150">
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-white uppercase tracking-wider">System Configuration</h2>
         <p className="text-sm text-slate-500">Manage platform-wide settings, security policies, and AI features.</p>
