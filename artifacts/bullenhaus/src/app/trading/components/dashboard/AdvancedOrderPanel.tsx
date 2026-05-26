@@ -29,6 +29,7 @@ export const AdvancedOrderPanel: React.FC = () => {
   const wallet = useTradingStore(s => s.wallet);
 
   const [user, setUser] = useState<any>(null);
+  const [conditionalPrice, setConditionalPrice] = useState('');
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
   }, []);
@@ -104,13 +105,12 @@ export const AdvancedOrderPanel: React.FC = () => {
 
       toast.success(t('marketOrderOpened', { defaultValue: `Market ${type} opened` }));
     } else {
-      const priceEl = document.getElementById('conditional-price') as HTMLInputElement;
-      const orderPrice = parseFloat(priceEl?.value || '');
-      if (!orderPrice) {
+      const orderPrice = parseFloat(conditionalPrice);
+      if (!orderPrice || orderPrice <= 0) {
         toast.error(t('invalidPrice', { defaultValue: `Please enter a valid ${orderType} price` }));
         return;
       }
-      
+
       const placed = placeOrder({
         symbol: currentPair,
         type: orderType as any,
@@ -121,16 +121,17 @@ export const AdvancedOrderPanel: React.FC = () => {
         marginType,
         stopLoss: sl,
         takeProfit: tp
-      })
+      });
       if (!placed) {
         toast.error(t('insufficientMargin', { defaultValue: 'Insufficient available margin' }));
         return;
       }
       toast.success(t('orderPlaced', { defaultValue: `${orderType} order placed` }));
     }
-    
+
     setTakeProfit('');
     setStopLoss('');
+    setConditionalPrice('');
   };
 
   return (
@@ -256,11 +257,12 @@ export const AdvancedOrderPanel: React.FC = () => {
               </label>
             </div>
             <div className="relative group">
-              <input 
-                 type="text" 
-                 id="conditional-price"
+              <input
+                 type="text"
+                 value={conditionalPrice}
+                 onChange={(e) => setConditionalPrice(e.target.value)}
                  placeholder={currentPrice?.toLocaleString() || '0.00'}
-                 className="w-full p-3 bg-[#111] border border-white/10 rounded-xl text-sm font-mono font-bold text-white focus:outline-none focus:border-accent-primary/50 transition-all pr-12" 
+                 className="w-full p-3 bg-[#111] border border-white/10 rounded-xl text-sm font-mono font-bold text-white focus:outline-none focus:border-accent-primary/50 transition-all pr-12"
               />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-500 group-focus-within:text-accent-primary transition-colors">{t('price')}</span>
             </div>
