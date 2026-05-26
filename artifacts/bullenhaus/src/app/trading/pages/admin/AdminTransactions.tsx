@@ -64,7 +64,7 @@ export const AdminTransactions = () => {
   };
 
   return (
-    <div className="p-8 max-w-[1600px] mx-auto animate-in fade-in duration-500">
+    <div className="p-8 max-w-[1600px] mx-auto animate-in fade-in duration-150">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h2 className="font-serif text-2xl font-light italic tracking-tight text-text">Global Transactions</h2>

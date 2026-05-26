@@ -130,7 +130,7 @@ export const AdminDashboard: React.FC = () => {
   ];
 
   return (
-    <div className="max-w-[1700px] mx-auto space-y-8 animate-in fade-in duration-500 relative">
+    <div className="max-w-[1700px] mx-auto space-y-8 animate-in fade-in duration-150 relative">
       <div className="absolute top-0 left-0 w-full h-[500px] bg-red-900/5 rounded-full blur-[150px] pointer-events-none" />
 
       {/* Header */}
