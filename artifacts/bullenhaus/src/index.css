@@ -106,10 +106,14 @@
     color: #fff;
   }
 
-  /* Remove ALL browser outlines and focus rings */
-  *, *::before, *::after,
-  *:focus, *:focus-visible, *:focus-within, *:active {
-    outline: none !important;
+  /* Keep mouse/touch focus clean, but preserve a visible keyboard focus ring */
+  *:focus:not(:focus-visible) {
+    outline: none;
+  }
+  *:focus-visible {
+    outline: 2px solid rgba(212, 175, 55, 0.7);
+    outline-offset: 2px;
+    border-radius: 2px;
   }
 
   /* Headings default to serif display */
