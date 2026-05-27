@@ -184,7 +184,7 @@ const AppContent = () => {
               CRM WORKER ZONE
              ========================================== */}
           <Route element={<AuthGuard />}>
-            <Route element={<RoleGuard allowedRoles={['agent', 'manager', 'director', 'admin']} />}>
+            <Route element={<RoleGuard allowedRoles={['agent', 'manager', 'director', 'admin', 'crm_admin']} />}>
               <Route path="/crm" element={<CRMRedirect />} />
               <Route path="/crm" element={<CRMAppWrapper />}>
                 <Route path="dashboard" element={<CRMDashboard />} />
@@ -196,7 +196,7 @@ const AppContent = () => {
                 <Route path="my-clients" element={<CRMAgentClients />} />
                 <Route path="telephony" element={<CRMTelephonySettings />} />
                 <Route path="ai-insights" element={<CRMAIInsights />} />
-                <Route element={<RoleGuard allowedRoles={['admin']} fallbackUrl="/unauthorized" />}>
+                <Route element={<RoleGuard allowedRoles={['admin', 'crm_admin']} fallbackUrl="/unauthorized" />}>
                   <Route path="admin" element={<CRMAdminPanel />} />
                 </Route>
               </Route>

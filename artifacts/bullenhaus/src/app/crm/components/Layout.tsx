@@ -38,6 +38,7 @@ const getNavForRole = (role: string, t: (key: string) => string) => {
         { name: 'AI Core Insights',        href: '/crm/ai-insights', icon: Brain },
       ];
     case 'admin':
+    case 'crm_admin':
       return [
         { name: t('navAdminPanel'),        href: '/crm/admin',       icon: Settings },
         { name: t('navDirectorDashboard'), href: '/crm/dashboard',   icon: LayoutDashboard },
