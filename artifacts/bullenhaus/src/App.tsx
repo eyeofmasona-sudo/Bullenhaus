@@ -14,6 +14,7 @@ import { CorporateData }     from './app/trading/pages/legal/CorporateData';
 import { AuthProvider, useAuth } from './app/trading/contexts/AuthContext';
 import { AuthGuard } from './components/guards/AuthGuard';
 import { RoleGuard } from './components/guards/RoleGuard';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Global Auth Pages
 import LoginPage from './app/login/LoginPage';
@@ -242,8 +243,10 @@ const AppContent = () => {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
