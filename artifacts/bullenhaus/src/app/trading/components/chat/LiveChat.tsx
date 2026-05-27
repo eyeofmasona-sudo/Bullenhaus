@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MessageSquare, X, Send, Bot, User, Loader2, AlertCircle, Sparkles } from 'lucide-react';
+import { aiStatus, aiChat } from '../../../../lib/ai/aiClient';
 
 const SYSTEM_PROMPT = `You are a navigation-only assistant for a trading platform.
 
@@ -58,10 +59,7 @@ export const LiveChat: React.FC = () => {
   const getModel = () => localStorage.getItem(AI_MODEL_STORAGE) || DEFAULT_MODEL;
 
   useEffect(() => {
-    fetch('/api/ai/status')
-      .then(r => r.json())
-      .then((d: { configured: boolean }) => setOnline(d.configured))
-      .catch(() => setOnline(false));
+    aiStatus().then(d => setOnline(d.configured)).catch(() => setOnline(false));
   }, []);
 
   useEffect(() => {
@@ -86,15 +84,11 @@ export const LiveChat: React.FC = () => {
     const chatHistory = updated.map(m => ({ role: m.role, content: m.content }));
 
     try {
-      const res = await fetch('/api/ai/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: getModel(),
-          messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...chatHistory],
-          max_tokens: 600,
-          temperature: 0.2,
-        }),
+      const res = await aiChat({
+        model: getModel(),
+        messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...chatHistory],
+        max_tokens: 600,
+        temperature: 0.2,
       });
 
       if (!res.ok) {

@@ -11,6 +11,7 @@ import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
 import { useI18n } from "../lib/i18n";
 import { supabase } from "../../trading/lib/supabase";
+import { aiStatus } from "../../../lib/ai/aiClient";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -121,10 +122,7 @@ export function AdminPanel() {
   ];
 
   useEffect(() => {
-    fetch("/api/ai/status")
-      .then(r => r.json())
-      .then((d: { configured: boolean }) => setAiOnline(d.configured))
-      .catch(() => setAiOnline(false));
+    aiStatus().then(d => setAiOnline(d.configured)).catch(() => setAiOnline(false));
   }, []);
 
   const saveAiModel = async () => {

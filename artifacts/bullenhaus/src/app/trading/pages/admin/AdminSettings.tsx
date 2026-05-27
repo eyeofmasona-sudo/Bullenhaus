@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Save, Server, Shield, Bot, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { aiStatus } from '../../../../lib/ai/aiClient';
 
 const AI_MODEL_STORAGE = 'bullenhaus_ai_model';
 
@@ -18,10 +19,7 @@ export const AdminSettings = () => {
   const [aiSaving,  setAiSaving]  = useState(false);
 
   useEffect(() => {
-    fetch('/api/ai/status')
-      .then(r => r.json())
-      .then((d: { configured: boolean }) => setAiOnline(d.configured))
-      .catch(() => setAiOnline(false));
+    aiStatus().then(d => setAiOnline(d.configured)).catch(() => setAiOnline(false));
   }, []);
 
   const saveAiModel = async () => {
