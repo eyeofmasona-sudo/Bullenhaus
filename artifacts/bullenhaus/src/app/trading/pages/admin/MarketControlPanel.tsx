@@ -48,6 +48,7 @@ export const MarketControlPanel = () => {
 
   const [globalSymbol, setGlobalSymbol] = useState('');
   const [globalPrice, setGlobalPrice] = useState('');
+  const [pairPrices, setPairPrices] = useState<Record<string, string>>({});
 
   // Global override (any symbol including crypto)
   const handleSetGlobalOverride = async () => {
@@ -239,19 +240,20 @@ export const MarketControlPanel = () => {
                       type="number"
                       step="any"
                       placeholder={`Enter price (now: ${fmtPrice(pair.symbol, pair.price)})`}
-                      id={`override-${pair.symbol}`}
+                      value={pairPrices[pair.symbol] || ''}
+                      onChange={(e) => setPairPrices(prev => ({ ...prev, [pair.symbol]: e.target.value }))}
                       className="flex-1 bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-accent-primary"
                     />
                     <button
                       onClick={async () => {
-                        const el = document.getElementById(`override-${pair.symbol}`) as HTMLInputElement;
-                        if (el?.value) {
-                          const price = parseFloat(el.value);
+                        const val = pairPrices[pair.symbol];
+                        if (val) {
+                          const price = parseFloat(val);
                           pinPrice(pair.symbol, price);
                           setPriceOverride(pair.symbol, price);
                           await supabase.from('price_overrides').upsert({ symbol: pair.symbol, price }, { onConflict: 'symbol' });
                           toast.success(`${pair.symbol} fixed at ${fmtPrice(pair.symbol, price)}`);
-                          el.value = '';
+                          setPairPrices(prev => ({ ...prev, [pair.symbol]: '' }));
                         } else {
                           toast.error('Please enter a valid price');
                         }

@@ -186,10 +186,10 @@ export const PositionsAndOrdersPanel = () => {
                       </td>
                       <td className="py-4 text-right whitespace-nowrap">
                         <div className="flex flex-col items-end">
-                            <span className={`text-xs font-bold ${isPositive ? 'text-accent-secondary drop-shadow-[0_0_5px_rgba(0,230,118,0.3)]' : 'text-accent-quaternary drop-shadow-[0_0_5px_rgba(255,61,0,0.3)]'}`}>
+                            <span className={`text-xs font-bold ${isPositive ? 'text-success drop-shadow-[0_0_5px_rgba(16,185,129,0.3)]' : 'text-danger drop-shadow-[0_0_5px_rgba(255,61,0,0.3)]'}`}>
                                {isPositive ? '+' : ''}{pos.unrealizedPnL.toFixed(2)} USD
                             </span>
-                            <span className={`text-[10px] font-bold ${isPositive ? 'text-accent-secondary/60' : 'text-accent-quaternary/60'}`}>
+                            <span className={`text-[10px] font-bold ${isPositive ? 'text-success/60' : 'text-danger/60'}`}>
                                {isPositive ? '+' : ''}{pnlPct.toFixed(2)}%
                             </span>
                         </div>
@@ -314,7 +314,7 @@ export const PositionsAndOrdersPanel = () => {
                       <td className="py-4 whitespace-nowrap text-xs font-mono text-slate-400">{entry.price.toLocaleString(undefined, { maximumFractionDigits: 4 })}</td>
                       <td className="py-4 whitespace-nowrap text-right">
                         {entry.pnl !== undefined ? (
-                          <span className={`text-xs font-bold ${isPnlPositive ? 'text-accent-secondary' : 'text-accent-quaternary'}`}>
+                          <span className={`text-xs font-bold ${isPnlPositive ? 'text-success' : 'text-danger'}`}>
                             {isPnlPositive ? '+' : ''}{entry.pnl.toFixed(2)} USD
                           </span>
                         ) : (
