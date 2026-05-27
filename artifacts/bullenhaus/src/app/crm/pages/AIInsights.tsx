@@ -8,6 +8,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { supabase } from "../../../lib/supabase/browserClient";
 import { fetchClientTransactions } from "../hooks/useClients";
+import { aiStatus, aiChat } from "../../../lib/ai/aiClient";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -42,18 +43,14 @@ type TabKey = "summary" | "scoring" | "action" | "comm" | "risk" | "productivity
 async function callOpenAI(systemPrompt: string, userContent: string): Promise<string> {
   const model = localStorage.getItem(CRM_AI_MODEL) || "meta-llama/llama-3.1-8b-instruct:free";
 
-  const res = await fetch("/api/ai/chat", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user",   content: userContent },
-      ],
-      max_tokens: 900,
-      temperature: 0.3,
-    }),
+  const res = await aiChat({
+    model,
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user",   content: userContent },
+    ],
+    max_tokens: 900,
+    temperature: 0.3,
   });
 
   if (!res.ok) {
@@ -1144,10 +1141,7 @@ function ApiKeyPanel({ onClose }: { onClose: () => void }) {
   const [saved,  setSaved]  = useState(false);
 
   useEffect(() => {
-    fetch("/api/ai/status")
-      .then(r => r.json())
-      .then((d: { configured: boolean }) => setAiOnline(d.configured))
-      .catch(() => setAiOnline(false));
+    aiStatus().then(d => setAiOnline(d.configured)).catch(() => setAiOnline(false));
   }, []);
 
   const save = async () => {
@@ -1217,10 +1211,7 @@ export function AIInsights() {
 
   const [hasKey, setHasKey] = useState<boolean>(false);
   useEffect(() => {
-    fetch("/api/ai/status")
-      .then(r => r.json())
-      .then((d: { configured: boolean }) => setHasKey(d.configured))
-      .catch(() => setHasKey(false));
+    aiStatus().then(d => setHasKey(d.configured)).catch(() => setHasKey(false));
   }, []);
 
   useEffect(() => {
