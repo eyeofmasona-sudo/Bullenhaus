@@ -1,9 +1,45 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { useTradingStore } from '../stores/tradingStore';
+import { useTradingStore, type Position, type Order } from '../stores/tradingStore';
 
+const mapDbPosition = (row: any): Position => ({
+  id: row.id,
+  symbol: row.symbol,
+  type: row.type,
+  entryPrice: Number(row.entry_price),
+  size: Number(row.size),
+  leverage: Number(row.leverage),
+  marginType: row.margin_type,
+  margin: Number(row.margin),
+  liquidationPrice: Number(row.liquidation_price),
+  stopLoss: row.stop_loss != null ? Number(row.stop_loss) : null,
+  takeProfit: row.take_profit != null ? Number(row.take_profit) : null,
+  unrealizedPnL: 0,
+  status: row.status,
+});
+
+const mapDbOrder = (row: any): Order => ({
+  id: row.id,
+  symbol: row.symbol,
+  type: row.type,
+  positionType: row.position_type,
+  price: Number(row.price),
+  size: Number(row.size),
+  leverage: Number(row.leverage),
+  marginType: row.margin_type,
+  stopLoss: row.stop_loss != null ? Number(row.stop_loss) : null,
+  takeProfit: row.take_profit != null ? Number(row.take_profit) : null,
+  status: row.status,
+});
+
+// Single source of truth for trading state hydration: loads the wallet balance
+// and realized P&L from the users table, plus open positions and pending orders.
+// marginUsed is derived from the open-positions sum (the true reserved margin),
+// not the denormalized users.margin_used column, which can drift.
 export const useWalletSync = (pollMs = 30000) => {
-  const setWallet = useTradingStore((state) => state.setWallet);
+  const setWallet = useTradingStore((s) => s.setWallet);
+  const setPositions = useTradingStore((s) => s.setPositions);
+  const setOrders = useTradingStore((s) => s.setOrders);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -14,29 +50,31 @@ export const useWalletSync = (pollMs = 30000) => {
       const session = (await supabase.auth.getSession()).data.session;
       if (!session?.user?.id) {
         setWallet({ balance: 0, realizedPnL: 0, marginUsed: 0 });
+        setPositions([]);
+        setOrders([]);
         return;
       }
+      const uid = session.user.id;
 
-      const { data: profile, error: dbError } = await supabase
-        .from('users')
-        .select('balance, realized_pnl, margin_used')
-        .eq('id', session.user.id)
-        .maybeSingle();
+      const [profileRes, posRes, ordRes] = await Promise.all([
+        supabase.from('users').select('balance, realized_pnl').eq('id', uid).maybeSingle(),
+        supabase.from('positions').select('*').eq('user_id', uid).eq('status', 'open'),
+        supabase.from('orders').select('*').eq('user_id', uid).eq('status', 'pending'),
+      ]);
 
-      if (dbError) throw dbError;
+      if (profileRes.error) throw profileRes.error;
 
-      setWallet(
-        profile
-          ? {
-              balance: Number(profile.balance ?? 0),
-              realizedPnL: Number(profile.realized_pnl ?? 0),
-              marginUsed: Number(profile.margin_used ?? 0),
-            }
-          : { balance: 0, realizedPnL: 0, marginUsed: 0 },
-      );
+      const positions = (posRes.data ?? []).map(mapDbPosition);
+      const orders = (ordRes.data ?? []).map(mapDbOrder);
+      const marginUsed = positions.reduce((acc, p) => acc + p.margin, 0);
 
-      // Trigger load of positions and orders from Supabase DB
-      await useTradingStore.getState().fetchPositionsAndOrders();
+      setPositions(positions);
+      setOrders(orders);
+      setWallet({
+        balance: Number(profileRes.data?.balance ?? 0),
+        realizedPnL: Number(profileRes.data?.realized_pnl ?? 0),
+        marginUsed,
+      });
     } catch (err: any) {
       console.error('[useWalletSync] failed to load wallet:', err);
       setError(err?.message || 'Failed to load wallet');
@@ -44,7 +82,7 @@ export const useWalletSync = (pollMs = 30000) => {
     } finally {
       setLoading(false);
     }
-  }, [setWallet]);
+  }, [setWallet, setPositions, setOrders]);
 
   useEffect(() => {
     refetch();
@@ -52,6 +90,8 @@ export const useWalletSync = (pollMs = 30000) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_OUT') {
         setWallet({ balance: 0, realizedPnL: 0, marginUsed: 0 });
+        setPositions([]);
+        setOrders([]);
       } else {
         refetch();
       }
@@ -66,7 +106,7 @@ export const useWalletSync = (pollMs = 30000) => {
       subscription.unsubscribe();
       window.clearInterval(interval);
     };
-  }, [pollMs, refetch, setWallet]);
+  }, [pollMs, refetch, setWallet, setPositions, setOrders]);
 
   return { loading, error, refetch };
 };

@@ -52,7 +52,6 @@ interface TradingState {
   priceOverrides: Record<string, number>;
 
   // Actions
-  fetchPositionsAndOrders: () => Promise<void>;
   initPriceOverrideSync: () => Promise<void>;
   setPositions: (positions: Position[]) => void;
   setOrders: (orders: Order[]) => void;
@@ -114,62 +113,6 @@ export const useTradingStore = create<TradingState>()(
             get().setPriceOverride(row.symbol, null);
           })
           .subscribe();
-      },
-
-      fetchPositionsAndOrders: async () => {
-        try {
-          const session = (await supabase.auth.getSession()).data.session;
-          if (!session?.user?.id) return;
-          
-          const [posRes, ordRes] = await Promise.all([
-            supabase
-              .from('positions')
-              .select('*')
-              .eq('user_id', session.user.id),
-            supabase
-              .from('orders')
-              .select('*')
-              .eq('user_id', session.user.id)
-          ]);
-
-          if (posRes.data) {
-            const positions = posRes.data.map(p => ({
-              id: p.id,
-              symbol: p.symbol,
-              type: p.type as PositionType,
-              entryPrice: Number(p.entry_price),
-              size: Number(p.size),
-              leverage: Number(p.leverage),
-              marginType: p.margin_type as MarginType,
-              margin: Number(p.margin),
-              liquidationPrice: Number(p.liquidation_price),
-              stopLoss: p.stop_loss ? Number(p.stop_loss) : null,
-              takeProfit: p.take_profit ? Number(p.take_profit) : null,
-              unrealizedPnL: Number(p.unrealized_pnl),
-              status: p.status as 'open' | 'closed',
-            }));
-            set({ positions });
-          }
-
-          if (ordRes.data) {
-            const orders = ordRes.data.map(o => ({
-              id: o.id,
-              symbol: o.symbol,
-              type: o.type as OrderType,
-              positionType: o.position_type as PositionType,
-              price: Number(o.price),
-              size: Number(o.size),
-              leverage: Number(o.leverage),
-              marginType: o.margin_type as MarginType,
-              stopLoss: o.stop_loss ? Number(o.stop_loss) : null,
-              takeProfit: o.take_profit ? Number(o.take_profit) : null,
-              status: o.status as 'pending' | 'filled' | 'canceled',
-            }));
-            set({ orders });
-          }
-        } catch (err) {
-          console.error('Failed to load positions/orders:', err);
-        }
       },
 
       setPositions: (positions) => set({ positions }),
@@ -455,8 +398,9 @@ export const useTradingStore = create<TradingState>()(
 
       placeOrder: (orderData) => {
         const state = get();
-        const currentPrice = state.prices[orderData.symbol] || orderData.price;
-        const marginRequired = (orderData.size * currentPrice) / orderData.leverage;
+        // Reserve margin at the order's execution price (not current market) so the
+        // reserved amount matches the position margin booked at fill and released at close.
+        const marginRequired = (orderData.size * orderData.price) / orderData.leverage;
         if (state.wallet.balance - state.wallet.marginUsed < marginRequired) {
           return false;
         }
@@ -530,11 +474,9 @@ export const useTradingStore = create<TradingState>()(
         const filledJobs: { order: Order; newPos: Position }[] = [];
 
         set((state) => {
-          let ordersChanged = false;
-          let positionsChanged = false;
+          let changed = false;
           const newOrders = [...state.orders];
           const newPositions = [...state.positions];
-          let newMarginUsed = state.wallet.marginUsed;
 
           for (let i = 0; i < newOrders.length; i++) {
             const order = newOrders[i];
@@ -553,48 +495,40 @@ export const useTradingStore = create<TradingState>()(
             }
 
             if (shouldExecute) {
-              const marginRequired = (order.size * currentPrice) / order.leverage;
-              if (state.wallet.balance - newMarginUsed >= marginRequired) {
-                 order.status = 'filled';
-                 ordersChanged = true;
-                 positionsChanged = true;
-                 // margin was already reserved in placeOrder — no need to add again
+              // Margin was already reserved in placeOrder at order.price; convert that
+              // reservation into a position so marginUsed stays balanced on close.
+              const margin = (order.size * order.price) / order.leverage;
+              order.status = 'filled';
+              changed = true;
 
-                 // Calculate liquidation price simplified
-                 const isLong = order.positionType === 'Long';
-                 const liqPrice = isLong 
-                   ? order.price * (1 - 1/order.leverage + 0.005) // maintenance margin simplified
-                   : order.price * (1 + 1/order.leverage - 0.005);
+              const isLong = order.positionType === 'Long';
+              const liqPrice = isLong
+                ? order.price * (1 - 1/order.leverage + 0.005) // maintenance margin simplified
+                : order.price * (1 + 1/order.leverage - 0.005);
 
-                 const localPosId = crypto.randomUUID();
-                 const newPos: Position = {
-                   id: localPosId,
-                   symbol: order.symbol,
-                   type: order.positionType,
-                   entryPrice: order.price, // executed at order price for logic
-                   size: order.size,
-                   leverage: order.leverage,
-                   marginType: order.marginType,
-                   margin: marginRequired,
-                   liquidationPrice: liqPrice,
-                   stopLoss: order.stopLoss,
-                   takeProfit: order.takeProfit,
-                   unrealizedPnL: 0,
-                   status: 'open'
-                 };
+              const newPos: Position = {
+                id: crypto.randomUUID(),
+                symbol: order.symbol,
+                type: order.positionType,
+                entryPrice: order.price, // executed at order price for logic
+                size: order.size,
+                leverage: order.leverage,
+                marginType: order.marginType,
+                margin,
+                liquidationPrice: liqPrice,
+                stopLoss: order.stopLoss,
+                takeProfit: order.takeProfit,
+                unrealizedPnL: 0,
+                status: 'open'
+              };
 
-                 newPositions.push(newPos);
-                 filledJobs.push({ order, newPos });
-              }
+              newPositions.push(newPos);
+              filledJobs.push({ order, newPos });
             }
           }
 
-          if (ordersChanged || positionsChanged) {
-            return {
-              orders: newOrders,
-              positions: newPositions,
-              wallet: { ...state.wallet, marginUsed: newMarginUsed }
-            };
+          if (changed) {
+            return { orders: newOrders, positions: newPositions };
           }
           return state;
         });
