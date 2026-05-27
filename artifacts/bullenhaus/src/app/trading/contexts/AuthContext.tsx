@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 
-export type UnifiedRole = 'client' | 'agent' | 'manager' | 'director' | 'admin' | 'trade_admin' | null;
+export type UnifiedRole = 'client' | 'agent' | 'manager' | 'director' | 'admin' | 'trade_admin' | 'crm_admin' | null;
 
 interface AuthContextType {
   session: Session | null;
@@ -53,7 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // (CRM workers may only exist in auth.users with metadata role)
         const { data: { user } } = await supabase.auth.getUser();
         const metaRole = user?.user_metadata?.role as UnifiedRole | undefined;
-        if (metaRole && ['client','agent','manager','director','admin','trade_admin'].includes(metaRole)) {
+        if (metaRole && ['client','agent','manager','director','admin','trade_admin','crm_admin'].includes(metaRole)) {
           setRole(metaRole);
           setKycStatus('VERIFIED');
         } else {
@@ -66,7 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const { data: { user } } = await supabase.auth.getUser();
         const metaRole = user?.user_metadata?.role as UnifiedRole | undefined;
-        if (metaRole && ['client','agent','manager','director','admin','trade_admin'].includes(metaRole)) {
+        if (metaRole && ['client','agent','manager','director','admin','trade_admin','crm_admin'].includes(metaRole)) {
           setRole(metaRole);
           setKycStatus('VERIFIED');
           return;

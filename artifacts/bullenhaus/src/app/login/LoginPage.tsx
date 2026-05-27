@@ -63,7 +63,7 @@ export default function LoginPage() {
         if (!userRole) {
           const { data: { user: authUser } } = await supabase.auth.getUser();
           const metaRole = authUser?.user_metadata?.role as string | undefined;
-          if (metaRole && ['client','agent','manager','director','admin','trade_admin'].includes(metaRole)) {
+          if (metaRole && ['client','agent','manager','director','admin','trade_admin','crm_admin'].includes(metaRole)) {
             userRole = metaRole as UnifiedRole;
           } else {
             userRole = 'client';
@@ -71,7 +71,7 @@ export default function LoginPage() {
         }
 
         if (userRole === 'admin' || userRole === 'trade_admin') target = '/admin/dashboard';
-        else if (userRole === 'agent' || userRole === 'manager' || userRole === 'director') target = '/crm/dashboard';
+        else if (userRole === 'agent' || userRole === 'manager' || userRole === 'director' || userRole === 'crm_admin') target = '/crm/dashboard';
       }
       navigate(target, { replace: true });
     } catch (err: any) {
