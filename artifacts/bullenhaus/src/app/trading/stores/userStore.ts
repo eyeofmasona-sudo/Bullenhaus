@@ -29,7 +29,7 @@ export const useUserStore = create<UserState>((set, get) => ({
       const supabase = getSupabaseBrowserClient();
       if (!supabase) throw new Error('Supabase not configured');
       const { data } = await supabase
-        .from('profiles')
+        .from('users')
         .select('*')
         .eq('id', userId)
         .maybeSingle();
@@ -57,7 +57,7 @@ export const useUserStore = create<UserState>((set, get) => ({
       const supabase = getSupabaseBrowserClient();
       if (!supabase) return;
       await supabase
-        .from('profiles')
+        .from('users')
         .update(updates)
         .eq('id', profile.id);
     } catch (e) {

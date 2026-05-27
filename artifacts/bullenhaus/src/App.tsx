@@ -163,8 +163,8 @@ const AppContent = () => {
              ========================================== */}
           <Route element={<AuthGuard />}>
             <Route element={<RoleGuard allowedRoles={['client', 'admin', 'trade_admin']} />}>
-              <Route path="/trade" element={<Navigate to="/trade/dashboard" replace />} />
               <Route path="/trade" element={<TradeAppWrapper />}>
+                <Route index element={<Navigate to="dashboard" replace />} />
                 <Route path="dashboard" element={<TradeDashboard />} />
                 <Route path="markets" element={<TradeMarkets />} />
                 <Route path="terminal" element={<TradeTerminal />} />
@@ -185,8 +185,8 @@ const AppContent = () => {
              ========================================== */}
           <Route element={<AuthGuard />}>
             <Route element={<RoleGuard allowedRoles={['agent', 'manager', 'director', 'admin', 'crm_admin']} />}>
-              <Route path="/crm" element={<CRMRedirect />} />
               <Route path="/crm" element={<CRMAppWrapper />}>
+                <Route index element={<CRMRedirect />} />
                 <Route path="dashboard" element={<CRMDashboard />} />
                 <Route path="manager" element={<CRMManagerDashboard />} />
                 <Route path="workspace" element={<CRMAgentWorkspace />} />
@@ -208,8 +208,8 @@ const AppContent = () => {
              ========================================== */}
           <Route element={<AuthGuard />}>
             <Route element={<RoleGuard allowedRoles={['admin', 'trade_admin']} />}>
-              <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="/admin" element={<TradeAdminLayout />}>
+                <Route index element={<Navigate to="dashboard" replace />} />
                 <Route path="dashboard" element={<TradeAdminOverview />} />
                 <Route path="users" element={<TradeAdminUsers />} />
                 <Route path="kyc" element={<TradeAdminKYC />} />
