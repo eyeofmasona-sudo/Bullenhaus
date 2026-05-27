@@ -2,18 +2,7 @@
 // CRM auth — Supabase-native implementation
 // ============================================================================
 
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL as string || '';
-const supabaseKey =
-  ((import.meta as any).env?.VITE_SUPABASE_PUBLISHABLE_KEY as string) ||
-  ((import.meta as any).env?.VITE_SUPABASE_ANON_KEY as string) ||
-  '';
-
-const supabase = createClient(
-  supabaseUrl || 'http://localhost:54321',
-  supabaseKey || 'placeholder'
-);
+import { supabase } from '../../../lib/supabase/browserClient';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
