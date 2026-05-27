@@ -6,7 +6,6 @@ import { AdvancedOrderPanel as OrderPanel } from '../../components/dashboard/Adv
 import { PositionsAndOrdersPanel } from '../../components/dashboard/PositionsAndOrdersPanel';
 import { useTradingStore } from '../../stores/tradingStore';
 import { useWalletSync } from '../../hooks/useWalletSync';
-import { useTradingSync } from '../../hooks/useTradingSync';
 import { motion } from 'motion/react';
 
 const TradeContent = () => {
@@ -15,7 +14,6 @@ const TradeContent = () => {
   const prices = useTradingStore(s => s.prices);
 
   useWalletSync();
-  useTradingSync();
 
   useEffect(() => {
     const sym = searchParams.get('symbol');
