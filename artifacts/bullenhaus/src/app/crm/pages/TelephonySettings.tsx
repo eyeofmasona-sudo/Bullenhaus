@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { supabase } from "../../../lib/supabase/browserClient";
 import { Button } from "../components/ui/Button";
+import { useI18n } from "../lib/i18n";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -38,6 +39,7 @@ function AddNumberModal({ agents, onClose, onAdded }: {
   onClose: () => void;
   onAdded: () => void;
 }) {
+  const { t } = useI18n();
   const [number, setNumber]   = useState('');
   const [label, setLabel]     = useState('');
   const [provider, setProvider] = useState('manual');
@@ -46,7 +48,7 @@ function AddNumberModal({ agents, onClose, onAdded }: {
   const [error, setError]     = useState<string | null>(null);
 
   const save = async () => {
-    if (!number.trim()) { setError('Phone number is required.'); return; }
+    if (!number.trim()) { setError(t('telPhoneRequired')); return; }
     setSaving(true);
     setError(null);
     const { error: dbErr } = await supabase.from('telephony_numbers').insert({
@@ -65,25 +67,25 @@ function AddNumberModal({ agents, onClose, onAdded }: {
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-md mx-4 bg-[#0E1012] border border-glass-border rounded-2xl p-6 shadow-2xl">
-        <h3 className="text-sm font-bold tracking-[0.15em] uppercase text-aura-platinum mb-5">Add Phone Number</h3>
+        <h3 className="text-sm font-bold tracking-[0.15em] uppercase text-aura-platinum mb-5">{t('telModalTitle')}</h3>
 
         {error && <div className="mb-4 p-3 rounded-lg bg-aura-ruby/10 border border-aura-ruby/30 text-aura-ruby text-xs flex items-center gap-2"><AlertCircle className="w-3.5 h-3.5" />{error}</div>}
 
         <div className="space-y-4">
           <div>
-            <label className="text-[9px] uppercase tracking-widest text-aura-platinum/40 block mb-1.5">Phone Number *</label>
+            <label className="text-[9px] uppercase tracking-widest text-aura-platinum/40 block mb-1.5">{t('telPhoneLabel')}</label>
             <input value={number} onChange={e => setNumber(e.target.value)}
               placeholder="+1 555 000 0000"
               className="w-full bg-black/40 border border-glass-border rounded-xl px-4 py-2.5 text-sm text-aura-platinum font-mono outline-none focus:border-aura-gold/40 transition-colors" />
           </div>
           <div>
-            <label className="text-[9px] uppercase tracking-widest text-aura-platinum/40 block mb-1.5">Label (optional)</label>
+            <label className="text-[9px] uppercase tracking-widest text-aura-platinum/40 block mb-1.5">{t('telLabelOptional')}</label>
             <input value={label} onChange={e => setLabel(e.target.value)}
               placeholder="e.g. Sales Line 1"
               className="w-full bg-black/40 border border-glass-border rounded-xl px-4 py-2.5 text-sm text-aura-platinum outline-none focus:border-aura-gold/40 transition-colors" />
           </div>
           <div>
-            <label className="text-[9px] uppercase tracking-widest text-aura-platinum/40 block mb-1.5">Provider</label>
+            <label className="text-[9px] uppercase tracking-widest text-aura-platinum/40 block mb-1.5">{t('telProvider')}</label>
             <select value={provider} onChange={e => setProvider(e.target.value)}
               className="w-full bg-black/40 border border-glass-border rounded-xl px-4 py-2.5 text-sm text-aura-platinum outline-none focus:border-aura-gold/40 transition-colors">
               <option value="manual">Manual</option>
@@ -93,20 +95,20 @@ function AddNumberModal({ agents, onClose, onAdded }: {
             </select>
           </div>
           <div>
-            <label className="text-[9px] uppercase tracking-widest text-aura-platinum/40 block mb-1.5">Assign to Agent (optional)</label>
+            <label className="text-[9px] uppercase tracking-widest text-aura-platinum/40 block mb-1.5">{t('telAssignAgent')}</label>
             <select value={agentId} onChange={e => setAgentId(e.target.value)}
               className="w-full bg-black/40 border border-glass-border rounded-xl px-4 py-2.5 text-sm text-aura-platinum outline-none focus:border-aura-gold/40 transition-colors">
-              <option value="">— Unassigned —</option>
+              <option value="">{t('telUnassigned')}</option>
               {agents.map(a => <option key={a.id} value={a.id}>{agentDisplayName(a)}</option>)}
             </select>
           </div>
         </div>
 
         <div className="flex gap-3 mt-6">
-          <Button variant="secondary" onClick={onClose} className="flex-1">Cancel</Button>
+          <Button variant="secondary" onClick={onClose} className="flex-1">{t('cancel')}</Button>
           <Button variant="outline" onClick={save} disabled={saving} className="flex-1">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-            Add Number
+            {t('telAddNumber')}
           </Button>
         </div>
       </div>
@@ -117,6 +119,7 @@ function AddNumberModal({ agents, onClose, onAdded }: {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export function TelephonySettings() {
+  const { t } = useI18n();
   const [numbers, setNumbers]     = useState<TelephonyNumber[]>([]);
   const [agents, setAgents]       = useState<Agent[]>([]);
   const [loading, setLoading]     = useState(true);
@@ -158,7 +161,7 @@ export function TelephonySettings() {
       .eq('id', numberId);
     if (!err) {
       await load();
-      showSuccess(agentId ? 'Number assigned.' : 'Number unassigned.');
+      showSuccess(agentId ? t('telNumberAssigned') : t('telNumberUnassigned'));
     }
     setReassigning(null);
   };
@@ -168,7 +171,7 @@ export function TelephonySettings() {
     await supabase.from('telephony_numbers').delete().eq('id', id);
     await load();
     setDeleting(null);
-    showSuccess('Number removed.');
+    showSuccess(t('telNumberRemoved'));
   };
 
   const toggleActive = async (num: TelephonyNumber) => {
@@ -181,16 +184,16 @@ export function TelephonySettings() {
 
       {/* Header */}
       <div className="border-b border-glass-border pb-4">
-        <h2 className="font-serif text-2xl font-light italic tracking-tight text-aura-platinum">Telephony Settings</h2>
-        <p className="text-[10px] font-bold tracking-[0.2em] text-aura-platinum/40 mt-2 uppercase">Manage phone numbers & provider connections</p>
+        <h2 className="font-serif text-2xl font-light italic tracking-tight text-aura-platinum">{t('telTitle')}</h2>
+        <p className="text-[10px] font-bold tracking-[0.2em] text-aura-platinum/40 mt-2 uppercase">{t('telSubtitle')}</p>
       </div>
 
       {/* Provider connection cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { name: 'Twilio',  logo: '📞', status: 'Not connected', color: 'text-aura-ruby/70',    border: 'border-glass-border' },
-          { name: 'Telnyx',  logo: '🔗', status: 'Not connected', color: 'text-aura-ruby/70',    border: 'border-glass-border' },
-          { name: 'Vonage',  logo: '📡', status: 'Not connected', color: 'text-aura-ruby/70',    border: 'border-glass-border' },
+          { name: 'Twilio',  logo: '📞', status: t('telNotConnected'), color: 'text-aura-ruby/70',    border: 'border-glass-border' },
+          { name: 'Telnyx',  logo: '🔗', status: t('telNotConnected'), color: 'text-aura-ruby/70',    border: 'border-glass-border' },
+          { name: 'Vonage',  logo: '📡', status: t('telNotConnected'), color: 'text-aura-ruby/70',    border: 'border-glass-border' },
         ].map(p => (
           <div key={p.name} className={`rounded-xl border ${p.border} bg-[#121214] p-5`}>
             <div className="flex items-center justify-between mb-3">
@@ -204,7 +207,7 @@ export function TelephonySettings() {
               </div>
             </div>
             <Button variant="secondary" size="sm" className="w-full text-[10px]">
-              <Settings className="w-3 h-3" /> Configure
+              <Settings className="w-3 h-3" /> {t('telConfigure')}
             </Button>
           </div>
         ))}
@@ -215,7 +218,7 @@ export function TelephonySettings() {
         <div className="flex items-center justify-between px-6 py-4 border-b border-glass-border">
           <div className="flex items-center gap-3">
             <PhoneCall className="w-4 h-4 text-aura-gold" />
-            <span className="text-xs font-bold tracking-[0.15em] uppercase text-aura-platinum">Phone Numbers</span>
+            <span className="text-xs font-bold tracking-[0.15em] uppercase text-aura-platinum">{t('telPhoneNumbers')}</span>
             <span className="text-[10px] bg-aura-gold/20 text-aura-gold px-2 py-0.5 rounded-full font-bold">{numbers.length}</span>
           </div>
           <div className="flex items-center gap-2">
@@ -228,7 +231,7 @@ export function TelephonySettings() {
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             </button>
             <Button variant="outline" size="sm" onClick={() => setShowAdd(true)}>
-              <Plus className="w-3.5 h-3.5" /> Add Number
+              <Plus className="w-3.5 h-3.5" /> {t('telAddNumber')}
             </Button>
           </div>
         </div>
@@ -240,17 +243,17 @@ export function TelephonySettings() {
         ) : numbers.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <Phone className="w-10 h-10 text-aura-platinum/10" />
-            <p className="text-sm text-aura-platinum/30">No phone numbers yet</p>
-            <p className="text-xs text-aura-platinum/20">Add numbers manually or connect a provider above</p>
+            <p className="text-sm text-aura-platinum/30">{t('telNoNumbersYet')}</p>
+            <p className="text-xs text-aura-platinum/20">{t('telNoNumbersDesc')}</p>
             <Button variant="outline" size="sm" onClick={() => setShowAdd(true)}>
-              <Plus className="w-3.5 h-3.5" /> Add First Number
+              <Plus className="w-3.5 h-3.5" /> {t('telAddFirstNumber')}
             </Button>
           </div>
         ) : (
           <>
             {/* Table header */}
             <div className="grid grid-cols-[2fr_1.5fr_1.5fr_1fr_80px] gap-4 px-6 py-2.5 border-b border-glass-border bg-black/20">
-              {['Number', 'Label', 'Assigned Agent', 'Status', 'Actions'].map(h => (
+              {[t('telColNumber'), t('telColLabel'), t('telColAssigned'), t('status'), t('telColActions')].map(h => (
                 <div key={h} className="text-[9px] font-bold uppercase tracking-[0.2em] text-aura-platinum/30">{h}</div>
               ))}
             </div>
@@ -280,7 +283,7 @@ export function TelephonySettings() {
                         onChange={e => reassign(num.id, e.target.value || null)}
                         className="bg-black/60 border border-glass-border text-aura-platinum text-[10px] rounded-lg px-2 py-1.5 outline-none focus:border-aura-gold/50 w-full max-w-[160px]"
                       >
-                        <option value="">— Unassigned —</option>
+                        <option value="">{t('telUnassigned')}</option>
                         {agents.map(a => (
                           <option key={a.id} value={a.id}>{agentDisplayName(a)}</option>
                         ))}
@@ -297,7 +300,7 @@ export function TelephonySettings() {
                           : 'border-glass-border bg-white/5 text-aura-platinum/40'
                       }`}>
                       {num.is_active ? <Wifi className="w-2.5 h-2.5" /> : <WifiOff className="w-2.5 h-2.5" />}
-                      {num.is_active ? 'Active' : 'Inactive'}
+                      {num.is_active ? t('telActive') : t('telInactive')}
                     </button>
                   </div>
 

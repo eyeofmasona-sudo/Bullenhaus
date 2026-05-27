@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Phone, PhoneOff, PhoneMissed, Clock, Search, RefreshCw, Loader2, User } from "lucide-react";
 import { useCallLogs, type CallLog } from "../hooks/useCallLogs";
+import { useI18n } from "../lib/i18n";
 
 function fmtDuration(secs: number) {
   if (!secs) return "—";
@@ -38,6 +39,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export function CallHistory() {
+  const { t } = useI18n();
   const { logs, loading, error, refetch } = useCallLogs(200);
   const [search, setSearch] = useState("");
 
@@ -62,19 +64,19 @@ export function CallHistory() {
       {/* Header */}
       <div className="border-b border-glass-border pb-4">
         <h2 className="font-serif text-2xl font-light italic tracking-tight text-aura-platinum">
-          Call History
+          {t('chTitle')}
         </h2>
         <p className="text-[10px] font-bold tracking-[0.2em] text-aura-platinum/40 mt-2 uppercase">
-          All outbound & inbound call records
+          {t('chSubtitle')}
         </p>
       </div>
 
       {/* KPI strip */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { label: "Total Calls",      value: totalCalls,                           sub: "All time", color: "text-aura-platinum" },
-          { label: "Completed",        value: completedCalls,                        sub: `${totalCalls ? Math.round(completedCalls / totalCalls * 100) : 0}% answer rate`, color: "text-aura-emerald" },
-          { label: "Total Talk Time",  value: fmtDuration(totalDuration),            sub: "All agents", color: "text-aura-gold" },
+          { label: t('chTotalCalls'),  value: totalCalls,              sub: t('dashAllTime'), color: "text-aura-platinum" },
+          { label: t('chCompleted'),  value: completedCalls,           sub: `${totalCalls ? Math.round(completedCalls / totalCalls * 100) : 0}% answer rate`, color: "text-aura-emerald" },
+          { label: t('chTalkTime'),   value: fmtDuration(totalDuration), sub: t('chAllAgents'), color: "text-aura-gold" },
         ].map(k => (
           <div key={k.label} className="rounded-xl border border-glass-border bg-gradient-to-b from-white/5 to-transparent p-5">
             <div className="text-[10px] uppercase tracking-[0.2em] text-aura-platinum/40 mb-1">{k.label}</div>
@@ -91,7 +93,7 @@ export function CallHistory() {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search by number, agent or client…"
+            placeholder={t('chSearchPlaceholder')}
             className="w-full bg-black/40 border border-glass-border rounded-xl pl-9 pr-4 py-2.5 text-xs text-aura-platinum placeholder:text-aura-platinum/30 outline-none focus:border-aura-gold/40 transition-colors"
           />
         </div>
@@ -113,7 +115,7 @@ export function CallHistory() {
       <div className="rounded-xl border border-glass-border bg-[#121214] overflow-hidden">
         {/* Head */}
         <div className="grid grid-cols-[2fr_1.5fr_1.5fr_1fr_1fr_1fr] gap-4 px-5 py-3 border-b border-glass-border bg-black/30">
-          {["Phone", "Client", "Agent", "Status", "Duration", "Date"].map(h => (
+          {[t('chColPhone'), t('chColClient'), t('chColAgent'), t('status'), t('chColDuration'), t('chColDate')].map(h => (
             <div key={h} className="text-[9px] font-bold uppercase tracking-[0.2em] text-aura-platinum/30">{h}</div>
           ))}
         </div>
@@ -126,9 +128,9 @@ export function CallHistory() {
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <PhoneMissed className="w-10 h-10 text-aura-platinum/10" />
             <span className="text-sm text-aura-platinum/30">
-              {search ? "No calls match your search" : "No call records yet"}
+              {search ? t('chNoMatch') : t('chNoRecords')}
             </span>
-            <span className="text-xs text-aura-platinum/20">Calls will appear here after agents start dialing</span>
+            <span className="text-xs text-aura-platinum/20">{t('chWillAppear')}</span>
           </div>
         ) : (
           <div className="divide-y divide-glass-border">

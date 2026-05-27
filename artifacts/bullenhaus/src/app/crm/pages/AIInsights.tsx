@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { supabase } from "../../../lib/supabase/browserClient";
 import { fetchClientTransactions } from "../hooks/useClients";
 import { aiStatus, aiChat } from "../../../lib/ai/aiClient";
+import { useI18n } from "../lib/i18n";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -1202,6 +1203,7 @@ const TABS: { key: TabKey; label: string; icon: React.ElementType; desc: string 
 ];
 
 export function AIInsights() {
+  const { t } = useI18n();
   const [tab,            setTab]            = useState<TabKey>("summary");
   const [clients,        setClients]        = useState<SlimClient[]>([]);
   const [clientsLoading, setClientsLoading] = useState(true);
@@ -1253,7 +1255,7 @@ export function AIInsights() {
             <div className="w-9 h-9 rounded-xl bg-aura-gold/10 border border-aura-gold/20 flex items-center justify-center">
               <Brain className="w-5 h-5 text-aura-gold" />
             </div>
-            <h1 className="text-xl font-bold text-aura-platinum">AI Core Insights</h1>
+            <h1 className="text-xl font-bold text-aura-platinum">{t('aiPageTitle')}</h1>
             <Sparkles className="w-4 h-4 text-aura-gold" />
           </div>
           <p className="text-[13px] text-aura-platinum/50 leading-relaxed max-w-xl">
