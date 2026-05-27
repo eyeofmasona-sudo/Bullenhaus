@@ -47,7 +47,11 @@ export const TradingProvider: React.FC<{ children: ReactNode }> = ({ children })
   const initPriceOverrideSync = useTradingStore(s => s.initPriceOverrideSync);
 
   useEffect(() => {
-    initPriceOverrideSync();
+    let cleanup: (() => void) | undefined;
+    initPriceOverrideSync().then((unsubscribe) => {
+      cleanup = unsubscribe;
+    });
+    return () => cleanup?.();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

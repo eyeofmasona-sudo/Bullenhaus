@@ -57,21 +57,25 @@ export const MarketControlPanel = () => {
       return;
     }
     const sym = globalSymbol.trim().toUpperCase();
-    if (!globalPrice) {
-      setPriceOverride(sym, null);
-      await supabase.from('price_overrides').delete().eq('symbol', sym);
-      toast.success(`Removed override for ${sym}`);
-    } else {
-      const price = parseFloat(globalPrice);
-      setPriceOverride(sym, price);
-      if (pairs[sym]) {
-        pinPrice(sym, price);
+    try {
+      if (!globalPrice) {
+        setPriceOverride(sym, null);
+        await supabase.from('price_overrides').delete().eq('symbol', sym);
+        toast.success(`Removed override for ${sym}`);
+      } else {
+        const price = parseFloat(globalPrice);
+        setPriceOverride(sym, price);
+        if (pairs[sym]) {
+          pinPrice(sym, price);
+        }
+        await supabase.from('price_overrides').upsert({ symbol: sym, price }, { onConflict: 'symbol' });
+        toast.success(`Override set: ${sym} = ${globalPrice}`);
       }
-      await supabase.from('price_overrides').upsert({ symbol: sym, price }, { onConflict: 'symbol' });
-      toast.success(`Override set: ${sym} = ${globalPrice}`);
+      setGlobalSymbol('');
+      setGlobalPrice('');
+    } catch {
+      toast.error(`Failed to update override for ${sym}`);
     }
-    setGlobalSymbol('');
-    setGlobalPrice('');
   };
 
   return (
@@ -133,10 +137,14 @@ export const MarketControlPanel = () => {
               <span className="uppercase">{sym}</span> = {pr}
               <button
                 onClick={async () => {
-                  setPriceOverride(sym, null);
-                  if (pairs[sym]?.isPaused) togglePause(sym);
-                  await supabase.from('price_overrides').delete().eq('symbol', sym);
-                  toast.success(`Override removed for ${sym}`);
+                  try {
+                    setPriceOverride(sym, null);
+                    if (pairs[sym]?.isPaused) togglePause(sym);
+                    await supabase.from('price_overrides').delete().eq('symbol', sym);
+                    toast.success(`Override removed for ${sym}`);
+                  } catch {
+                    toast.error(`Failed to remove override for ${sym}`);
+                  }
                 }}
                 className="ml-1 hover:text-white transition-colors"
                 title="Remove override"
@@ -247,15 +255,16 @@ export const MarketControlPanel = () => {
                     <button
                       onClick={async () => {
                         const val = pairPrices[pair.symbol];
-                        if (val) {
+                        if (!val) { toast.error('Please enter a valid price'); return; }
+                        try {
                           const price = parseFloat(val);
                           pinPrice(pair.symbol, price);
                           setPriceOverride(pair.symbol, price);
                           await supabase.from('price_overrides').upsert({ symbol: pair.symbol, price }, { onConflict: 'symbol' });
                           toast.success(`${pair.symbol} fixed at ${fmtPrice(pair.symbol, price)}`);
                           setPairPrices(prev => ({ ...prev, [pair.symbol]: '' }));
-                        } else {
-                          toast.error('Please enter a valid price');
+                        } catch {
+                          toast.error(`Failed to fix price for ${pair.symbol}`);
                         }
                       }}
                       className="px-4 py-2 bg-accent-primary/20 hover:bg-accent-primary/30 text-accent-primary font-bold rounded-lg text-xs transition-colors flex items-center gap-1"
@@ -265,10 +274,14 @@ export const MarketControlPanel = () => {
                     {isPinned && (
                       <button
                         onClick={async () => {
-                          setPriceOverride(pair.symbol, null);
-                          if (pair.isPaused) togglePause(pair.symbol);
-                          await supabase.from('price_overrides').delete().eq('symbol', pair.symbol);
-                          toast.success(`${pair.symbol} unfixed — simulation resumed`);
+                          try {
+                            setPriceOverride(pair.symbol, null);
+                            if (pair.isPaused) togglePause(pair.symbol);
+                            await supabase.from('price_overrides').delete().eq('symbol', pair.symbol);
+                            toast.success(`${pair.symbol} unfixed — simulation resumed`);
+                          } catch {
+                            toast.error(`Failed to unfix ${pair.symbol}`);
+                          }
                         }}
                         className="px-3 py-2 bg-white/10 hover:bg-white/20 text-slate-300 font-bold rounded-lg text-xs transition-colors flex items-center gap-1"
                       >
