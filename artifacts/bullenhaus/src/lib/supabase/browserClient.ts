@@ -22,27 +22,24 @@ let _client: SupabaseClient | null = null;
 
 /**
  * Returns the singleton Supabase browser client.
- * Throws if env vars are not configured.
+ * Throws if env vars are not configured — fail fast at startup rather than
+ * silently pointing at localhost and surfacing confusing auth failures later.
  */
 export function getSupabaseBrowserClient(): SupabaseClient {
   if (!_client) {
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-      console.warn(
-        '[Supabase] VITE_SUPABASE_URL or VITE_SUPABASE_PUBLISHABLE_KEY not set. ' +
-        'Auth and database calls will fail.'
+      throw new Error(
+        '[Supabase] Missing required environment variables. Set VITE_SUPABASE_URL and ' +
+        'VITE_SUPABASE_PUBLISHABLE_KEY (or VITE_SUPABASE_ANON_KEY) in your deployment environment.'
       );
     }
-    _client = createClient(
-      SUPABASE_URL || 'http://localhost:54321',
-      SUPABASE_ANON_KEY || 'placeholder-key',
-      {
-        auth: {
-          autoRefreshToken: true,
-          persistSession: true,
-          detectSessionInUrl: true,
-        },
-      }
-    );
+    _client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true,
+      },
+    });
   }
   return _client;
 }
