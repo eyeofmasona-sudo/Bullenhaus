@@ -299,7 +299,7 @@ export const useTradingStore = create<TradingState>()(
           ),
           wallet: {
             ...state.wallet,
-            balance: state.wallet.balance + pnl,
+            balance: Math.max(0, state.wallet.balance + pnl),
             realizedPnL: state.wallet.realizedPnL + pnl,
             marginUsed: state.wallet.marginUsed - pos.margin,
           }
@@ -401,7 +401,7 @@ export const useTradingStore = create<TradingState>()(
               positions: updatedPositions,
               wallet: {
                 ...state.wallet,
-                balance: state.wallet.balance + balanceChange,
+                balance: Math.max(0, state.wallet.balance + balanceChange),
                 realizedPnL: state.wallet.realizedPnL + realizedPnLChange,
                 marginUsed: state.wallet.marginUsed - marginFreed,
               }
@@ -464,7 +464,11 @@ export const useTradingStore = create<TradingState>()(
         const newId = crypto.randomUUID();
 
         set((state) => ({
-          orders: [...state.orders, { ...orderData, id: newId, status: 'pending' }]
+          orders: [...state.orders, { ...orderData, id: newId, status: 'pending' }],
+          wallet: {
+            ...state.wallet,
+            marginUsed: state.wallet.marginUsed + marginRequired,
+          },
         }));
 
         // Background database sync
@@ -496,8 +500,18 @@ export const useTradingStore = create<TradingState>()(
       },
 
       cancelOrder: (id) => {
+        const order = get().orders.find(o => o.id === id);
+        const marginToReturn = (order && order.status === 'pending')
+          ? (order.size * order.price) / order.leverage
+          : 0;
         set((state) => ({
-          orders: state.orders.map(o => o.id === id ? { ...o, status: 'canceled' } : o)
+          orders: state.orders.map(o => o.id === id ? { ...o, status: 'canceled' } : o),
+          ...(marginToReturn > 0 ? {
+            wallet: {
+              ...state.wallet,
+              marginUsed: Math.max(0, state.wallet.marginUsed - marginToReturn),
+            },
+          } : {}),
         }));
 
         // Background database sync
@@ -544,7 +558,7 @@ export const useTradingStore = create<TradingState>()(
                  order.status = 'filled';
                  ordersChanged = true;
                  positionsChanged = true;
-                 newMarginUsed += marginRequired;
+                 // margin was already reserved in placeOrder — no need to add again
 
                  // Calculate liquidation price simplified
                  const isLong = order.positionType === 'Long';
@@ -673,7 +687,6 @@ export const useTradingStore = create<TradingState>()(
       partialize: (state) => ({
         positions: state.positions,
         orders: state.orders,
-        wallet: state.wallet,
       }),
     }
   )
