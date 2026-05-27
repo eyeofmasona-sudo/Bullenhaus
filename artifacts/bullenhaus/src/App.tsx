@@ -195,8 +195,10 @@ const AppContent = () => {
                 <Route path="calls" element={<CRMCallHistory />} />
                 <Route path="my-clients" element={<CRMAgentClients />} />
                 <Route path="telephony" element={<CRMTelephonySettings />} />
-                <Route path="admin" element={<CRMAdminPanel />} />
                 <Route path="ai-insights" element={<CRMAIInsights />} />
+                <Route element={<RoleGuard allowedRoles={['admin']} fallbackUrl="/unauthorized" />}>
+                  <Route path="admin" element={<CRMAdminPanel />} />
+                </Route>
               </Route>
             </Route>
           </Route>
