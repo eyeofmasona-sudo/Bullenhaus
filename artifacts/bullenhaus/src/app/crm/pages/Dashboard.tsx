@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { 
-  TrendingUp, 
-  Users, 
-  ArrowUpRight, 
+import {
+  TrendingUp,
+  Users,
+  ArrowUpRight,
   ArrowDownRight,
   ShieldAlert,
   Activity,
@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 import { supabase } from "../../../lib/supabase/browserClient";
+import { useI18n } from "../lib/i18n";
 
 interface DashboardStats {
   clientCount: number;
@@ -20,13 +21,13 @@ interface DashboardStats {
   weeklyFlow: { name: string; deposit: number; withdrawal: number }[];
 }
 
-function getOnlineStatus(lastSeen: string | null) {
-  if (!lastSeen) return { label: 'Offline', dotClass: 'bg-aura-platinum/20', textClass: 'text-aura-platinum/30' };
+function getOnlineStatus(lastSeen: string | null, onlineLabel: string, offlineLabel: string) {
+  if (!lastSeen) return { label: offlineLabel, dotClass: 'bg-aura-platinum/20', textClass: 'text-aura-platinum/30' };
   const mins = (Date.now() - new Date(lastSeen).getTime()) / 60_000;
-  if (mins < 5)  return { label: 'Online',             dotClass: 'bg-aura-emerald shadow-[0_0_6px_rgba(16,185,129,0.6)]', textClass: 'text-aura-emerald' };
+  if (mins < 5)  return { label: onlineLabel,               dotClass: 'bg-aura-emerald shadow-[0_0_6px_rgba(16,185,129,0.6)]', textClass: 'text-aura-emerald' };
   if (mins < 60) return { label: `${Math.floor(mins)}m ago`, dotClass: 'bg-yellow-400', textClass: 'text-yellow-400' };
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24)  return { label: `${hrs}h ago`,        dotClass: 'bg-aura-platinum/30', textClass: 'text-aura-platinum/40' };
+  if (hrs < 24)  return { label: `${hrs}h ago`,              dotClass: 'bg-aura-platinum/30', textClass: 'text-aura-platinum/40' };
   return           { label: new Date(lastSeen).toLocaleDateString(), dotClass: 'bg-aura-platinum/20', textClass: 'text-aura-platinum/30' };
 }
 
@@ -81,6 +82,7 @@ function fmt(n: number) {
 }
 
 export function Dashboard() {
+  const { t } = useI18n();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -100,12 +102,12 @@ export function Dashboard() {
         </div>
         <div>
           <div className="mb-2 flex items-center gap-2">
-            <h3 className="text-xs font-bold tracking-widest text-aura-gold">AI CORE INSIGHTS</h3>
-            <span className="text-[9px] bg-aura-gold/10 text-aura-gold border border-aura-gold/20 px-2 py-0.5 rounded uppercase tracking-widest">Live</span>
+            <h3 className="text-xs font-bold tracking-widest text-aura-gold">{t('dashInsightsLabel')}</h3>
+            <span className="text-[9px] bg-aura-gold/10 text-aura-gold border border-aura-gold/20 px-2 py-0.5 rounded uppercase tracking-widest">{t('dashLive')}</span>
           </div>
           <p className="text-aura-platinum/80 leading-relaxed text-sm">
             {loading
-              ? "Loading platform analytics…"
+              ? t('dashLoadingAnalytics')
               : stats && stats.clientCount > 0
                 ? `Platform has ${stats.clientCount} registered client${stats.clientCount !== 1 ? "s" : ""}. ${stats.crmWorkers.length} CRM specialists active across ${new Set(stats.crmWorkers.map(w => w.role)).size} roles. ${hasFlow ? `Net capital flow: ${netFlow >= 0 ? "+" : ""}${fmt(netFlow)} since launch.` : "No transactions recorded yet."}`
                 : "No clients registered yet. Share the trading platform link to onboard your first clients."
@@ -117,28 +119,28 @@ export function Dashboard() {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         <KPICard
-          title="Active Clients"
+          title={t('dashActiveClients')}
           value={loading ? "—" : String(stats?.clientCount ?? 0)}
           change={stats && stats.clientCount > 0 ? "Registered" : "No clients yet"}
           trend="up"
           icon={<Users className="w-5 h-5" />}
-          subtitle="Total onboarded"
+          subtitle={t('dashTotalOnboarded')}
         />
         <KPICard
-          title="Total Deposits"
+          title={t('dashTotalDeposits')}
           value={loading ? "—" : fmt(stats?.totalDeposits ?? 0)}
           change={stats && stats.totalDeposits > 0 ? "Completed" : "No deposits yet"}
           trend="up"
           icon={<DollarSign className="w-5 h-5" />}
-          subtitle="All time"
+          subtitle={t('dashAllTime')}
         />
         <KPICard
-          title="Net Capital Flow"
+          title={t('dashNetCapFlow')}
           value={loading ? "—" : fmt(netFlow)}
           change={netFlow >= 0 ? "Positive" : "Negative"}
           trend={netFlow >= 0 ? "up" : "down"}
           icon={<TrendingUp className="w-5 h-5" />}
-          subtitle="Deposits minus withdrawals"
+          subtitle={t('dashDepMinusWit')}
         />
         {(() => {
           const workers = stats?.crmWorkers ?? [];
@@ -148,12 +150,12 @@ export function Dashboard() {
           }).length;
           return (
             <KPICard
-              title="CRM Team"
+              title={t('dashCrmTeam')}
               value={loading ? "—" : String(onlineCount)}
               change={loading ? "…" : `${onlineCount} of ${workers.length} online`}
               trend={onlineCount > 0 ? "up" : "down"}
               icon={<ShieldAlert className="w-5 h-5" />}
-              subtitle="Active last 5 min"
+              subtitle={t('dashActiveLast5')}
             />
           );
         })()}
@@ -165,10 +167,10 @@ export function Dashboard() {
         <div className="glass-panel p-8 rounded-2xl xl:col-span-2 flex flex-col min-h-[400px]">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-xs font-bold tracking-[0.2em] text-aura-platinum/60">CAPITAL FLOW — LAST 7 DAYS</h3>
+              <h3 className="text-xs font-bold tracking-[0.2em] text-aura-platinum/60">{t('dashCapFlowTitle')}</h3>
             </div>
             <div className="text-[10px] text-aura-gold border border-aura-gold/30 px-3 py-1 rounded-full uppercase">
-              {hasFlow ? "Live Data" : "Awaiting Transactions"}
+              {hasFlow ? t('dashLiveData') : t('dashAwaitingTx')}
             </div>
           </div>
           <div className="flex-1 w-full mt-4">
@@ -201,7 +203,7 @@ export function Dashboard() {
         {/* CRM Team */}
         <div className="glass-panel p-6 rounded-2xl flex flex-col">
           <div className="mb-4">
-            <h3 className="text-xs font-bold tracking-[0.2em] text-aura-platinum/60 uppercase">CRM Team</h3>
+            <h3 className="text-xs font-bold tracking-[0.2em] text-aura-platinum/60 uppercase">{t('dashCrmTeam')}</h3>
             <span className="text-[10px] font-mono text-aura-platinum/30 uppercase mt-1 block">
               {stats?.crmWorkers.length ?? 0} active specialists
             </span>
@@ -223,7 +225,7 @@ export function Dashboard() {
                     <div className="text-[9px] text-aura-platinum/40 tracking-wider uppercase mt-0.5">{w.role}</div>
                   </div>
                   {(() => {
-                    const s = getOnlineStatus(w.last_seen_at);
+                    const s = getOnlineStatus(w.last_seen_at, t('dashOnline'), t('dashOffline'));
                     return (
                       <div className="flex items-center gap-1.5">
                         <span className={`w-1.5 h-1.5 rounded-full ${s.dotClass}`} />
@@ -234,7 +236,7 @@ export function Dashboard() {
                 </div>
               ))}
               {(stats?.crmWorkers ?? []).length === 0 && (
-                <div className="text-center py-8 text-aura-platinum/30 text-xs">No CRM workers found</div>
+                <div className="text-center py-8 text-aura-platinum/30 text-xs">{t('dashNoCrmWorkers')}</div>
               )}
             </div>
           )}
