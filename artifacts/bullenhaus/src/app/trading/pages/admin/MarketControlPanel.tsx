@@ -4,7 +4,7 @@ import { useTradingStore } from '../../stores/tradingStore';
 import { Activity, Play, Pause, Zap, BarChart2, Hash, Edit3, Lock, Unlock } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase';
-import { ASSETS } from '../dashboard/AssetSelector';
+import { ASSETS } from '../../components/dashboard/AssetSelector';
 
 // Dynamic slider ranges per symbol type
 function volRange(symbol: string) {
