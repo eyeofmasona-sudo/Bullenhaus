@@ -4,6 +4,7 @@ import { useTradingStore } from '../../stores/tradingStore';
 import { Activity, Play, Pause, Zap, BarChart2, Hash, Edit3, Lock, Unlock } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase';
+import { ASSETS } from '../dashboard/AssetSelector';
 
 // Dynamic slider ranges per symbol type
 function volRange(symbol: string) {
@@ -50,7 +51,10 @@ export const MarketControlPanel = () => {
   const [globalPrice, setGlobalPrice] = useState('');
   const [pairPrices, setPairPrices] = useState<Record<string, string>>({});
 
-  const allSymbols = Array.from(new Set([...Object.keys(pairs), ...Object.keys(prices)])).sort();
+  const validSymbols = new Set(Object.values(ASSETS).flat());
+  const allSymbols = Array.from(new Set([...Object.keys(pairs), ...Object.keys(prices)]))
+    .filter(sym => validSymbols.has(sym))
+    .sort();
 
   // Global override (any symbol including crypto)
   const handleSetGlobalOverride = async () => {

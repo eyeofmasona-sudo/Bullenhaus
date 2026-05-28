@@ -5,7 +5,7 @@ import { Search, Star, ChevronDown, Check, Flame, TrendingUp, TrendingDown, Bitc
 import { useTradingStore } from '../../stores/tradingStore';
 
 const CATEGORIES = ['Crypto', 'Forex', 'Metals'];
-const ASSETS = {
+export const ASSETS = {
   Crypto: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT', 'BNBUSDT', 'ADAUSDT', 'DOGEUSDT'],
   Forex: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY'],
   Metals: ['XAUUSD', 'XAGUSD', 'XPTUSD', 'XPDUSD']

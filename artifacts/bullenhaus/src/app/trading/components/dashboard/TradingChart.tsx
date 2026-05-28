@@ -3,6 +3,7 @@ import { createChart, ColorType, CandlestickSeries, HistogramSeries, LineSeries 
 import { MousePointer2, Settings, Type, Crosshair, Pencil, Move, Crop, Plus, Check, Trash2 } from 'lucide-react';
 import { useTradingContext } from '../../contexts/TradingContext';
 import { useTradingStore } from '../../stores/tradingStore';
+import { useForexStore } from '../../stores/forexStore';
 import { AssetSelector } from './AssetSelector';
 
 type IndicatorKey = 'ema' | 'rsi' | 'macd' | 'sma' | 'bb';
@@ -564,6 +565,9 @@ export const TradingChart: React.FC = () => {
               wsRef.current = ws;
               ws.onmessage = (event) => {
                 if (cancelled || !seriesRef.current) return;
+                const fp = useForexStore.getState().pairs[currentPair];
+                if (fp && fp.trend !== 'sideways') return;
+
                 const msg = JSON.parse(event.data);
                 if (msg?.k) {
                   const k = msg.k;
@@ -579,6 +583,26 @@ export const TradingChart: React.FC = () => {
                 }
               };
             } catch { /* static history still shown */ }
+
+            let lastCryptoPrice = fallbackPrice;
+            unsubRef.current = useTradingStore.subscribe((state) => {
+              const fp = useForexStore.getState().pairs[currentPair];
+              if (!fp || fp.trend === 'sideways') return;
+              
+              const newPrice = state.prices[currentPair];
+              if (!newPrice || newPrice === lastCryptoPrice) return;
+              lastCryptoPrice = newPrice;
+              
+              const now = Math.floor(Date.now() / 1000);
+              const candleTime = now - (now % tfSeconds);
+              candlestick.update({
+                time: candleTime as any,
+                open: newPrice,
+                high: newPrice * 1.0001,
+                low: newPrice * 0.9999,
+                close: newPrice
+              });
+            });
           }
         } else {
           const { cData, vData, eData } = buildDemoCandles(fallbackPrice, tfSeconds, 500);

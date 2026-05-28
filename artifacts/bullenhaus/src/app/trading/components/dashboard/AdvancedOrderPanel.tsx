@@ -143,37 +143,69 @@ export const AdvancedOrderPanel: React.FC = () => {
       }
       toast.success(t('orderPlaced', { defaultValue: `${orderType} order placed` }));
     }
+    const liqPrice = type === 'Long'
+      ? currentPrice * (1 - 1/leverage + 0.005)
+      : currentPrice * (1 + 1/leverage - 0.005);
+
+    const opened = openPosition({
+      symbol: currentPair,
+      type,
+      entryPrice: currentPrice,
+      size: parsedAmount,
+      leverage,
+      marginType,
+      margin: marginRequired,
+      liquidationPrice: Math.max(0, liqPrice),
+      stopLoss: sl,
+      takeProfit: tp,
+    });
+
+    if (!opened) {
+      toast.error(t('insufficientMargin', { defaultValue: 'Insufficient available margin' }));
+      return;
+    }
+
+    if (user) {
+      try {
+        await crmService.activity({
+          external_trader_id: user.id,
+          external_trade_id: crypto.randomUUID(),
+          symbol: currentPair,
+          side: type === 'Long' ? 'buy' : 'sell',
+          volume: parsedAmount,
+          open_price: currentPrice,
+          opened_at: new Date().toISOString(),
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    toast.success(t('marketOrderOpened', { defaultValue: `Market ${type} opened` }));
 
     setTakeProfit('');
     setStopLoss('');
-    setConditionalPrice('');
   };
 
-  return (
-    <div className="glass-card flex flex-col relative overflow-hidden h-full">
-      <div className="absolute bottom-0 right-0 w-48 h-48 bg-accent-secondary/5 rounded-full blur-3xl pointer-events-none" />
-      
-      {/* Header */}
-      <div className="flex items-center justify-between p-6 border-b border-white/5 relative z-10">
-        <h3 className="text-sm font-bold text-white tracking-wide uppercase">{t('launchProtocol')}</h3>
-        <div className="flex items-center gap-1 p-1 bg-[#111] rounded-lg border border-white/5">
-           {['Market', 'Limit', 'Stop'].map(tStr => (
+  return <div className="glass-card flex flex-col relative overflow-hidden h-full">
+        <div className="absolute bottom-0 right-0 w-48 h-48 bg-accent-secondary/5 rounded-full blur-3xl pointer-events-none" />
+        
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-white/5 relative z-10">
+          <h3 className="text-sm font-bold text-white tracking-wide uppercase">{t('launchProtocol')}</h3>
+          <div className="flex items-center gap-1 p-1 bg-[#111] rounded-lg border border-white/5">
              <button 
-               key={tStr}
-               onClick={() => setOrderType(tStr as any)}
-               className={`px-3 py-1 rounded text-[10px] font-bold transition-colors ${
-                 orderType === tStr ? 'bg-accent-primary text-black shadow-neon-gold' : 'text-slate-500 hover:text-white'
-               }`}
+               className="px-3 py-1 rounded text-[10px] font-bold transition-colors bg-accent-primary text-black shadow-neon-gold"
              >
-               {t(tStr.toLowerCase())}
+               {t('market')}
              </button>
-           ))}
+          </div>
         </div>
-      </div>
-
-      <div className="p-6 space-y-6 flex-1 overflow-y-auto custom-scrollbar relative z-10">
+  
+        <div className="flex-1 p-6 overflow-y-auto custom-scrollbar relative z-10">
+        
         {/* Pair Display */}
-        <div className="p-4 bg-[#111] border border-white/10 rounded-xl flex items-center justify-between">
+        <div className="p-4 bg-[#111] border border-white/10 rounded-xl flex items-center justify-between mb-6">
           <div className="flex items-center gap-3 w-full">
              <div className="w-10 h-10 rounded-xl bg-[#222] flex items-center justify-center border border-white/10 shrink-0 text-[10px] font-bold text-white uppercase tracking-widest break-all px-1 text-center leading-none">
                 {currentPair.substring(0, 3)}
@@ -263,54 +295,9 @@ export const AdvancedOrderPanel: React.FC = () => {
            )}
         </div>
 
-        {/* Limit/Stop Price */}
-        {orderType !== 'Market' && (
-          <div>
-            <div className="flex justify-between items-end mb-2 mt-4">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none flex items-center gap-1">
-                <Target size={10}/> {t(orderType.toLowerCase())} {t('price')}
-              </label>
-            </div>
-
-            {/* Direction hint */}
-            {currentPrice && (
-              <div className="mb-2 text-[10px] text-slate-500 leading-relaxed space-y-0.5">
-                {orderType === 'Limit' && (
-                  <p>
-                    <span className="text-accent-secondary font-bold">Long (Buy):</span> below current&nbsp;
-                    <span className="font-mono text-slate-400">${currentPrice.toLocaleString()}</span>
-                    &nbsp;·&nbsp;
-                    <span className="text-accent-quaternary font-bold">Short (Sell):</span> above current
-                  </p>
-                )}
-                {orderType === 'Stop' && (
-                  <p>
-                    <span className="text-accent-secondary font-bold">Long (Buy):</span> above current&nbsp;
-                    <span className="font-mono text-slate-400">${currentPrice.toLocaleString()}</span>
-                    &nbsp;·&nbsp;
-                    <span className="text-accent-quaternary font-bold">Short (Sell):</span> below current
-                  </p>
-                )}
-              </div>
-            )}
-
-            <div className="relative group">
-              <input
-                 type="text"
-                 value={conditionalPrice}
-                 onChange={(e) => setConditionalPrice(e.target.value)}
-                 placeholder={currentPrice?.toLocaleString() || '0.00'}
-                 className="w-full p-3 bg-[#111] border border-white/10 rounded-xl text-sm font-mono font-bold text-white focus:outline-none focus:border-accent-primary/50 transition-all pr-12"
-              />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-500 group-focus-within:text-accent-primary transition-colors">{t('price')}</span>
-            </div>
-
-          </div>
-        )}
-
-        {/* TP / SL */}
-        <div className="space-y-3">
-          {/* Take Profit */}
+          {/* TP / SL */}
+          <div className="space-y-3 mt-6">
+            {/* Take Profit */}
           <div>
             <div className="flex justify-between items-end mb-1.5">
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1"><Target size={10} className="text-accent-secondary" /> {t('takeProfit')}</label>
