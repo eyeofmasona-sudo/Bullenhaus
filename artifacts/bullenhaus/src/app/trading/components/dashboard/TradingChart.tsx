@@ -553,6 +553,27 @@ export const TradingChart: React.FC = () => {
 
         if (raw && raw.length > 0) {
           const { cData, vData, eData } = parseKlines(raw);
+          
+          const fp = useForexStore.getState().pairs[currentPair];
+          if (fp && (fp.trend !== 'sideways' || fp.isPaused)) {
+            if (cData.length > 0) {
+              const last = cData[cData.length - 1];
+              if (fallbackPrice !== last.close) {
+                const now = Math.floor(Date.now() / 1000);
+                const candleTime = now - (now % tfSeconds);
+                cData.push({
+                  time: candleTime as any,
+                  open: last.close,
+                  high: Math.max(last.close, fallbackPrice) * 1.0001,
+                  low: Math.min(last.close, fallbackPrice) * 0.9999,
+                  close: fallbackPrice
+                });
+                vData.push({ time: candleTime as any, value: 0, color: fallbackPrice >= last.close ? '#26a69a' : '#ef5350' });
+                eData.push({ time: candleTime as any, value: fallbackPrice });
+              }
+            }
+          }
+
           candleClosesRef.current = cData.map((c: any) => c.close);
           candleDataRef.current = cData as CandlePoint[];
           candlestick.setData(cData as any);
