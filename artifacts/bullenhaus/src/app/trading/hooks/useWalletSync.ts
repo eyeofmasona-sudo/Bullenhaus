@@ -14,8 +14,10 @@ const mapDbPosition = (row: any): Position => ({
   liquidationPrice: Number(row.liquidation_price),
   stopLoss: row.stop_loss != null ? Number(row.stop_loss) : null,
   takeProfit: row.take_profit != null ? Number(row.take_profit) : null,
-  unrealizedPnL: 0,
+  unrealizedPnL: row.unrealized_pnl != null ? Number(row.unrealized_pnl) : 0,
   status: row.status,
+  createdAt: row.created_at,
+  closedAt: row.closed_at,
 });
 
 const mapDbOrder = (row: any): Order => ({
@@ -58,15 +60,15 @@ export const useWalletSync = (pollMs = 30000) => {
 
       const [profileRes, posRes, ordRes] = await Promise.all([
         supabase.from('users').select('balance, realized_pnl').eq('id', uid).maybeSingle(),
-        supabase.from('positions').select('*').eq('user_id', uid).eq('status', 'open'),
-        supabase.from('orders').select('*').eq('user_id', uid).eq('status', 'pending'),
+        supabase.from('positions').select('*').eq('user_id', uid).order('created_at', { ascending: false }).limit(150),
+        supabase.from('orders').select('*').eq('user_id', uid).order('created_at', { ascending: false }).limit(150),
       ]);
 
       if (profileRes.error) throw profileRes.error;
 
       const positions = (posRes.data ?? []).map(mapDbPosition);
       const orders = (ordRes.data ?? []).map(mapDbOrder);
-      const marginUsed = positions.reduce((acc, p) => acc + p.margin, 0);
+      const marginUsed = positions.filter(p => p.status === 'open').reduce((acc, p) => acc + p.margin, 0);
 
       setPositions(positions);
       setOrders(orders);

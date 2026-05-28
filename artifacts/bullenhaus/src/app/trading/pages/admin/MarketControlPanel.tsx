@@ -44,11 +44,13 @@ export const MarketControlPanel = () => {
     togglePause,
     resetMarket,
   } = useForexStore();
-  const { priceOverrides, setPriceOverride } = useTradingStore();
+  const { priceOverrides, setPriceOverride, prices } = useTradingStore();
 
   const [globalSymbol, setGlobalSymbol] = useState('');
   const [globalPrice, setGlobalPrice] = useState('');
   const [pairPrices, setPairPrices] = useState<Record<string, string>>({});
+
+  const allSymbols = Array.from(new Set([...Object.keys(pairs), ...Object.keys(prices)])).sort();
 
   // Global override (any symbol including crypto)
   const handleSetGlobalOverride = async () => {
@@ -175,14 +177,24 @@ export const MarketControlPanel = () => {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {Object.values(pairs).map(pair => {
-          const isPinned = priceOverrides[pair.symbol] !== undefined;
-          const vRange = volRange(pair.symbol);
-          const sRange = spreadRange(pair.symbol);
+        {allSymbols.map(sym => {
+          const pair = pairs[sym] || {
+            symbol: sym,
+            price: prices[sym] || 1.0,
+            basePrice: prices[sym] || 1.0,
+            change24h: 0,
+            volatility: (prices[sym] || 1.0) * 0.0001,
+            spread: (prices[sym] || 1.0) * 0.0001,
+            trend: 'sideways' as ForexTrend,
+            isPaused: false
+          };
+          const isPinned = priceOverrides[sym] !== undefined;
+          const vRange = volRange(sym);
+          const sRange = spreadRange(sym);
 
           return (
             <div
-              key={pair.symbol}
+              key={sym}
               className={`p-5 rounded-2xl border transition-all ${
                 isPinned
                   ? 'bg-accent-primary/5 border-accent-primary/30'

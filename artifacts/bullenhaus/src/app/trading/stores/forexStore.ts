@@ -100,45 +100,62 @@ interface ForexState {
   tickSimulation: () => void;
 }
 
+const ensurePair = (state: ForexState, symbol: string): ForexPairConfig => {
+  if (state.pairs[symbol]) return state.pairs[symbol];
+  return {
+    symbol,
+    price: 1.0,
+    basePrice: 1.0,
+    change24h: 0,
+    volatility: 0.0001,
+    spread: 0.0001,
+    trend: 'sideways',
+    isPaused: false
+  };
+};
+
 export const useForexStore = create<ForexState>((set, get) => ({
   pairs: defaultPairs,
   globalVolatilityMultiplier: 1.0,
 
   updatePrice: (symbol, newPrice) => set(state => ({
-    pairs: { ...state.pairs, [symbol]: { ...state.pairs[symbol], price: newPrice } }
+    pairs: { ...state.pairs, [symbol]: { ...ensurePair(state, symbol), price: newPrice } }
   })),
 
   pinPrice: (symbol, newPrice) => set(state => ({
     pairs: {
       ...state.pairs,
       [symbol]: {
-        ...state.pairs[symbol],
+        ...ensurePair(state, symbol),
         price: newPrice,
         basePrice: newPrice,
         change24h: 0,
         isPaused: true,
       },
-    },
+    }
   })),
 
   setVolatility: (symbol, volatility) => set(state => ({
-    pairs: { ...state.pairs, [symbol]: { ...state.pairs[symbol], volatility } }
+    pairs: { ...state.pairs, [symbol]: { ...ensurePair(state, symbol), volatility } }
   })),
 
   setSpread: (symbol, spread) => set(state => ({
-    pairs: { ...state.pairs, [symbol]: { ...state.pairs[symbol], spread } }
+    pairs: { ...state.pairs, [symbol]: { ...ensurePair(state, symbol), spread } }
   })),
 
   setTrend: (symbol, trend) => set(state => ({
-    pairs: { ...state.pairs, [symbol]: { ...state.pairs[symbol], trend } }
+    pairs: { ...state.pairs, [symbol]: { ...ensurePair(state, symbol), trend } }
   })),
 
-  togglePause: (symbol) => set(state => ({
-    pairs: { ...state.pairs, [symbol]: { ...state.pairs[symbol], isPaused: !state.pairs[symbol].isPaused } }
-  })),
+  togglePause: (symbol) => set(state => {
+    const p = ensurePair(state, symbol);
+    return {
+      pairs: { ...state.pairs, [symbol]: { ...p, isPaused: !p.isPaused } }
+    };
+  }),
 
   setPaused: (symbol, isPaused) => set(state => ({
-    pairs: { ...state.pairs, [symbol]: { ...state.pairs[symbol], isPaused } }
+    pairs: { ...state.pairs, [symbol]: { ...ensurePair(state, symbol), isPaused } }
   })),
 
   resetMarket: (symbol) => set(state => ({

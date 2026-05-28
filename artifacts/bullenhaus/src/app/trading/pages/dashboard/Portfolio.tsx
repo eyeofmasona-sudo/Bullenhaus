@@ -6,6 +6,7 @@ import { useTradingStore } from '../../stores/tradingStore';
 import { useTransactionStore } from '../../stores/transactionStore';
 import { supabase } from '../../lib/supabase';
 import { useWalletSync } from '../../hooks/useWalletSync';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 
 import { TransferModal } from './TransferModal';
 
@@ -18,6 +19,27 @@ export const Portfolio: React.FC = () => {
   useWalletSync();
   const wallet = useTradingStore(s => s.wallet);
   const requests = useTransactionStore(s => s.requests);
+  const positions = useTradingStore(s => s.positions);
+
+  const closedPositions = useMemo(() => {
+    return positions.filter(p => p.status === 'closed').sort((a, b) => {
+      const ta = new Date(a.closedAt || a.createdAt || 0).getTime();
+      const tb = new Date(b.closedAt || b.createdAt || 0).getTime();
+      return ta - tb;
+    });
+  }, [positions]);
+
+  const pnlData = useMemo(() => {
+    let cumulative = 0;
+    return closedPositions.map(p => {
+      cumulative += p.unrealizedPnL;
+      return {
+        name: new Date(p.closedAt || p.createdAt || 0).toLocaleDateString(),
+        pnl: cumulative
+      };
+    });
+  }, [closedPositions]);
+
   const holdings = useMemo(() => wallet.balance > 0 ? [{
     name: 'USD',
     description: 'Account Wallet',
@@ -153,15 +175,37 @@ export const Portfolio: React.FC = () => {
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-sm font-bold text-white uppercase tracking-widest">Portfolio Performance</h3>
             </div>
-            <div className="h-[300px] w-full rounded-xl border border-border bg-surface/40 flex flex-col items-center justify-center text-center px-6 gap-3">
-              <div className="w-10 h-10 rounded-full bg-surface border border-border flex items-center justify-center">
-                <Activity size={20} className="text-text-dim" />
+              <div className="h-[300px] w-full rounded-xl border border-border bg-surface/40 flex flex-col items-center justify-center px-2 pt-4">
+                {pnlData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={pnlData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="colorPnL" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#D4AF37" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="name" stroke="#ffffff33" fontSize={10} tickMargin={10} minTickGap={30} />
+                      <YAxis stroke="#ffffff33" fontSize={10} tickFormatter={(val) => `$${val}`} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#111', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                        itemStyle={{ color: '#D4AF37' }}
+                      />
+                      <Area type="monotone" dataKey="pnl" stroke="#D4AF37" fillOpacity={1} fill="url(#colorPnL)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-surface border border-border flex items-center justify-center">
+                      <Activity size={20} className="text-text-dim" />
+                    </div>
+                    <p className="text-sm font-medium text-text-muted">Portfolio history not available yet</p>
+                    <p className="text-xs text-text-dim max-w-xs">
+                      Performance history will appear once real trade records are available.
+                    </p>
+                  </div>
+                )}
               </div>
-              <p className="text-sm font-medium text-text-muted">Portfolio history not available yet</p>
-              <p className="text-xs text-text-dim max-w-xs">
-                Performance history will appear once real trade records are available.
-              </p>
-            </div>
           </div>
 
           {/* Holdings List */}

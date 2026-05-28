@@ -22,6 +22,8 @@ export interface Position {
   takeProfit: number | null;
   unrealizedPnL: number;
   status: 'open' | 'closed';
+  createdAt?: string;
+  closedAt?: string;
 }
 
 export interface Order {
@@ -91,22 +93,36 @@ export const useTradingStore = create<TradingState>()(
             const overrides: Record<string, number> = {};
             const { setTrend, setVolatility, setSpread, setPaused } = useForexStore.getState();
 
+            const initCryptoPair = (sym: string) => {
+              const currentForex = useForexStore.getState().pairs[sym];
+              if (!currentForex) {
+                const p = get().prices[sym] || 1.0;
+                useForexStore.setState(s => ({
+                  pairs: { ...s.pairs, [sym]: { symbol: sym, price: p, basePrice: p, change24h: 0, volatility: p * 0.0001, spread: p * 0.0001, trend: 'sideways' as any, isPaused: false } }
+                }));
+              }
+            };
+
             data.forEach((row: { symbol: string; price: number }) => {
               const name = row.symbol;
               const val = Number(row.price);
 
               if (name.endsWith('_trend')) {
                 const sym = name.replace('_trend', '');
+                initCryptoPair(sym);
                 const trend = val === 1 ? 'bull' : val === 2 ? 'bear' : val === 3 ? 'sideways' : val === 4 ? 'crash' : 'news';
                 setTrend(sym, trend as ForexTrend);
               } else if (name.endsWith('_volatility')) {
                 const sym = name.replace('_volatility', '');
+                initCryptoPair(sym);
                 setVolatility(sym, val);
               } else if (name.endsWith('_spread')) {
                 const sym = name.replace('_spread', '');
+                initCryptoPair(sym);
                 setSpread(sym, val);
               } else if (name.endsWith('_isPaused')) {
                 const sym = name.replace('_isPaused', '');
+                initCryptoPair(sym);
                 setPaused(sym, val === 1);
               } else {
                 overrides[name] = val;
@@ -128,27 +144,32 @@ export const useTradingStore = create<TradingState>()(
 
             const { setTrend, setVolatility, setSpread, setPaused } = useForexStore.getState();
 
-            if (name.endsWith('_trend')) {
-              const sym = name.replace('_trend', '');
-              const trend = val === 1 ? 'bull' : val === 2 ? 'bear' : val === 3 ? 'sideways' : val === 4 ? 'crash' : 'news';
-              
+            const initCryptoPair = (sym: string) => {
               const currentForex = useForexStore.getState().pairs[sym];
               if (!currentForex) {
-                 const p = get().prices[sym] || 1.0;
-                 useForexStore.setState(s => ({
-                   pairs: { ...s.pairs, [sym]: { symbol: sym, price: p, basePrice: p, change24h: 0, volatility: p * 0.0001, spread: p * 0.0001, trend: trend as any, isPaused: false } }
-                 }));
-              } else {
-                 setTrend(sym, trend as any);
+                const p = get().prices[sym] || 1.0;
+                useForexStore.setState(s => ({
+                  pairs: { ...s.pairs, [sym]: { symbol: sym, price: p, basePrice: p, change24h: 0, volatility: p * 0.0001, spread: p * 0.0001, trend: 'sideways' as any, isPaused: false } }
+                }));
               }
+            };
+
+            if (name.endsWith('_trend')) {
+              const sym = name.replace('_trend', '');
+              initCryptoPair(sym);
+              const trend = val === 1 ? 'bull' : val === 2 ? 'bear' : val === 3 ? 'sideways' : val === 4 ? 'crash' : 'news';
+              setTrend(sym, trend as any);
             } else if (name.endsWith('_volatility')) {
               const sym = name.replace('_volatility', '');
+              initCryptoPair(sym);
               setVolatility(sym, val);
             } else if (name.endsWith('_spread')) {
               const sym = name.replace('_spread', '');
+              initCryptoPair(sym);
               setSpread(sym, val);
             } else if (name.endsWith('_isPaused')) {
               const sym = name.replace('_isPaused', '');
+              initCryptoPair(sym);
               setPaused(sym, val === 1);
             } else {
               get().setPriceOverride(name, val);
@@ -161,27 +182,32 @@ export const useTradingStore = create<TradingState>()(
 
             const { setTrend, setVolatility, setSpread, setPaused } = useForexStore.getState();
 
-            if (name.endsWith('_trend')) {
-              const sym = name.replace('_trend', '');
-              const trend = val === 1 ? 'bull' : val === 2 ? 'bear' : val === 3 ? 'sideways' : val === 4 ? 'crash' : 'news';
-              
+            const initCryptoPair = (sym: string) => {
               const currentForex = useForexStore.getState().pairs[sym];
               if (!currentForex) {
-                 const p = get().prices[sym] || 1.0;
-                 useForexStore.setState(s => ({
-                   pairs: { ...s.pairs, [sym]: { symbol: sym, price: p, basePrice: p, change24h: 0, volatility: p * 0.0001, spread: p * 0.0001, trend: trend as any, isPaused: false } }
-                 }));
-              } else {
-                 setTrend(sym, trend as any);
+                const p = get().prices[sym] || 1.0;
+                useForexStore.setState(s => ({
+                  pairs: { ...s.pairs, [sym]: { symbol: sym, price: p, basePrice: p, change24h: 0, volatility: p * 0.0001, spread: p * 0.0001, trend: 'sideways' as any, isPaused: false } }
+                }));
               }
+            };
+
+            if (name.endsWith('_trend')) {
+              const sym = name.replace('_trend', '');
+              initCryptoPair(sym);
+              const trend = val === 1 ? 'bull' : val === 2 ? 'bear' : val === 3 ? 'sideways' : val === 4 ? 'crash' : 'news';
+              setTrend(sym, trend as any);
             } else if (name.endsWith('_volatility')) {
               const sym = name.replace('_volatility', '');
+              initCryptoPair(sym);
               setVolatility(sym, val);
             } else if (name.endsWith('_spread')) {
               const sym = name.replace('_spread', '');
+              initCryptoPair(sym);
               setSpread(sym, val);
             } else if (name.endsWith('_isPaused')) {
               const sym = name.replace('_isPaused', '');
+              initCryptoPair(sym);
               setPaused(sym, val === 1);
             } else {
               get().setPriceOverride(name, val);
