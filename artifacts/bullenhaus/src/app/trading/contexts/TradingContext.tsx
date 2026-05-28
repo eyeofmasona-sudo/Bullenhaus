@@ -4,9 +4,6 @@ import { useTradingStore } from '../stores/tradingStore';
 export interface TradingState {
   currentPair: string; // e.g., 'BTCUSDT'
   currentTimeframe: string; // e.g., '1m', '1h', etc.
-  currentPrice: number | null;
-  priceChange24h: number | null;
-  priceChangePercent24h: number | null;
   orderSize: string;
   leverage: number;
   takeProfit: string;
@@ -42,8 +39,6 @@ const TradingContext = createContext<(TradingState & TradingActions) | null>(nul
 export const TradingProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, setState] = useState(defaultState);
 
-  const currentPrice = useTradingStore(s => s.prices[state.currentPair]) || null;
-  const priceChangePercent24h = useTradingStore(s => s.priceChanges[state.currentPair]) || null;
   const initPriceOverrideSync = useTradingStore(s => s.initPriceOverrideSync);
 
   useEffect(() => {
@@ -69,9 +64,6 @@ export const TradingProvider: React.FC<{ children: ReactNode }> = ({ children })
   return (
     <TradingContext.Provider value={{ 
       ...state, 
-      currentPrice, 
-      priceChange24h: null, // Note: using percent for now in UI so this is fine
-      priceChangePercent24h,
       ...actions 
     }}>
       {children}

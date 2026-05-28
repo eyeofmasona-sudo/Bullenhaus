@@ -13,7 +13,7 @@ import { Link } from 'react-router-dom';
 export const AdvancedOrderPanel: React.FC = () => {
   const { t } = useTranslation('common');
   const { 
-    currentPair, currentPrice, priceChangePercent24h,
+    currentPair,
     leverage, setLeverage,
     takeProfit, setTakeProfit,
     stopLoss, setStopLoss,
@@ -23,6 +23,9 @@ export const AdvancedOrderPanel: React.FC = () => {
     setCurrentPair
   } = useTradingContext();
   const { kycStatus } = useAuth();
+  
+  const currentPrice = useTradingStore(s => s.prices[currentPair]) || null;
+  const priceChangePercent24h = useTradingStore(s => s.priceChanges[currentPair]) || null;
   
   const openPosition = useTradingStore(s => s.openPosition);
   const placeOrder = useTradingStore(s => s.placeOrder);

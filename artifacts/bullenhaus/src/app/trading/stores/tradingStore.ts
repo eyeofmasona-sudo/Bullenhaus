@@ -170,8 +170,9 @@ export const useTradingStore = create<TradingState>()(
             }
           })
           .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'price_overrides' }, (payload) => {
-            const row = payload.old as { symbol: string };
-            const name = row.symbol;
+            const row = payload.old as { symbol?: string };
+            const name = row?.symbol;
+            if (!name) return;
 
             const { resetMarket } = useForexStore.getState();
 
@@ -193,6 +194,10 @@ export const useTradingStore = create<TradingState>()(
               }));
             } else {
               get().setPriceOverride(name, null);
+              const fp = useForexStore.getState().pairs[name];
+              if (fp) {
+                get().updatePrice(name, fp.price, fp.change24h);
+              }
             }
           })
           .subscribe();
