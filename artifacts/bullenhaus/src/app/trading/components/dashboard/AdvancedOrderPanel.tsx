@@ -187,7 +187,8 @@ export const AdvancedOrderPanel: React.FC = () => {
     setStopLoss('');
   };
 
-  return <div className="glass-card flex flex-col relative overflow-hidden h-full">
+  return (
+    <div className="glass-card flex flex-col relative overflow-hidden h-full">
         <div className="absolute bottom-0 right-0 w-48 h-48 bg-accent-secondary/5 rounded-full blur-3xl pointer-events-none" />
         
         {/* Header */}
