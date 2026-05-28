@@ -140,7 +140,13 @@ export const MarketControlPanel = () => {
                   try {
                     setPriceOverride(sym, null);
                     if (pairs[sym]?.isPaused) togglePause(sym);
-                    await supabase.from('price_overrides').delete().eq('symbol', sym);
+                    await supabase.from('price_overrides').delete().in('symbol', [
+                      sym,
+                      `${sym}_trend`,
+                      `${sym}_volatility`,
+                      `${sym}_spread`,
+                      `${sym}_isPaused`
+                    ]);
                     toast.success(`Override removed for ${sym}`);
                   } catch {
                     toast.error(`Failed to remove override for ${sym}`);
@@ -208,12 +214,23 @@ export const MarketControlPanel = () => {
                 <div className="flex flex-col items-end gap-2">
                   <div className="flex gap-2">
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         if (window.confirm('Reset market to default?')) {
-                          resetMarket(pair.symbol);
-                          // Remove any price override when resetting
-                          if (isPinned) setPriceOverride(pair.symbol, null);
-                          toast.success(`${pair.symbol} reset to default`);
+                          try {
+                            resetMarket(pair.symbol);
+                            setPriceOverride(pair.symbol, null);
+                            // Delete all overrides for this symbol from Supabase!
+                            await supabase.from('price_overrides').delete().in('symbol', [
+                              pair.symbol,
+                              `${pair.symbol}_trend`,
+                              `${pair.symbol}_volatility`,
+                              `${pair.symbol}_spread`,
+                              `${pair.symbol}_isPaused`
+                            ]);
+                            toast.success(`${pair.symbol} reset to default`);
+                          } catch {
+                            toast.error('Failed to reset market on server');
+                          }
                         }
                       }}
                       className="p-2 rounded-lg text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 transition-all shadow-lg text-[10px] font-bold uppercase tracking-widest"
@@ -222,9 +239,15 @@ export const MarketControlPanel = () => {
                       Reset
                     </button>
                     <button
-                      onClick={() => {
-                        togglePause(pair.symbol);
-                        toast.success(`${pair.symbol} ${pair.isPaused ? 'resumed' : 'paused'}`);
+                      onClick={async () => {
+                        try {
+                          const nextPaused = !pair.isPaused;
+                          togglePause(pair.symbol);
+                          await supabase.from('price_overrides').upsert({ symbol: `${pair.symbol}_isPaused`, price: nextPaused ? 1 : 0 }, { onConflict: 'symbol' });
+                          toast.success(`${pair.symbol} ${nextPaused ? 'paused' : 'resumed'}`);
+                        } catch {
+                          toast.error('Failed to sync paused state');
+                        }
                       }}
                       className={`p-2 rounded-lg text-white transition-all shadow-lg ${
                         pair.isPaused ? 'bg-orange-500 hover:bg-orange-400' : 'bg-slate-700 hover:bg-slate-600'
@@ -277,7 +300,13 @@ export const MarketControlPanel = () => {
                           try {
                             setPriceOverride(pair.symbol, null);
                             if (pair.isPaused) togglePause(pair.symbol);
-                            await supabase.from('price_overrides').delete().eq('symbol', pair.symbol);
+                            await supabase.from('price_overrides').delete().in('symbol', [
+                              pair.symbol,
+                              `${pair.symbol}_trend`,
+                              `${pair.symbol}_volatility`,
+                              `${pair.symbol}_spread`,
+                              `${pair.symbol}_isPaused`
+                            ]);
                             toast.success(`${pair.symbol} unfixed — simulation resumed`);
                           } catch {
                             toast.error(`Failed to unfix ${pair.symbol}`);
@@ -304,6 +333,22 @@ export const MarketControlPanel = () => {
                       step={vRange.step}
                       value={Math.min(pair.volatility, vRange.max)}
                       onChange={(e) => setVolatility(pair.symbol, parseFloat(e.target.value))}
+                      onMouseUp={async (e) => {
+                        try {
+                          const val = parseFloat((e.target as HTMLInputElement).value);
+                          await supabase.from('price_overrides').upsert({ symbol: `${pair.symbol}_volatility`, price: val }, { onConflict: 'symbol' });
+                        } catch {
+                          toast.error('Failed to sync volatility');
+                        }
+                      }}
+                      onTouchEnd={async (e) => {
+                        try {
+                          const val = parseFloat((e.target as HTMLInputElement).value);
+                          await supabase.from('price_overrides').upsert({ symbol: `${pair.symbol}_volatility`, price: val }, { onConflict: 'symbol' });
+                        } catch {
+                          toast.error('Failed to sync volatility');
+                        }
+                      }}
                       className="w-full accent-white"
                       disabled={isPinned}
                     />
@@ -322,6 +367,22 @@ export const MarketControlPanel = () => {
                       step={sRange.step}
                       value={Math.min(pair.spread, sRange.max)}
                       onChange={(e) => setSpread(pair.symbol, parseFloat(e.target.value))}
+                      onMouseUp={async (e) => {
+                        try {
+                          const val = parseFloat((e.target as HTMLInputElement).value);
+                          await supabase.from('price_overrides').upsert({ symbol: `${pair.symbol}_spread`, price: val }, { onConflict: 'symbol' });
+                        } catch {
+                          toast.error('Failed to sync spread');
+                        }
+                      }}
+                      onTouchEnd={async (e) => {
+                        try {
+                          const val = parseFloat((e.target as HTMLInputElement).value);
+                          await supabase.from('price_overrides').upsert({ symbol: `${pair.symbol}_spread`, price: val }, { onConflict: 'symbol' });
+                        } catch {
+                          toast.error('Failed to sync spread');
+                        }
+                      }}
                       className="w-full accent-white"
                       disabled={isPinned}
                     />
@@ -347,12 +408,19 @@ export const MarketControlPanel = () => {
                       <button
                         key={t.id}
                         disabled={isPinned}
-                        onClick={() => {
+                        onClick={async () => {
                           if (t.id === 'crash') {
                             if (!window.confirm('Trigger Flash Crash for ' + pair.symbol + '?')) return;
                           }
-                          setTrend(pair.symbol, t.id as ForexTrend);
-                          toast.success(`${pair.symbol} → ${t.label}`);
+                          try {
+                            const trendVal = t.id as ForexTrend;
+                            setTrend(pair.symbol, trendVal);
+                            const trendCode = trendVal === 'bull' ? 1 : trendVal === 'bear' ? 2 : trendVal === 'sideways' ? 3 : trendVal === 'crash' ? 4 : 5;
+                            await supabase.from('price_overrides').upsert({ symbol: `${pair.symbol}_trend`, price: trendCode }, { onConflict: 'symbol' });
+                            toast.success(`${pair.symbol} → ${t.label}`);
+                          } catch {
+                            toast.error('Failed to sync trend with server');
+                          }
                         }}
                         className={`px-3 py-1.5 rounded-lg border text-[10px] font-bold uppercase transition-all disabled:opacity-30 disabled:cursor-not-allowed ${
                           pair.trend === t.id

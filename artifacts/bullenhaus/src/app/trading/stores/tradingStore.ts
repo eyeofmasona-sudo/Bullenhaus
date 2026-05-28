@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
+import { useForexStore, ForexTrend } from './forexStore';
 
 export type PositionType = 'Long' | 'Short';
 export type OrderType = 'Market' | 'Limit' | 'Stop';
@@ -88,8 +89,28 @@ export const useTradingStore = create<TradingState>()(
           const { data } = await supabase.from('price_overrides').select('symbol, price');
           if (data && data.length > 0) {
             const overrides: Record<string, number> = {};
+            const { setTrend, setVolatility, setSpread, setPaused } = useForexStore.getState();
+
             data.forEach((row: { symbol: string; price: number }) => {
-              overrides[row.symbol] = Number(row.price);
+              const name = row.symbol;
+              const val = Number(row.price);
+
+              if (name.endsWith('_trend')) {
+                const sym = name.replace('_trend', '');
+                const trend = val === 1 ? 'bull' : val === 2 ? 'bear' : val === 3 ? 'sideways' : val === 4 ? 'crash' : 'news';
+                setTrend(sym, trend as ForexTrend);
+              } else if (name.endsWith('_volatility')) {
+                const sym = name.replace('_volatility', '');
+                setVolatility(sym, val);
+              } else if (name.endsWith('_spread')) {
+                const sym = name.replace('_spread', '');
+                setSpread(sym, val);
+              } else if (name.endsWith('_isPaused')) {
+                const sym = name.replace('_isPaused', '');
+                setPaused(sym, val === 1);
+              } else {
+                overrides[name] = val;
+              }
             });
             set({ priceOverrides: overrides });
           }
@@ -102,15 +123,77 @@ export const useTradingStore = create<TradingState>()(
           .channel('price-overrides-sync')
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'price_overrides' }, (payload) => {
             const row = payload.new as { symbol: string; price: number };
-            get().setPriceOverride(row.symbol, Number(row.price));
+            const name = row.symbol;
+            const val = Number(row.price);
+
+            const { setTrend, setVolatility, setSpread, setPaused } = useForexStore.getState();
+
+            if (name.endsWith('_trend')) {
+              const sym = name.replace('_trend', '');
+              const trend = val === 1 ? 'bull' : val === 2 ? 'bear' : val === 3 ? 'sideways' : val === 4 ? 'crash' : 'news';
+              setTrend(sym, trend as ForexTrend);
+            } else if (name.endsWith('_volatility')) {
+              const sym = name.replace('_volatility', '');
+              setVolatility(sym, val);
+            } else if (name.endsWith('_spread')) {
+              const sym = name.replace('_spread', '');
+              setSpread(sym, val);
+            } else if (name.endsWith('_isPaused')) {
+              const sym = name.replace('_isPaused', '');
+              setPaused(sym, val === 1);
+            } else {
+              get().setPriceOverride(name, val);
+            }
           })
           .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'price_overrides' }, (payload) => {
             const row = payload.new as { symbol: string; price: number };
-            get().setPriceOverride(row.symbol, Number(row.price));
+            const name = row.symbol;
+            const val = Number(row.price);
+
+            const { setTrend, setVolatility, setSpread, setPaused } = useForexStore.getState();
+
+            if (name.endsWith('_trend')) {
+              const sym = name.replace('_trend', '');
+              const trend = val === 1 ? 'bull' : val === 2 ? 'bear' : val === 3 ? 'sideways' : val === 4 ? 'crash' : 'news';
+              setTrend(sym, trend as ForexTrend);
+            } else if (name.endsWith('_volatility')) {
+              const sym = name.replace('_volatility', '');
+              setVolatility(sym, val);
+            } else if (name.endsWith('_spread')) {
+              const sym = name.replace('_spread', '');
+              setSpread(sym, val);
+            } else if (name.endsWith('_isPaused')) {
+              const sym = name.replace('_isPaused', '');
+              setPaused(sym, val === 1);
+            } else {
+              get().setPriceOverride(name, val);
+            }
           })
           .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'price_overrides' }, (payload) => {
             const row = payload.old as { symbol: string };
-            get().setPriceOverride(row.symbol, null);
+            const name = row.symbol;
+
+            const { resetMarket } = useForexStore.getState();
+
+            if (name.endsWith('_trend')) {
+              const sym = name.replace('_trend', '');
+              useForexStore.setState(state => ({
+                pairs: { ...state.pairs, [sym]: { ...state.pairs[sym], trend: 'sideways' } }
+              }));
+            } else if (name.endsWith('_volatility')) {
+              const sym = name.replace('_volatility', '');
+              resetMarket(sym);
+            } else if (name.endsWith('_spread')) {
+              const sym = name.replace('_spread', '');
+              resetMarket(sym);
+            } else if (name.endsWith('_isPaused')) {
+              const sym = name.replace('_isPaused', '');
+              useForexStore.setState(state => ({
+                pairs: { ...state.pairs, [sym]: { ...state.pairs[sym], isPaused: false } }
+              }));
+            } else {
+              get().setPriceOverride(name, null);
+            }
           })
           .subscribe();
 

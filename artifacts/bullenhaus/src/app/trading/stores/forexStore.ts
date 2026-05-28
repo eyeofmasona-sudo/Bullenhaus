@@ -95,6 +95,7 @@ interface ForexState {
   setSpread: (symbol: string, spread: number) => void;
   setTrend: (symbol: string, trend: ForexTrend) => void;
   togglePause: (symbol: string) => void;
+  setPaused: (symbol: string, isPaused: boolean) => void;
   resetMarket: (symbol: string) => void;
   tickSimulation: () => void;
 }
@@ -134,6 +135,10 @@ export const useForexStore = create<ForexState>((set, get) => ({
 
   togglePause: (symbol) => set(state => ({
     pairs: { ...state.pairs, [symbol]: { ...state.pairs[symbol], isPaused: !state.pairs[symbol].isPaused } }
+  })),
+
+  setPaused: (symbol, isPaused) => set(state => ({
+    pairs: { ...state.pairs, [symbol]: { ...state.pairs[symbol], isPaused } }
   })),
 
   resetMarket: (symbol) => set(state => ({
