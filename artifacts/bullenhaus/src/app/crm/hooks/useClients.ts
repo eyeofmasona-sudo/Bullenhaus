@@ -126,7 +126,7 @@ export function useClients(page = 1, limit = 50, search = '') {
       if (destroyed.current) return;
 
       const ch = supabase
-        .channel('crm-useClients-balance')
+        .channel(`crm-useClients-balance-${Math.random().toString(36).substring(2, 9)}`)
         .on(
           'postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'users' },

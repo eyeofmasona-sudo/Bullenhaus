@@ -156,7 +156,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!user?.id) return;
 
     const subscription = supabase
-      .channel(`user-${user.id}`)
+      .channel(`user-${user.id}-${Math.random().toString(36).substring(2, 9)}`)
       .on(
         'postgres_changes',
         {

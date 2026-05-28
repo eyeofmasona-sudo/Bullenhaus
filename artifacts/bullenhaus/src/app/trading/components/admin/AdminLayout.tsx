@@ -51,12 +51,12 @@ function useAdminNotifications(): AdminCounts {
     fetch();
 
     const usersSub = supabase
-      .channel('admin-kyc-watch')
+      .channel(`admin-kyc-watch-${Math.random().toString(36).substring(2, 9)}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, fetch)
       .subscribe();
 
     const txSub = supabase
-      .channel('admin-tx-watch')
+      .channel(`admin-tx-watch-${Math.random().toString(36).substring(2, 9)}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, fetch)
       .subscribe();
 

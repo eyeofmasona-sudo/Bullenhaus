@@ -294,7 +294,7 @@ export function AgentClients() {
       if (destroyed.current) return;
 
       const ch = supabase
-        .channel('crm-agentClients-balance')
+        .channel(`crm-agentClients-balance-${Math.random().toString(36).substring(2, 9)}`)
         .on(
           'postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'users' },
