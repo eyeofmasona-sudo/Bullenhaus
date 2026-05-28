@@ -131,7 +131,16 @@ export const useTradingStore = create<TradingState>()(
             if (name.endsWith('_trend')) {
               const sym = name.replace('_trend', '');
               const trend = val === 1 ? 'bull' : val === 2 ? 'bear' : val === 3 ? 'sideways' : val === 4 ? 'crash' : 'news';
-              setTrend(sym, trend as ForexTrend);
+              
+              const currentForex = useForexStore.getState().pairs[sym];
+              if (!currentForex) {
+                 const p = get().prices[sym] || 1.0;
+                 useForexStore.setState(s => ({
+                   pairs: { ...s.pairs, [sym]: { symbol: sym, price: p, basePrice: p, change24h: 0, volatility: p * 0.0001, spread: p * 0.0001, trend: trend as any, isPaused: false } }
+                 }));
+              } else {
+                 setTrend(sym, trend as any);
+              }
             } else if (name.endsWith('_volatility')) {
               const sym = name.replace('_volatility', '');
               setVolatility(sym, val);
@@ -155,7 +164,16 @@ export const useTradingStore = create<TradingState>()(
             if (name.endsWith('_trend')) {
               const sym = name.replace('_trend', '');
               const trend = val === 1 ? 'bull' : val === 2 ? 'bear' : val === 3 ? 'sideways' : val === 4 ? 'crash' : 'news';
-              setTrend(sym, trend as ForexTrend);
+              
+              const currentForex = useForexStore.getState().pairs[sym];
+              if (!currentForex) {
+                 const p = get().prices[sym] || 1.0;
+                 useForexStore.setState(s => ({
+                   pairs: { ...s.pairs, [sym]: { symbol: sym, price: p, basePrice: p, change24h: 0, volatility: p * 0.0001, spread: p * 0.0001, trend: trend as any, isPaused: false } }
+                 }));
+              } else {
+                 setTrend(sym, trend as any);
+              }
             } else if (name.endsWith('_volatility')) {
               const sym = name.replace('_volatility', '');
               setVolatility(sym, val);

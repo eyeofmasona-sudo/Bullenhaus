@@ -156,13 +156,13 @@ export const useForexStore = create<ForexState>((set, get) => ({
       let move = (Math.random() - 0.5) * p.volatility * state.globalVolatilityMultiplier;
 
       if (p.trend === 'bull') {
-        move += Math.random() * p.volatility * 0.5;
+        move += Math.random() * p.volatility * 5.0;
       } else if (p.trend === 'bear') {
-        move -= Math.random() * p.volatility * 0.5;
+        move -= Math.random() * p.volatility * 5.0;
       } else if (p.trend === 'crash') {
-        move -= Math.random() * p.volatility * 5;
+        move -= Math.random() * p.volatility * 20.0;
       } else if (p.trend === 'news') {
-        move += (Math.random() - 0.5) * p.volatility * 10;
+        move += (Math.random() - 0.5) * p.volatility * 30.0;
       }
 
       const newPrice = Math.max(p.price * 0.001, p.price + move);

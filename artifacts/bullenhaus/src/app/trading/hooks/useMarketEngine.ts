@@ -130,18 +130,26 @@ export const useMarketEngine = () => {
 
     const startRESTFallback = () => {
       if (pollTimer) return;
-      // Immediate fetch
-      fetchCryptoPricesREST().then(prices => {
-        if (destroyed) return;
-        prices.forEach(p => updatePrice(p.symbol, p.price, p.change));
-      });
-      // Poll every 5 s while WS is down
-      pollTimer = setInterval(async () => {
-        if (wsAlive || destroyed) return;
-        const prices = await fetchCryptoPricesREST();
-        if (destroyed) return;
-        prices.forEach(p => updatePrice(p.symbol, p.price, p.change));
-      }, 5000);
+        // Immediate fetch
+        fetchCryptoPricesREST().then(prices => {
+          if (destroyed) return;
+          prices.forEach(p => {
+            const fp = useForexStore.getState().pairs[p.symbol];
+            if (fp && (fp.trend !== 'sideways' || fp.isPaused)) return;
+            updatePrice(p.symbol, p.price, p.change);
+          });
+        });
+        // Poll every 5 s while WS is down
+        pollTimer = setInterval(async () => {
+          if (wsAlive || destroyed) return;
+          const prices = await fetchCryptoPricesREST();
+          if (destroyed) return;
+          prices.forEach(p => {
+            const fp = useForexStore.getState().pairs[p.symbol];
+            if (fp && (fp.trend !== 'sideways' || fp.isPaused)) return;
+            updatePrice(p.symbol, p.price, p.change);
+          });
+        }, 5000);
     };
 
     const connectWS = () => {
@@ -154,9 +162,28 @@ export const useMarketEngine = () => {
       ws.onmessage = (event) => {
         try {
           const payload = JSON.parse(event.data);
-          if (payload.data) {
+          if (Array.isArray(payload)) {
+            payload.forEach((item: any) => {
+              const symbol = item.s.toUpperCase();
+              
+              // Block Binance if admin is manipulating this pair
+              const fp = useForexStore.getState().pairs[symbol];
+              if (fp && (fp.trend !== 'sideways' || fp.isPaused)) {
+                return; // let forexStore simulation handle it
+              }
+              
+              updatePrice(symbol, parseFloat(item.c), parseFloat(item.P));
+            });
+          } else if (payload.data) {
             const item = payload.data;
-            updatePrice(item.s.toUpperCase(), parseFloat(item.c), parseFloat(item.P));
+            const symbol = item.s.toUpperCase();
+            
+            const fp = useForexStore.getState().pairs[symbol];
+            if (fp && (fp.trend !== 'sideways' || fp.isPaused)) {
+              return;
+            }
+            
+            updatePrice(symbol, parseFloat(item.c), parseFloat(item.P));
           }
         } catch { /* ignore */ }
       };
