@@ -52,7 +52,7 @@ interface TradingState {
   priceOverrides: Record<string, number>;
 
   // Actions
-  initPriceOverrideSync: () => Promise<void>;
+  initPriceOverrideSync: () => Promise<() => void>;
   setPositions: (positions: Position[]) => void;
   setOrders: (orders: Order[]) => void;
   setPriceOverride: (symbol: string, price: number | null) => void;
@@ -98,7 +98,7 @@ export const useTradingStore = create<TradingState>()(
         }
 
         // Subscribe to realtime changes on price_overrides
-        supabase
+        const channel = supabase
           .channel('price-overrides-sync')
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'price_overrides' }, (payload) => {
             const row = payload.new as { symbol: string; price: number };
@@ -113,6 +113,10 @@ export const useTradingStore = create<TradingState>()(
             get().setPriceOverride(row.symbol, null);
           })
           .subscribe();
+
+        return () => {
+          supabase.removeChannel(channel);
+        };
       },
 
       setPositions: (positions) => set({ positions }),

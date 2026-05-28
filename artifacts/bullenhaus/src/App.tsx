@@ -164,7 +164,7 @@ const AppContent = () => {
              ========================================== */}
           <Route element={<AuthGuard />}>
             <Route element={<RoleGuard allowedRoles={['client', 'admin', 'trade_admin']} />}>
-              <Route path="/trade" element={<TradeAppWrapper />}>
+              <Route path="/trade" element={<ErrorBoundary><TradeAppWrapper /></ErrorBoundary>}>
                 <Route index element={<Navigate to="dashboard" replace />} />
                 <Route path="dashboard" element={<TradeDashboard />} />
                 <Route path="markets" element={<TradeMarkets />} />
@@ -186,7 +186,7 @@ const AppContent = () => {
              ========================================== */}
           <Route element={<AuthGuard />}>
             <Route element={<RoleGuard allowedRoles={['agent', 'manager', 'director', 'admin', 'crm_admin']} />}>
-              <Route path="/crm" element={<CRMAppWrapper />}>
+              <Route path="/crm" element={<ErrorBoundary><CRMAppWrapper /></ErrorBoundary>}>
                 <Route index element={<CRMRedirect />} />
                 <Route path="dashboard" element={<CRMDashboard />} />
                 <Route path="manager" element={<CRMManagerDashboard />} />
@@ -209,7 +209,7 @@ const AppContent = () => {
              ========================================== */}
           <Route element={<AuthGuard />}>
             <Route element={<RoleGuard allowedRoles={['admin', 'trade_admin']} />}>
-              <Route path="/admin" element={<TradeAdminLayout />}>
+              <Route path="/admin" element={<ErrorBoundary><TradeAdminLayout /></ErrorBoundary>}>
                 <Route index element={<Navigate to="dashboard" replace />} />
                 <Route path="dashboard" element={<TradeAdminOverview />} />
                 <Route path="users" element={<TradeAdminUsers />} />
