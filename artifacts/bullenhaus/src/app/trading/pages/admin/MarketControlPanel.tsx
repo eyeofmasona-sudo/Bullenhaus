@@ -52,10 +52,7 @@ export const MarketControlPanel = () => {
   const [pairPrices, setPairPrices] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState<'Crypto' | 'Forex' | 'Metals'>('Crypto');
 
-  const validSymbols = new Set(ASSETS[activeTab]);
-  const allSymbols = Array.from(new Set([...Object.keys(pairs), ...Object.keys(prices)]))
-    .filter(sym => validSymbols.has(sym))
-    .sort();
+  const allSymbols = [...ASSETS[activeTab]].sort();
 
   // Global override (any symbol including crypto)
   const handleSetGlobalOverride = async () => {
@@ -171,10 +168,10 @@ export const MarketControlPanel = () => {
 
       <hr className="border-white/5" />
 
-      {/* ── Forex / Metals Simulation Engine ── */}
+      {/* ── Crypto, Forex & Metals Simulation Engine ── */}
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2">
-          <Zap size={18} className="text-slate-400" /> Forex & Metals Simulation Engine
+          <Zap size={18} className="text-slate-400" /> Crypto, Forex & Metals Simulation Engine
         </h3>
         <span className="text-[9px] text-slate-500 uppercase tracking-widest">
           <Lock size={9} className="inline mr-1" />Pinned pairs are frozen — simulation + API won't override
@@ -209,6 +206,14 @@ export const MarketControlPanel = () => {
             trend: 'sideways' as ForexTrend,
             isPaused: false
           };
+          
+          const ensureInit = () => {
+            if (!pairs[sym]) {
+              useForexStore.getState().pinPrice(sym, prices[sym] || 1.0);
+              useForexStore.getState().setPaused(sym, false);
+            }
+          };
+
           const isPinned = priceOverrides[sym] !== undefined;
           const vRange = volRange(sym);
           const sRange = spreadRange(sym);
@@ -273,9 +278,10 @@ export const MarketControlPanel = () => {
                     </button>
                     <button
                       onClick={async () => {
+                        ensureInit();
+                        const nextPaused = !pair.isPaused;
+                        togglePause(pair.symbol);
                         try {
-                          const nextPaused = !pair.isPaused;
-                          togglePause(pair.symbol);
                           await supabase.from('price_overrides').upsert({ symbol: `${pair.symbol}_isPaused`, price: nextPaused ? 1 : 0 }, { onConflict: 'symbol' });
                           toast.success(`${pair.symbol} ${nextPaused ? 'paused' : 'resumed'}`);
                         } catch {
@@ -310,6 +316,7 @@ export const MarketControlPanel = () => {
                     />
                     <button
                       onClick={async () => {
+                        ensureInit();
                         const val = pairPrices[pair.symbol];
                         if (!val) { toast.error('Please enter a valid price'); return; }
                         try {
@@ -365,7 +372,7 @@ export const MarketControlPanel = () => {
                       max={vRange.max}
                       step={vRange.step}
                       value={Math.min(pair.volatility, vRange.max)}
-                      onChange={(e) => setVolatility(pair.symbol, parseFloat(e.target.value))}
+                      onChange={(e) => { ensureInit(); setVolatility(pair.symbol, parseFloat(e.target.value)); }}
                       onMouseUp={async (e) => {
                         try {
                           const val = parseFloat((e.target as HTMLInputElement).value);
@@ -399,7 +406,7 @@ export const MarketControlPanel = () => {
                       max={sRange.max}
                       step={sRange.step}
                       value={Math.min(pair.spread, sRange.max)}
-                      onChange={(e) => setSpread(pair.symbol, parseFloat(e.target.value))}
+                      onChange={(e) => { ensureInit(); setSpread(pair.symbol, parseFloat(e.target.value)); }}
                       onMouseUp={async (e) => {
                         try {
                           const val = parseFloat((e.target as HTMLInputElement).value);
@@ -442,6 +449,7 @@ export const MarketControlPanel = () => {
                         key={t.id}
                         disabled={isPinned}
                         onClick={async () => {
+                          ensureInit();
                           if (t.id === 'crash') {
                             if (!window.confirm('Trigger Flash Crash for ' + pair.symbol + '?')) return;
                           }
