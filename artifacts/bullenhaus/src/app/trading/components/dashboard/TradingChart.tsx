@@ -474,18 +474,21 @@ export const TradingChart: React.FC = () => {
 
       let lastPrice = curPrice;
       unsubRef.current = useTradingStore.subscribe((state) => {
-        const newPrice = state.prices[currentPair];
-        if (!newPrice || newPrice === lastPrice) return;
-        lastPrice = newPrice;
-        const now = Math.floor(Date.now() / 1000);
-        const candleTime = now - (now % tfSeconds);
-        candlestick.update({
-          time: candleTime as any,
-          open: newPrice,
-          high: newPrice * 1.0001,
-          low: newPrice * 0.9999,
-          close: newPrice,
-        });
+          const newPrice = state.prices[currentPair];
+          if (!newPrice || newPrice === lastPrice) return;
+          
+          const prevPrice = lastPrice;
+          lastPrice = newPrice;
+          
+          const now = Math.floor(Date.now() / 1000);
+          const candleTime = now - (now % tfSeconds);
+          candlestick.update({
+            time: candleTime as any,
+            open: prevPrice,
+            high: Math.max(prevPrice, newPrice) * 1.0001,
+            low: Math.min(prevPrice, newPrice) * 0.9999,
+            close: newPrice,
+          });
       });
     } else {
       // Crypto — fetch real Binance history
@@ -566,7 +569,7 @@ export const TradingChart: React.FC = () => {
               ws.onmessage = (event) => {
                 if (cancelled || !seriesRef.current) return;
                 const fp = useForexStore.getState().pairs[currentPair];
-                if (fp && fp.trend !== 'sideways') return;
+                if (fp && (fp.trend !== 'sideways' || fp.isPaused)) return;
 
                 const msg = JSON.parse(event.data);
                 if (msg?.k) {
@@ -587,19 +590,21 @@ export const TradingChart: React.FC = () => {
             let lastCryptoPrice = fallbackPrice;
             unsubRef.current = useTradingStore.subscribe((state) => {
               const fp = useForexStore.getState().pairs[currentPair];
-              if (!fp || fp.trend === 'sideways') return;
+              if (!fp || (fp.trend === 'sideways' && !fp.isPaused)) return;
               
               const newPrice = state.prices[currentPair];
               if (!newPrice || newPrice === lastCryptoPrice) return;
+              
+              const prevPrice = lastCryptoPrice;
               lastCryptoPrice = newPrice;
               
               const now = Math.floor(Date.now() / 1000);
               const candleTime = now - (now % tfSeconds);
               candlestick.update({
                 time: candleTime as any,
-                open: newPrice,
-                high: newPrice * 1.0001,
-                low: newPrice * 0.9999,
+                open: prevPrice,
+                high: Math.max(prevPrice, newPrice) * 1.0001,
+                low: Math.min(prevPrice, newPrice) * 0.9999,
                 close: newPrice
               });
             });
