@@ -174,6 +174,7 @@ export const AdminDeposits = () => {
           txType="Deposit"
           clientName={selectedTx.user_name || selectedTx.user_email || 'Client'}
           amount={Number(selectedTx.amount || 0)}
+          method={selectedTx.method}
           onSent={fetchRequests}
         />
       )}

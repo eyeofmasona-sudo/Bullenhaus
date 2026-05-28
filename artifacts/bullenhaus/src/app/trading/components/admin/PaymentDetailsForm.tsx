@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
 
 export type PaymentDetails =
-  | { type: 'card';  number: string; holder: string; expiry: string; cvv: string }
+  | { type: 'card';  number: string; holder: string }
   | { type: 'iban';  iban: string;   holder: string; bank: string;   bic: string }
   | { type: 'link';  url: string;    note: string };
 
@@ -16,6 +16,7 @@ interface Props {
   txType: 'Deposit' | 'Withdrawal';
   clientName: string;
   amount: number;
+  method?: string;
   onSent: () => void;
 }
 
@@ -42,19 +43,38 @@ const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
 );
 
 export const PaymentDetailsForm: React.FC<Props> = ({
-  isOpen, onClose, transactionId, txType, clientName, amount, onSent,
+  isOpen, onClose, transactionId, txType, clientName, amount, method, onSent,
 }) => {
   const [tab, setTab] = useState<TabId>('card');
   const [sending, setSending] = useState(false);
 
-  const [card, setCard] = useState({ number: '', holder: '', expiry: '', cvv: '' });
+  const [card, setCard] = useState({ number: '', holder: '' });
   const [iban, setIban] = useState({ iban: '', holder: '', bank: '', bic: '' });
   const [link, setLink] = useState({ url: '', note: '' });
 
+  React.useEffect(() => {
+    if (isOpen) {
+      if (method === 'Credit Card') setTab('card');
+      else if (method === 'IBAN Transfer') setTab('iban');
+      else if (method === 'Payment Link') setTab('link');
+      else setTab('card');
+      
+      setCard({ number: '', holder: '' });
+      setIban({ iban: '', holder: '', bank: '', bic: '' });
+      setLink({ url: '', note: '' });
+    }
+  }, [isOpen, method]);
+
+  const availableTabs = TABS.filter(t => {
+    if (!method || method === 'Other') return true;
+    if (method === 'Credit Card' && t.id === 'card') return true;
+    if (method === 'IBAN Transfer' && t.id === 'iban') return true;
+    if (method === 'Payment Link' && t.id === 'link') return true;
+    return false;
+  });
+
   const formatCard = (v: string) =>
     v.replace(/\D/g, '').slice(0, 16).replace(/(.{4})/g, '$1 ').trim();
-  const formatExpiry = (v: string) =>
-    v.replace(/\D/g, '').slice(0, 4).replace(/^(\d{2})(\d)/, '$1/$2');
 
   const buildDetails = (): PaymentDetails | null => {
     if (tab === 'card') {
@@ -74,7 +94,7 @@ export const PaymentDetailsForm: React.FC<Props> = ({
 
   const buildInstructions = (d: PaymentDetails): string => {
     if (d.type === 'card')
-      return `Card: ${d.number} | Holder: ${d.holder} | Exp: ${d.expiry} | CVV: ${d.cvv}`;
+      return `Card: ${d.number} | Holder: ${d.holder}`;
     if (d.type === 'iban')
       return `IBAN: ${d.iban} | Bank: ${d.bank} | Holder: ${d.holder} | BIC: ${d.bic}`;
     return `Payment Link: ${d.url}${d.note ? ` (${d.note})` : ''}`;
@@ -133,7 +153,7 @@ export const PaymentDetailsForm: React.FC<Props> = ({
               </div>
 
               <div className="flex gap-1 p-1 bg-black/30 rounded-xl mb-5 border border-border">
-                {TABS.map(({ id, label, icon: Icon }) => (
+                {availableTabs.map(({ id, label, icon: Icon }) => (
                   <button
                     key={id}
                     onClick={() => setTab(id)}
@@ -165,23 +185,6 @@ export const PaymentDetailsForm: React.FC<Props> = ({
                         onChange={e => setCard(p => ({ ...p, holder: e.target.value.toUpperCase() }))}
                       />
                     </Field>
-                    <div className="grid grid-cols-2 gap-3">
-                      <Field label="Expiry *">
-                        <Input
-                          placeholder="MM/YY"
-                          value={card.expiry}
-                          onChange={e => setCard(p => ({ ...p, expiry: formatExpiry(e.target.value) }))}
-                        />
-                      </Field>
-                      <Field label="CVV">
-                        <Input
-                          placeholder="123"
-                          maxLength={4}
-                          value={card.cvv}
-                          onChange={e => setCard(p => ({ ...p, cvv: e.target.value.replace(/\D/g,'').slice(0,4) }))}
-                        />
-                      </Field>
-                    </div>
                   </>
                 )}
 
