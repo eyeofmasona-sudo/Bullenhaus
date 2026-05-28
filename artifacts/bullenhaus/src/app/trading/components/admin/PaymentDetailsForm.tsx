@@ -27,6 +27,20 @@ const TABS = [
 
 type TabId = 'card' | 'iban' | 'link';
 
+const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <div>
+    <label className="block text-[10px] font-bold uppercase tracking-widest text-text-dim mb-1.5">{label}</label>
+    {children}
+  </div>
+);
+
+const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
+  <input
+    {...props}
+    className="w-full bg-black/40 border border-border rounded-lg px-3 py-2.5 text-sm text-text placeholder:text-text-dim focus:outline-none focus:border-accent-primary/50 transition-colors"
+  />
+);
+
 export const PaymentDetailsForm: React.FC<Props> = ({
   isOpen, onClose, transactionId, txType, clientName, amount, onSent,
 }) => {
@@ -86,19 +100,7 @@ export const PaymentDetailsForm: React.FC<Props> = ({
     }
   };
 
-  const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-    <div>
-      <label className="block text-[10px] font-bold uppercase tracking-widest text-text-dim mb-1.5">{label}</label>
-      {children}
-    </div>
-  );
 
-  const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
-    <input
-      {...props}
-      className="w-full bg-black/40 border border-border rounded-lg px-3 py-2.5 text-sm text-text placeholder:text-text-dim focus:outline-none focus:border-accent-primary/50 transition-colors"
-    />
-  );
 
   return (
     <AnimatePresence>
