@@ -126,6 +126,8 @@ export const useTradingStore = create<TradingState>()(
                 setPaused(sym, val === 1);
               } else {
                 overrides[name] = val;
+                initCryptoPair(name);
+                useForexStore.getState().pinPrice(name, val);
               }
             });
             set({ priceOverrides: overrides });
@@ -172,6 +174,8 @@ export const useTradingStore = create<TradingState>()(
               initCryptoPair(sym);
               setPaused(sym, val === 1);
             } else {
+              initCryptoPair(name);
+              useForexStore.getState().pinPrice(name, val);
               get().setPriceOverride(name, val);
             }
           })
@@ -210,6 +214,8 @@ export const useTradingStore = create<TradingState>()(
               initCryptoPair(sym);
               setPaused(sym, val === 1);
             } else {
+              initCryptoPair(name);
+              useForexStore.getState().pinPrice(name, val);
               get().setPriceOverride(name, val);
             }
           })
@@ -233,13 +239,12 @@ export const useTradingStore = create<TradingState>()(
               resetMarket(sym);
             } else if (name.endsWith('_isPaused')) {
               const sym = name.replace('_isPaused', '');
-              useForexStore.setState(state => ({
-                pairs: { ...state.pairs, [sym]: { ...state.pairs[sym], isPaused: false } }
-              }));
+              useForexStore.getState().setPaused(sym, false);
             } else {
               get().setPriceOverride(name, null);
               const fp = useForexStore.getState().pairs[name];
               if (fp) {
+                useForexStore.getState().setPaused(name, false);
                 get().updatePrice(name, fp.price, fp.change24h);
               }
             }

@@ -209,11 +209,11 @@ export const AdvancedOrderPanel: React.FC = () => {
         <div className="p-4 bg-[#111] border border-white/10 rounded-xl flex items-center justify-between mb-6">
           <div className="flex items-center gap-3 w-full">
              <div className="w-10 h-10 rounded-xl bg-[#222] flex items-center justify-center border border-white/10 shrink-0 text-[10px] font-bold text-white uppercase tracking-widest break-all px-1 text-center leading-none">
-                {currentPair.substring(0, 3)}
+                {currentPair?.substring(0, 3)}
              </div>
              <div className="flex-1 w-full relative group">
                 <div className="w-full bg-transparent text-sm font-bold text-white outline-none p-0 m-0">
-                  {currentPair.endsWith('USDT') ? currentPair.replace('USDT', ' / USDT') : currentPair.endsWith('USD') ? currentPair.replace('USD', ' / USD') : currentPair}
+                  {currentPair?.endsWith('USDT') ? currentPair.replace('USDT', ' / USDT') : currentPair?.endsWith('USD') ? currentPair.replace('USD', ' / USD') : currentPair}
                 </div>
                 <div className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-1">{t('perpetual')}</div>
              </div>

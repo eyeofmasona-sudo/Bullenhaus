@@ -158,7 +158,7 @@ export const PositionsAndOrdersPanel = () => {
                       <td className="py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-lg bg-[#111] border border-white/10 flex items-center justify-center font-bold text-white text-[10px]">
-                                {pos.symbol.substring(0, 3)}
+                                {pos.symbol?.substring(0, 3)}
                             </div>
                             <div>
                               <p className="font-bold text-white text-xs leading-none mb-1 group-hover:text-accent-primary transition-colors">{pos.symbol}</p>
@@ -232,7 +232,7 @@ export const PositionsAndOrdersPanel = () => {
                       <td className="py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-lg bg-[#111] border border-white/10 flex items-center justify-center font-bold text-white text-[10px]">
-                                {order.symbol.substring(0, 3)}
+                                {order.symbol?.substring(0, 3)}
                             </div>
                             <div>
                               <p className="font-bold text-white text-xs leading-none mb-1 group-hover:text-accent-primary transition-colors">{order.symbol}</p>

@@ -233,7 +233,7 @@ export const MarketControlPanel = () => {
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <h4 className="text-xl font-bold text-white tracking-tight">
-                      {pair.symbol.substring(0, 3)} / {pair.symbol.substring(3)}
+                      {pair.symbol?.substring(0, 3)} / {pair.symbol?.substring(3)}
                     </h4>
                     {isPinned && (
                       <span className="text-[9px] font-bold text-accent-primary bg-accent-primary/10 border border-accent-primary/30 px-1.5 py-0.5 rounded uppercase tracking-widest flex items-center gap-1">

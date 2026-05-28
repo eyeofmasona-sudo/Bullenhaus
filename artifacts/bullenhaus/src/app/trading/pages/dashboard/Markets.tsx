@@ -12,14 +12,14 @@ const MarketRow = React.memo(({ symbol, handleTrade, t }: { symbol: string, hand
   const spread = spreadParams != null ? spreadParams : null;
 
   const isPositive = change != null && change >= 0;
-  const displaySym = symbol.includes('USDT') ? symbol.replace('USDT', ' / USDT') : `${symbol.substring(0,3)} / ${symbol.substring(3)}`;
+  const displaySym = symbol?.includes('USDT') ? symbol.replace('USDT', ' / USDT') : `${symbol?.substring(0,3)} / ${symbol?.substring(3)}`;
 
   return (
     <tr className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
       <td className="px-6 py-4">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-white/10 flex items-center justify-center font-bold text-white text-[10px]">
-            {symbol.substring(0, 3)}
+            {symbol?.substring(0, 3)}
           </div>
           <div>
             <p className="font-bold text-white group-hover:text-accent-primary transition-colors">{displaySym}</p>

@@ -18,7 +18,7 @@ export const Watchlist = () => {
     const c = priceChanges[storeKey] || priceChanges[sym];
     const isCrypto = sym.endsWith('USDT');
     // Format presentation symbol
-    const displaySym = isCrypto ? sym.replace('USDT', ' / USDT') : `${sym.substring(0,3)} / ${sym.substring(3)}`;
+    const displaySym = isCrypto ? sym.replace('USDT', ' / USDT') : `${sym?.substring(0,3)} / ${sym?.substring(3)}`;
     
     return {
       id: sym,
@@ -77,7 +77,7 @@ export const MarketMovers = () => {
   const moversList = Object.entries(priceChanges).map(([symbol, change]) => {
     const isCrypto = symbol.toLowerCase().endsWith('usdt');
     const upperSym = symbol.toUpperCase();
-    const displaySym = isCrypto ? upperSym.replace('USDT', ' / USDT') : `${upperSym.substring(0,3)} / ${upperSym.substring(3)}`;
+    const displaySym = isCrypto ? upperSym.replace('USDT', ' / USDT') : `${upperSym?.substring(0,3)} / ${upperSym?.substring(3)}`;
     const currPrice = prices[symbol];
     
     return {
