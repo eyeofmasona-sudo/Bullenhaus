@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Download, Upload, ArrowRight, CheckCircle2, Lock, Loader2 } from 'lucide-react';
+import { X, Download, Upload, ArrowRight, CheckCircle2, Lock, Loader2, Clock } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useTradingStore } from '../../stores/tradingStore';
 import { useTransactionStore, TxMethod, TX_METHODS } from '../../stores/transactionStore';
@@ -27,6 +27,8 @@ export const TransferModal: React.FC<{
   const [serverInstructions, setServerInstructions] = useState('');
   const [serverStatus, setServerStatus]         = useState<string | null>(null);
   const [paymentDetails, setPaymentDetails]     = useState<PaymentDetails | null>(null);
+  const [updatedAt, setUpdatedAt]               = useState<string | null>(null);
+  const [timeLeft, setTimeLeft]                 = useState<number | null>(null);
 
   const { wallet }                = useTradingStore();
   const { addRequest, requests }  = useTransactionStore();
@@ -42,7 +44,57 @@ export const TransferModal: React.FC<{
   const displayRequest  = serverRequest || activeRequest;
   const displayInstructions = serverRequest?.instructions || activeRequest?.instructions || serverInstructions;
 
-  // Poll Supabase every 5 s for status / instructions / payment_details
+  // Load existing pending transaction on mount/open
+  useEffect(() => {
+    if (!isOpen || !user) return;
+
+    const checkPendingTransaction = async () => {
+      try {
+        const { data: pendingTx } = await supabase
+          .from('transactions')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('type', isDeposit ? 'Deposit' : 'Withdrawal')
+          .eq('status', 'Pending')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (pendingTx) {
+          const hasDetails = Boolean(pendingTx.payment_details || pendingTx.instructions);
+          if (hasDetails && pendingTx.updated_at) {
+            const expiryTime = new Date(pendingTx.updated_at).getTime() + 15 * 60 * 1000;
+            const now = new Date().getTime();
+            if (now >= expiryTime) {
+              // Expired! Attempt to reject it
+              await supabase
+                .from('transactions')
+                .update({ status: 'Rejected' })
+                .eq('id', pendingTx.id);
+              return;
+            }
+          }
+          
+          // Load active transaction
+          setServerRequestId(pendingTx.id);
+          setServerRequest(pendingTx);
+          setServerStatus(pendingTx.status);
+          setAmount(pendingTx.amount.toString());
+          setMethod(pendingTx.method);
+          setServerInstructions(pendingTx.instructions || '');
+          setPaymentDetails(pendingTx.payment_details);
+          setUpdatedAt(pendingTx.updated_at);
+          setStep(2);
+        }
+      } catch (err) {
+        console.warn('[TransferModal] Error checking pending transaction:', err);
+      }
+    };
+
+    checkPendingTransaction();
+  }, [isOpen, user, isDeposit]);
+
+  // Poll Supabase every 5 s for status / instructions / payment_details / updated_at
   useEffect(() => {
     if (step !== 2 || !serverRequestId) return;
     const isFinal = serverStatus === 'Completed' || serverStatus === 'Rejected';
@@ -51,19 +103,72 @@ export const TransferModal: React.FC<{
     const poll = async () => {
       const { data } = await supabase
         .from('transactions')
-        .select('status, instructions, payment_details')
+        .select('status, instructions, payment_details, updated_at')
         .eq('id', serverRequestId)
         .single();
       if (!data) return;
       if (data.instructions)    setServerInstructions(data.instructions);
       if (data.status)          setServerStatus(data.status);
       if (data.payment_details) setPaymentDetails(data.payment_details as PaymentDetails);
+      if (data.updated_at)      setUpdatedAt(data.updated_at);
     };
 
     poll();
     const interval = window.setInterval(poll, 5000);
     return () => window.clearInterval(interval);
   }, [step, serverRequestId, serverStatus]);
+
+  // Countdown timer for 15-minute expiration
+  useEffect(() => {
+    const isFinal = serverStatus === 'Completed' || serverStatus === 'Rejected';
+    if (step !== 2 || !updatedAt || (!paymentDetails && !serverInstructions) || isFinal) {
+      setTimeLeft(null);
+      return;
+    }
+
+    const calculateTimeLeft = async () => {
+      const expiryTime = new Date(updatedAt).getTime() + 15 * 60 * 1000;
+      const now = new Date().getTime();
+      const difference = expiryTime - now;
+
+      if (difference <= 0) {
+        setTimeLeft(0);
+        toast.error('The payment window (15 minutes) has expired. The transaction has been canceled.');
+        try {
+          if (serverRequestId) {
+            await supabase
+              .from('transactions')
+              .update({ status: 'Rejected' })
+              .eq('id', serverRequestId);
+          }
+        } catch (err) {
+          console.warn('[TransferModal] Failed to reject expired transaction:', err);
+        }
+        // Reset modal state
+        setStep(1);
+        setAmount('');
+        setRequestId(null);
+        setServerRequestId(null);
+        setServerRequest(null);
+        setServerInstructions('');
+        setServerStatus(null);
+        setPaymentDetails(null);
+        setUpdatedAt(null);
+      } else {
+        setTimeLeft(Math.floor(difference / 1000));
+      }
+    };
+
+    calculateTimeLeft();
+    const timer = window.setInterval(calculateTimeLeft, 1000);
+    return () => window.clearInterval(timer);
+  }, [step, updatedAt, paymentDetails, serverInstructions, serverRequestId, serverStatus]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const handleAction = async () => {
     if (kycStatus !== 'VERIFIED') { toast.error('KYC Verification required'); return; }
@@ -75,14 +180,26 @@ export const TransferModal: React.FC<{
     if (isDeposit && user) {
       const { data: pendingDeposits } = await supabase
         .from('transactions')
-        .select('id')
+        .select('*')
         .eq('user_id', user.id)
         .eq('type', 'Deposit')
-        .eq('status', 'Pending')
-        .limit(1);
+        .eq('status', 'Pending');
+
       if (pendingDeposits && pendingDeposits.length > 0) {
-        toast.error('You already have a pending deposit. Please wait for it to be approved or rejected before submitting a new one.');
-        return;
+        // Filter out expired ones
+        const activePending = pendingDeposits.filter(tx => {
+          const hasDetails = Boolean(tx.payment_details || tx.instructions);
+          if (hasDetails && tx.updated_at) {
+            const expiryTime = new Date(tx.updated_at).getTime() + 15 * 60 * 1000;
+            return new Date().getTime() < expiryTime;
+          }
+          return true; // Still waiting for operator
+        });
+
+        if (activePending.length > 0) {
+          toast.error('You already have a pending deposit. Please wait for it to be approved or rejected before submitting a new one.');
+          return;
+        }
       }
     }
 
@@ -119,6 +236,7 @@ export const TransferModal: React.FC<{
         setServerRequestId(txRow?.id   || null);
         setServerRequest(txRow         || null);
         setServerStatus('Pending');
+        setUpdatedAt(txRow?.updated_at || new Date().toISOString());
       } catch (err) {
         console.warn('[TransferModal] Could not persist to Supabase:', err);
       }
@@ -142,6 +260,8 @@ export const TransferModal: React.FC<{
     setServerInstructions('');
     setServerStatus(null);
     setPaymentDetails(null);
+    setUpdatedAt(null);
+    setTimeLeft(null);
     onClose();
   };
 
@@ -285,6 +405,17 @@ export const TransferModal: React.FC<{
                     }`}>{serverStatus || displayRequest.status}</span>
                   </div>
                 </div>
+
+                {/* Countdown Timer */}
+                {timeLeft !== null && (
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-400 font-mono text-xs animate-in fade-in duration-300">
+                    <div className="flex items-center gap-2">
+                      <Clock size={15} className="animate-pulse text-orange-500" />
+                      <span className="font-sans font-medium">Payment window remaining</span>
+                    </div>
+                    <span className="font-bold text-sm tracking-wider text-orange-500">{formatTime(timeLeft)}</span>
+                  </div>
+                )}
 
                 {/* Payment details or waiting state */}
                 {paymentDetails ? (
