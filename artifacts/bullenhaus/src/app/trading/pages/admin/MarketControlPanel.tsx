@@ -50,8 +50,9 @@ export const MarketControlPanel = () => {
   const [globalSymbol, setGlobalSymbol] = useState('');
   const [globalPrice, setGlobalPrice] = useState('');
   const [pairPrices, setPairPrices] = useState<Record<string, string>>({});
+  const [activeTab, setActiveTab] = useState<'Crypto' | 'Forex' | 'Metals'>('Crypto');
 
-  const validSymbols = new Set(Object.values(ASSETS).flat());
+  const validSymbols = new Set(ASSETS[activeTab]);
   const allSymbols = Array.from(new Set([...Object.keys(pairs), ...Object.keys(prices)]))
     .filter(sym => validSymbols.has(sym))
     .sort();
@@ -177,10 +178,26 @@ export const MarketControlPanel = () => {
         </h3>
         <span className="text-[9px] text-slate-500 uppercase tracking-widest">
           <Lock size={9} className="inline mr-1" />Pinned pairs are frozen — simulation + API won't override
-        </span>
-      </div>
+          </span>
+        </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div className="flex items-center gap-2 mb-6">
+          {(['Crypto', 'Forex', 'Metals'] as const).map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-6 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${
+                activeTab === tab
+                  ? 'bg-accent-primary text-black shadow-neon-gold'
+                  : 'bg-white/5 text-slate-500 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+  
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {allSymbols.map(sym => {
           const pair = pairs[sym] || {
             symbol: sym,
