@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase } from '../lib/supabase';
-import { toast } from 'sonner';
 
 export type PositionType = 'Long' | 'Short';
 export type OrderType = 'Market' | 'Limit' | 'Stop';
@@ -50,9 +49,9 @@ interface TradingState {
   prices: Record<string, number>;
   priceChanges: Record<string, number>;
   priceOverrides: Record<string, number>;
-
+  
   // Actions
-  initPriceOverrideSync: () => Promise<() => void>;
+  fetchPositionsAndOrders: () => Promise<void>;
   setPositions: (positions: Position[]) => void;
   setOrders: (orders: Order[]) => void;
   setPriceOverride: (symbol: string, price: number | null) => void;
@@ -82,41 +81,67 @@ export const useTradingStore = create<TradingState>()(
       priceChanges: {},
       priceOverrides: {},
 
-      initPriceOverrideSync: async () => {
-        // Fetch all existing admin price overrides and apply them locally
+      fetchPositionsAndOrders: async () => {
         try {
-          const { data } = await supabase.from('price_overrides').select('symbol, price');
-          if (data && data.length > 0) {
-            const overrides: Record<string, number> = {};
-            data.forEach((row: { symbol: string; price: number }) => {
-              overrides[row.symbol] = Number(row.price);
-            });
-            set({ priceOverrides: overrides });
+          const session = (await supabase.auth.getSession()).data.session;
+          if (!session?.user?.id) return;
+          
+          const [posRes, ordRes] = await Promise.all([
+            supabase
+              .from('positions')
+              .select('*')
+              .eq('user_id', session.user.id),
+            supabase
+              .from('orders')
+              .select('*')
+              .eq('user_id', session.user.id)
+          ]);
+
+          if (posRes.error) throw posRes.error;
+          if (ordRes.error) throw ordRes.error;
+
+          if (posRes.data) {
+            const dbPositions = posRes.data.map(p => ({
+              id: p.id,
+              symbol: p.symbol,
+              type: p.type as PositionType,
+              entryPrice: Number(p.entry_price),
+              size: Number(p.size),
+              leverage: Number(p.leverage),
+              marginType: p.margin_type as MarginType,
+              margin: Number(p.margin),
+              liquidationPrice: Number(p.liquidation_price),
+              stopLoss: p.stop_loss ? Number(p.stop_loss) : null,
+              takeProfit: p.take_profit ? Number(p.take_profit) : null,
+              unrealizedPnL: Number(p.unrealized_pnl),
+              status: p.status as 'open' | 'closed',
+            }));
+            const dbIds = new Set(dbPositions.map(p => p.id));
+            const localOnly = get().positions.filter(p => !dbIds.has(p.id));
+            set({ positions: [...dbPositions, ...localOnly] });
           }
-        } catch {
-          // table may not exist yet — silently skip
+
+          if (ordRes.data) {
+            const dbOrders = ordRes.data.map(o => ({
+              id: o.id,
+              symbol: o.symbol,
+              type: o.type as OrderType,
+              positionType: o.position_type as PositionType,
+              price: Number(o.price),
+              size: Number(o.size),
+              leverage: Number(o.leverage),
+              marginType: o.margin_type as MarginType,
+              stopLoss: o.stop_loss ? Number(o.stop_loss) : null,
+              takeProfit: o.take_profit ? Number(o.take_profit) : null,
+              status: o.status as 'pending' | 'filled' | 'canceled',
+            }));
+            const dbIds = new Set(dbOrders.map(o => o.id));
+            const localOnly = get().orders.filter(o => !dbIds.has(o.id));
+            set({ orders: [...dbOrders, ...localOnly] });
+          }
+        } catch (err) {
+          console.error('Failed to load positions/orders:', err);
         }
-
-        // Subscribe to realtime changes on price_overrides
-        const channel = supabase
-          .channel('price-overrides-sync')
-          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'price_overrides' }, (payload) => {
-            const row = payload.new as { symbol: string; price: number };
-            get().setPriceOverride(row.symbol, Number(row.price));
-          })
-          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'price_overrides' }, (payload) => {
-            const row = payload.new as { symbol: string; price: number };
-            get().setPriceOverride(row.symbol, Number(row.price));
-          })
-          .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'price_overrides' }, (payload) => {
-            const row = payload.old as { symbol: string };
-            get().setPriceOverride(row.symbol, null);
-          })
-          .subscribe();
-
-        return () => {
-          supabase.removeChannel(channel);
-        };
       },
 
       setPositions: (positions) => set({ positions }),
@@ -164,6 +189,7 @@ export const useTradingStore = create<TradingState>()(
         }
 
         const newId = crypto.randomUUID();
+        const newOrderId = crypto.randomUUID();
 
         set((state) => {
           const newPos: Position = {
@@ -172,9 +198,24 @@ export const useTradingStore = create<TradingState>()(
             unrealizedPnL: 0,
             status: 'open',
           };
+
+          const newOrder: Order = {
+            id: newOrderId,
+            symbol: posData.symbol,
+            type: 'Market',
+            positionType: posData.type,
+            price: posData.entryPrice,
+            size: posData.size,
+            leverage: posData.leverage,
+            marginType: posData.marginType,
+            stopLoss: posData.stopLoss,
+            takeProfit: posData.takeProfit,
+            status: 'filled',
+          };
           
           return {
             positions: [...state.positions, newPos],
+            orders: [...state.orders, newOrder],
             wallet: {
               ...state.wallet,
               marginUsed: state.wallet.marginUsed + posData.margin,
@@ -188,8 +229,23 @@ export const useTradingStore = create<TradingState>()(
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
-            // 1. Insert position record
-            await supabase.from('positions').insert({
+            const { error: ordErr } = await supabase.from('orders').insert({
+              id: newOrderId,
+              user_id: user.id,
+              symbol: posData.symbol,
+              type: 'Market',
+              position_type: posData.type,
+              price: posData.entryPrice,
+              size: posData.size,
+              leverage: posData.leverage,
+              margin_type: posData.marginType,
+              stop_loss: posData.stopLoss,
+              take_profit: posData.takeProfit,
+              status: 'filled',
+            });
+            if (ordErr) throw ordErr;
+
+            const { error: posErr } = await supabase.from('positions').insert({
               id: newId,
               user_id: user.id,
               symbol: posData.symbol,
@@ -204,9 +260,9 @@ export const useTradingStore = create<TradingState>()(
               take_profit: posData.takeProfit,
               status: 'open',
             });
+            if (posErr) throw posErr;
 
-            // 2. Log trade transaction
-            await supabase.from('transactions').insert({
+            const { error: txErr } = await supabase.from('transactions').insert({
               user_id: user.id,
               user_email: user.email,
               user_name: user.user_metadata?.full_name || user.email,
@@ -217,13 +273,14 @@ export const useTradingStore = create<TradingState>()(
               status: 'Completed',
               instructions: `Opened ${posData.type} position: ${posData.size} ${posData.symbol} at $${posData.entryPrice.toLocaleString()}`,
             });
+            if (txErr) throw txErr;
 
-            // 3. Update balance and margin in user profile
             const currentWallet = get().wallet;
-            await supabase.from('users').update({
+            const { error: userErr } = await supabase.from('users').update({
               balance: currentWallet.balance,
               margin_used: currentWallet.marginUsed,
             }).eq('id', user.id);
+            if (userErr) throw userErr;
           } catch (err) {
             console.error('[openPosition] Failed to persist to Supabase:', err);
           }
@@ -240,13 +297,31 @@ export const useTradingStore = create<TradingState>()(
           ? (closePrice - pos.entryPrice) * pos.size
           : (pos.entryPrice - closePrice) * pos.size;
 
+        const newOrderId = crypto.randomUUID();
+
         set((state) => ({
           positions: state.positions.map(p => 
             p.id === id ? { ...p, status: 'closed', unrealizedPnL: pnl } : p
           ),
+          orders: [
+            ...state.orders,
+            {
+              id: newOrderId,
+              symbol: pos.symbol,
+              type: 'Market',
+              positionType: pos.type === 'Long' ? 'Short' : 'Long',
+              price: closePrice,
+              size: pos.size,
+              leverage: pos.leverage,
+              marginType: pos.marginType,
+              stopLoss: null,
+              takeProfit: null,
+              status: 'filled',
+            }
+          ],
           wallet: {
             ...state.wallet,
-            balance: Math.max(0, state.wallet.balance + pnl),
+            balance: state.wallet.balance + pnl,
             realizedPnL: state.wallet.realizedPnL + pnl,
             marginUsed: state.wallet.marginUsed - pos.margin,
           }
@@ -258,14 +333,27 @@ export const useTradingStore = create<TradingState>()(
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
-            // 1. Update position status to closed
-            await supabase.from('positions').update({
+            const { error: ordErr } = await supabase.from('orders').insert({
+              id: newOrderId,
+              user_id: user.id,
+              symbol: pos.symbol,
+              type: 'Market',
+              position_type: pos.type === 'Long' ? 'Short' : 'Long',
+              price: closePrice,
+              size: pos.size,
+              leverage: pos.leverage,
+              margin_type: pos.marginType,
+              status: 'filled',
+            });
+            if (ordErr) throw ordErr;
+
+            const { error: posErr } = await supabase.from('positions').update({
               status: 'closed',
               unrealized_pnl: pnl,
             }).eq('id', id);
+            if (posErr) throw posErr;
 
-            // 2. Log close trade transaction
-            await supabase.from('transactions').insert({
+            const { error: txErr } = await supabase.from('transactions').insert({
               user_id: user.id,
               user_email: user.email,
               user_name: user.user_metadata?.full_name || user.email,
@@ -276,14 +364,15 @@ export const useTradingStore = create<TradingState>()(
               status: 'Completed',
               instructions: `Closed ${pos.type} position on ${pos.symbol} at $${closePrice.toLocaleString()}. P&L: ${pnl >= 0 ? '+' : ''}$${pnl.toLocaleString()}`,
             });
+            if (txErr) throw txErr;
 
-            // 3. Update user balance
             const currentWallet = get().wallet;
-            await supabase.from('users').update({
+            const { error: userErr } = await supabase.from('users').update({
               balance: currentWallet.balance,
               margin_used: currentWallet.marginUsed,
               realized_pnl: currentWallet.realizedPnL,
             }).eq('id', user.id);
+            if (userErr) throw userErr;
           } catch (err) {
             console.error('[closePosition] Failed to persist to Supabase:', err);
           }
@@ -348,7 +437,7 @@ export const useTradingStore = create<TradingState>()(
               positions: updatedPositions,
               wallet: {
                 ...state.wallet,
-                balance: Math.max(0, state.wallet.balance + balanceChange),
+                balance: state.wallet.balance + balanceChange,
                 realizedPnL: state.wallet.realizedPnL + realizedPnLChange,
                 marginUsed: state.wallet.marginUsed - marginFreed,
               }
@@ -366,14 +455,13 @@ export const useTradingStore = create<TradingState>()(
               if (!user) return;
 
               for (const job of closedJobs) {
-                // 1. Update position status to closed
-                await supabase.from('positions').update({
+                const { error: posErr } = await supabase.from('positions').update({
                   status: 'closed',
                   unrealized_pnl: job.pnl,
                 }).eq('id', job.pos.id);
+                if (posErr) throw posErr;
 
-                // 2. Log close trade transaction
-                await supabase.from('transactions').insert({
+                const { error: txErr } = await supabase.from('transactions').insert({
                   user_id: user.id,
                   user_email: user.email,
                   user_name: user.user_metadata?.full_name || user.email,
@@ -384,15 +472,16 @@ export const useTradingStore = create<TradingState>()(
                   status: 'Completed',
                   instructions: `Closed ${job.pos.type} position on ${job.pos.symbol} at $${currentPrice.toLocaleString()} via ${job.reason}. P&L: ${job.pnl >= 0 ? '+' : ''}$${job.pnl.toLocaleString()}`,
                 });
+                if (txErr) throw txErr;
               }
 
-              // 3. Update user balance
               const currentWallet = get().wallet;
-              await supabase.from('users').update({
+              const { error: userErr } = await supabase.from('users').update({
                 balance: currentWallet.balance,
                 margin_used: currentWallet.marginUsed,
                 realized_pnl: currentWallet.realizedPnL,
               }).eq('id', user.id);
+              if (userErr) throw userErr;
             } catch (err) {
               console.error('[updatePositionPnL] Failed to persist closed positions to Supabase:', err);
             }
@@ -402,9 +491,10 @@ export const useTradingStore = create<TradingState>()(
 
       placeOrder: (orderData) => {
         const state = get();
-        // Reserve margin at the order's execution price (not current market) so the
-        // reserved amount matches the position margin booked at fill and released at close.
-        const marginRequired = (orderData.size * orderData.price) / orderData.leverage;
+        const executionPrice = (orderData.type === 'Limit' || orderData.type === 'Stop') 
+          ? orderData.price 
+          : (state.prices[orderData.symbol] || orderData.price);
+        const marginRequired = (orderData.size * executionPrice) / orderData.leverage;
         if (state.wallet.balance - state.wallet.marginUsed < marginRequired) {
           return false;
         }
@@ -412,11 +502,7 @@ export const useTradingStore = create<TradingState>()(
         const newId = crypto.randomUUID();
 
         set((state) => ({
-          orders: [...state.orders, { ...orderData, id: newId, status: 'pending' }],
-          wallet: {
-            ...state.wallet,
-            marginUsed: state.wallet.marginUsed + marginRequired,
-          },
+          orders: [...state.orders, { ...orderData, id: newId, status: 'pending' }]
         }));
 
         // Background database sync
@@ -425,7 +511,7 @@ export const useTradingStore = create<TradingState>()(
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
-            await supabase.from('orders').insert({
+            const { error: ordErr } = await supabase.from('orders').insert({
               id: newId,
               user_id: user.id,
               symbol: orderData.symbol,
@@ -439,6 +525,7 @@ export const useTradingStore = create<TradingState>()(
               take_profit: orderData.takeProfit,
               status: 'pending',
             });
+            if (ordErr) throw ordErr;
           } catch (err) {
             console.error('[placeOrder] Failed to persist to Supabase:', err);
           }
@@ -448,26 +535,17 @@ export const useTradingStore = create<TradingState>()(
       },
 
       cancelOrder: (id) => {
-        const order = get().orders.find(o => o.id === id);
-        const marginToReturn = (order && order.status === 'pending')
-          ? (order.size * order.price) / order.leverage
-          : 0;
         set((state) => ({
-          orders: state.orders.map(o => o.id === id ? { ...o, status: 'canceled' } : o),
-          ...(marginToReturn > 0 ? {
-            wallet: {
-              ...state.wallet,
-              marginUsed: Math.max(0, state.wallet.marginUsed - marginToReturn),
-            },
-          } : {}),
+          orders: state.orders.map(o => o.id === id ? { ...o, status: 'canceled' } : o)
         }));
 
         // Background database sync
         (async () => {
           try {
-            await supabase.from('orders').update({
+            const { error: ordErr } = await supabase.from('orders').update({
               status: 'canceled',
             }).eq('id', id);
+            if (ordErr) throw ordErr;
           } catch (err) {
             console.error('[cancelOrder] Failed to update cancel status in Supabase:', err);
           }
@@ -478,9 +556,11 @@ export const useTradingStore = create<TradingState>()(
         const filledJobs: { order: Order; newPos: Position }[] = [];
 
         set((state) => {
-          let changed = false;
+          let ordersChanged = false;
+          let positionsChanged = false;
           const newOrders = [...state.orders];
           const newPositions = [...state.positions];
+          let newMarginUsed = state.wallet.marginUsed;
 
           for (let i = 0; i < newOrders.length; i++) {
             const order = newOrders[i];
@@ -499,50 +579,51 @@ export const useTradingStore = create<TradingState>()(
             }
 
             if (shouldExecute) {
-              // Margin was already reserved in placeOrder at order.price; convert that
-              // reservation into a position so marginUsed stays balanced on close.
-              const margin = (order.size * order.price) / order.leverage;
-              order.status = 'filled';
-              changed = true;
+              const executionPrice = order.price;
+              const marginRequired = (order.size * executionPrice) / order.leverage;
+              if (state.wallet.balance - newMarginUsed >= marginRequired) {
+                 order.status = 'filled';
+                 ordersChanged = true;
+                 positionsChanged = true;
+                 newMarginUsed += marginRequired;
 
-              const isLong = order.positionType === 'Long';
-              const liqPrice = isLong
-                ? order.price * (1 - 1/order.leverage + 0.005) // maintenance margin simplified
-                : order.price * (1 + 1/order.leverage - 0.005);
+                 // Calculate liquidation price simplified
+                 const isLong = order.positionType === 'Long';
+                 const liqPrice = isLong 
+                   ? order.price * (1 - 1/order.leverage + 0.005) // maintenance margin simplified
+                   : order.price * (1 + 1/order.leverage - 0.005);
 
-              const newPos: Position = {
-                id: crypto.randomUUID(),
-                symbol: order.symbol,
-                type: order.positionType,
-                entryPrice: order.price, // executed at order price for logic
-                size: order.size,
-                leverage: order.leverage,
-                marginType: order.marginType,
-                margin,
-                liquidationPrice: liqPrice,
-                stopLoss: order.stopLoss,
-                takeProfit: order.takeProfit,
-                unrealizedPnL: 0,
-                status: 'open'
-              };
+                 const localPosId = crypto.randomUUID();
+                 const newPos: Position = {
+                   id: localPosId,
+                   symbol: order.symbol,
+                   type: order.positionType,
+                   entryPrice: order.price, // executed at order price for logic
+                   size: order.size,
+                   leverage: order.leverage,
+                   marginType: order.marginType,
+                   margin: marginRequired,
+                   liquidationPrice: liqPrice,
+                   stopLoss: order.stopLoss,
+                   takeProfit: order.takeProfit,
+                   unrealizedPnL: 0,
+                   status: 'open'
+                 };
 
-              newPositions.push(newPos);
-              filledJobs.push({ order, newPos });
+                 newPositions.push(newPos);
+                 filledJobs.push({ order, newPos });
+              }
             }
           }
 
-          if (changed) {
-            return { orders: newOrders, positions: newPositions };
+          if (ordersChanged || positionsChanged) {
+            return {
+              orders: newOrders,
+              positions: newPositions,
+              wallet: { ...state.wallet, marginUsed: newMarginUsed }
+            };
           }
           return state;
-        });
-
-        // Notify user for each filled order
-        filledJobs.forEach(job => {
-          toast.success(
-            `✅ ${job.order.type} order filled: ${job.order.positionType} ${job.order.symbol} at $${job.order.price.toLocaleString()}`,
-            { duration: 6000 }
-          );
         });
 
         // Trigger background db updates for each filled order
@@ -553,13 +634,12 @@ export const useTradingStore = create<TradingState>()(
               if (!user) return;
 
               for (const job of filledJobs) {
-                // 1. Update order status to filled
-                await supabase.from('orders').update({
+                const { error: ordErr } = await supabase.from('orders').update({
                   status: 'filled',
                 }).eq('id', job.order.id);
+                if (ordErr) throw ordErr;
 
-                // 2. Insert position record
-                await supabase.from('positions').insert({
+                const { error: posErr } = await supabase.from('positions').insert({
                   id: job.newPos.id,
                   user_id: user.id,
                   symbol: job.newPos.symbol,
@@ -574,9 +654,9 @@ export const useTradingStore = create<TradingState>()(
                   take_profit: job.newPos.takeProfit,
                   status: 'open',
                 });
+                if (posErr) throw posErr;
 
-                // 3. Log filled trade transaction
-                await supabase.from('transactions').insert({
+                const { error: txErr } = await supabase.from('transactions').insert({
                   user_id: user.id,
                   user_email: user.email,
                   user_name: user.user_metadata?.full_name || user.email,
@@ -587,14 +667,15 @@ export const useTradingStore = create<TradingState>()(
                   status: 'Completed',
                   instructions: `Order Filled - Opened ${job.newPos.type} position: ${job.newPos.size} ${job.newPos.symbol} at $${job.newPos.entryPrice.toLocaleString()}`,
                 });
+                if (txErr) throw txErr;
               }
 
-              // 4. Update balance and margin in user profile
               const currentWallet = get().wallet;
-              await supabase.from('users').update({
+              const { error: userErr } = await supabase.from('users').update({
                 balance: currentWallet.balance,
                 margin_used: currentWallet.marginUsed,
               }).eq('id', user.id);
+              if (userErr) throw userErr;
             } catch (err) {
               console.error('[checkOrders] Failed to synchronize filled orders with Supabase:', err);
             }
@@ -625,6 +706,7 @@ export const useTradingStore = create<TradingState>()(
       partialize: (state) => ({
         positions: state.positions,
         orders: state.orders,
+        wallet: state.wallet,
       }),
     }
   )
