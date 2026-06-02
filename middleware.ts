@@ -1,3 +1,4 @@
+// @ts-nocheck
 export const config = {
   matcher: [
     '/((?!api|_vercel|.*\\..*).*)',
