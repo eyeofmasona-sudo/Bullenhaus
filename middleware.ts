@@ -19,13 +19,17 @@ export default async function middleware(request: Request) {
 
   if (url.pathname === '/gate') {
     let error = false;
+    let errorMessage = '';
 
     if (request.method === 'POST') {
+      errorMessage = 'Incorrect password. Please try again.';
       try {
-        const formData = await request.formData();
-        const password = formData.get('password');
+        const body = await request.text();
+        const params = new URLSearchParams(body);
+        const password = params.get('password') || '';
 
-        if (password === SITE_PASSWORD) {
+        // Safely check password, allowing for accidental trailing spaces in env var
+        if (password === SITE_PASSWORD || password.trim() === SITE_PASSWORD.trim()) {
           const response = Response.redirect(new URL('/login', request.url), 302);
           response.headers.set(
             'Set-Cookie',
@@ -37,6 +41,7 @@ export default async function middleware(request: Request) {
         }
       } catch (e) {
         error = true;
+        errorMessage = 'System error while checking password. ' + String(e);
       }
     }
 
@@ -133,7 +138,7 @@ export default async function middleware(request: Request) {
 <body>
   <div class="gate-container">
     <h1>Access Restricted</h1>
-    ${error ? '<div class="error">Incorrect password. Please try again.</div>' : ''}
+    ${error ? `<div class="error">${errorMessage}</div>` : ''}
     <form method="POST" action="/gate">
       <div class="input-group">
         <label for="password">Enter Site Password</label>
