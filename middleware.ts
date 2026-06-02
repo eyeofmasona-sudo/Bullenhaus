@@ -31,12 +31,13 @@ export default async function middleware(request: Request) {
         // Safely check password, allowing for accidental trailing spaces in env var
         const envPass = process.env.SITE_PASSWORD || '';
         if (password === envPass || password.trim() === envPass.trim()) {
-          const response = Response.redirect(new URL('/login', request.url), 302);
-          response.headers.set(
-            'Set-Cookie',
-            'site_gate_passed=1; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=31536000'
-          );
-          return response;
+          return new Response(null, {
+            status: 302,
+            headers: {
+              'Location': new URL('/login', request.url).toString(),
+              'Set-Cookie': 'site_gate_passed=1; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=31536000'
+            }
+          });
         } else {
           error = true;
           if (envPass.trim() === '') {
