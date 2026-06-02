@@ -29,7 +29,8 @@ export default async function middleware(request: Request) {
         const password = params.get('password') || '';
 
         // Safely check password, allowing for accidental trailing spaces in env var
-        if (password === SITE_PASSWORD || password.trim() === SITE_PASSWORD.trim()) {
+        const envPass = process.env.SITE_PASSWORD || '';
+        if (password === envPass || password.trim() === envPass.trim()) {
           const response = Response.redirect(new URL('/login', request.url), 302);
           response.headers.set(
             'Set-Cookie',
@@ -38,6 +39,11 @@ export default async function middleware(request: Request) {
           return response;
         } else {
           error = true;
+          if (envPass.trim() === '') {
+            errorMessage = 'System configuration error: SITE_PASSWORD environment variable is not set in Vercel.';
+          } else {
+            errorMessage = 'Incorrect password. Please try again.';
+          }
         }
       } catch (e) {
         error = true;
