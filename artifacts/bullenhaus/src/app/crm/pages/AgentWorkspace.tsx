@@ -1,10 +1,12 @@
-import React, { useState } from "react";
-import { Phone, Clock, FileText, PlayCircle, Plus, ChevronRight, MoreHorizontal, Loader2, AlertCircle, ChevronDown } from "lucide-react";
+import React, { useState, useRef } from "react";
+import { Phone, Clock, FileText, PlayCircle, Plus, ChevronRight, MoreHorizontal, Loader2, AlertCircle, ChevronDown, Upload } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
 import { useLeads, updateLeadStage, LEAD_STAGES, type LeadStage } from "../hooks/useLeads";
 import { useI18n } from "../lib/i18n";
 import { usePhoneDialer } from "../contexts/PhoneDialerContext";
+import { authStorage } from "../lib/auth";
+import { supabase } from "../../../lib/supabase/browserClient";
 
 interface LocalTask {
   name: string;
@@ -150,6 +152,138 @@ function LeadPipeline({ leads, meta, loading, error, onCall, onStageChange, onOp
           })}
        </div>
     </div>
+  );
+}
+
+// Roles allowed to bulk-upload leads.
+const LEAD_UPLOAD_ROLES = ['super-admin', 'superadmin', 'admin', 'crm_admin', 'director'];
+function canUploadLeads(): boolean {
+  return LEAD_UPLOAD_ROLES.includes((authStorage.getRole() || '').toLowerCase());
+}
+
+// Minimal CSV parser (header row + comma-separated, basic quote support).
+function parseCsv(text: string): Record<string, string>[] {
+  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(l => l.trim().length > 0);
+  if (lines.length === 0) return [];
+  const parseLine = (line: string): string[] => {
+    const out: string[] = [];
+    let cur = '', q = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (q) {
+        if (c === '"') { if (line[i + 1] === '"') { cur += '"'; i++; } else q = false; }
+        else cur += c;
+      } else {
+        if (c === '"') q = true;
+        else if (c === ',') { out.push(cur); cur = ''; }
+        else cur += c;
+      }
+    }
+    out.push(cur);
+    return out;
+  };
+  const headers = parseLine(lines[0]).map(h => h.trim());
+  return lines.slice(1).map(l => {
+    const cells = parseLine(l);
+    const o: Record<string, string> = {};
+    headers.forEach((h, i) => { o[h] = (cells[i] ?? '').trim(); });
+    return o;
+  });
+}
+
+function pick(row: Record<string, string>, keys: string[]): string {
+  for (const k of keys) { if (row[k] !== undefined && row[k] !== '') return row[k]; }
+  return '';
+}
+
+type UploadResult = { parsed: number; inserted: number; skipped: number; error?: string };
+
+function LeadUploadButton({ onDone }: { onDone: () => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<UploadResult | null>(null);
+
+  if (!canUploadLeads()) return null;
+
+  const onPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (inputRef.current) inputRef.current.value = '';
+    if (!file) return;
+    setBusy(true);
+    setResult(null);
+    try {
+      const text = await file.text();
+      const rows = parseCsv(text);
+      const mapped = rows.map(r => {
+        const fn = pick(r, ['firstName', 'first_name', 'First Name', 'firstname']);
+        const ln = pick(r, ['lastName', 'last_name', 'Last Name', 'lastname']);
+        const email = pick(r, ['email', 'Email', 'mail', 'E-mail']).toLowerCase();
+        const phone = pick(r, ['mobile', 'phone', 'Phone', 'tel', 'Mobile']).replace(/[^\d+]/g, '');
+        const country = pick(r, ['country', 'Country']);
+        const source = pick(r, ['source', 'Source', 'leadSource']) || 'upload';
+        return {
+          first_name: fn,
+          last_name: ln,
+          name: `${fn} ${ln}`.trim(),
+          email,
+          phone,
+          country,
+          stage: 'NEW_INQUIRY',
+          acquisition_source: { source, country, imported_from: file.name },
+        };
+      }).filter(r => r.email);
+
+      // de-duplicate within file
+      const seen = new Set<string>();
+      const unique = mapped.filter(r => { if (seen.has(r.email)) return false; seen.add(r.email); return true; });
+
+      // de-duplicate against existing leads
+      const existing = new Set<string>();
+      for (let from = 0; from < 500000; from += 1000) {
+        const { data, error } = await supabase.from('leads').select('email').range(from, from + 999);
+        if (error) throw new Error(error.message);
+        const batch = data ?? [];
+        batch.forEach((x: any) => { if (x.email) existing.add(String(x.email).toLowerCase()); });
+        if (batch.length < 1000) break;
+      }
+      const toInsert = unique.filter(r => !existing.has(r.email));
+
+      let inserted = 0;
+      for (let i = 0; i < toInsert.length; i += 500) {
+        const chunk = toInsert.slice(i, i + 500);
+        const { error } = await supabase.from('leads').insert(chunk);
+        if (error) throw new Error(error.message);
+        inserted += chunk.length;
+      }
+
+      setResult({ parsed: rows.length, inserted, skipped: rows.length - inserted });
+      onDone();
+    } catch (err: any) {
+      setResult({ parsed: 0, inserted: 0, skipped: 0, error: err?.message || 'Upload failed' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <input ref={inputRef} type="file" accept=".csv,text/csv" onChange={onPick} className="hidden" />
+      <Button variant="secondary" onClick={() => inputRef.current?.click()} isLoading={busy}>
+        {!busy && <Upload className="w-4 h-4" />} {busy ? 'Uploading…' : 'Upload Leads'}
+      </Button>
+      <Modal isOpen={!!result} onClose={() => setResult(null)} title="Lead Upload" subtitle={result?.error ? 'Failed' : 'Import summary'}>
+        {result && (result.error ? (
+          <div className="flex items-start gap-2 text-xs text-aura-ruby"><AlertCircle className="w-4 h-4 shrink-0" /><span>{result.error}</span></div>
+        ) : (
+          <div className="space-y-2 text-xs text-aura-platinum">
+            <div>Parsed rows: <b>{result.parsed}</b></div>
+            <div>Inserted: <b className="text-aura-emerald">{result.inserted}</b></div>
+            <div>Skipped (duplicate / no email): <b>{result.skipped}</b></div>
+            <p className="text-[10px] text-aura-platinum/40 pt-2">Expected columns: firstName, lastName, mobile, email, country, source</p>
+          </div>
+        ))}
+      </Modal>
+    </>
   );
 }
 
@@ -322,6 +456,7 @@ export function AgentWorkspace() {
                <div className="text-[9px] uppercase tracking-widest text-aura-platinum/40">FTD Today</div>
              </div>
            </div>
+           <LeadUploadButton onDone={refetch} />
            <Button variant="secondary" size="icon" onClick={() => setIsTaskModalOpen(true)}>
              <Plus className="w-4 h-4" />
            </Button>
