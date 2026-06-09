@@ -105,7 +105,7 @@ export function useClientFiles(clientId: string | null) {
 
   const deleteFile = useCallback(async (fileId: string): Promise<void> => {
     if (!clientId) return;
-    await api.delete(`/api/crm/clients/${clientId}/files/${fileId}`);
+    await api.delete(`/api/crm/clients/${clientId}/files?fileId=${fileId}`);
     await fetchFiles();
   }, [clientId, fetchFiles]);
 
