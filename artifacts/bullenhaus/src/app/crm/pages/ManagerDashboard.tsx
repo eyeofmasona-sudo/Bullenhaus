@@ -80,17 +80,12 @@ export function ManagerDashboard() {
     setLoading(true);
     setError(null);
     try {
-      const [teamRes, leadsRes, clientsRes, txRes] = await Promise.all([
+      const [teamRes, clientsRes, txRes] = await Promise.all([
         supabase
           .from('users')
           .select('id, full_name, email, role, last_seen_at')
           .in('role', ['agent', 'manager'])
           .order('role'),
-        supabase
-          .from('leads')
-          .select('id, first_name, last_name, email, stage, assigned_agent_id')
-          .order('created_at', { ascending: false })
-          .limit(200),
         supabase
           .from('users')
           .select('id, full_name, email, assigned_agent_id')
@@ -105,10 +100,21 @@ export function ManagerDashboard() {
       ]);
 
       if (teamRes.error)    throw new Error(teamRes.error.message);
-      if (leadsRes.error)   throw new Error(leadsRes.error.message);
       if (clientsRes.error) throw new Error(clientsRes.error.message);
 
-      const leadsData   = (leadsRes.data   ?? []) as Lead[];
+      // Fetch ALL leads — PostgREST caps each request at 1000 rows, so page through.
+      let leadsData: Lead[] = [];
+      for (let from = 0; from < 100000; from += 1000) {
+        const { data: leadsChunk, error: leadsErr } = await supabase
+          .from('leads')
+          .select('id, first_name, last_name, email, stage, assigned_agent_id')
+          .order('created_at', { ascending: false })
+          .range(from, from + 999);
+        if (leadsErr) throw new Error(leadsErr.message);
+        const batch = (leadsChunk ?? []) as Lead[];
+        leadsData = leadsData.concat(batch);
+        if (batch.length < 1000) break;
+      }
       const clientsData = (clientsRes.data ?? []) as ClientRecord[];
       const teamData    = (teamRes.data    ?? []) as any[];
 
