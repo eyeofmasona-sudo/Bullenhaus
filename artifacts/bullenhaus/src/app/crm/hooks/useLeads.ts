@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../../lib/supabase/browserClient';
 
-const LEADS_SELECT = 'id, first_name, last_name, email, phone, country, stage, capacity, acquisition_source, notes, created_at';
+const LEADS_SELECT = 'id, name, first_name, last_name, email, phone, country, stage, capacity, timezone, acquisition_source, notes, assigned_agent_id, created_at, updated_at';
 
 function mapLead(row: any) {
   return {

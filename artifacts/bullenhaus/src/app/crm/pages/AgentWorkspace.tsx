@@ -13,13 +13,14 @@ interface LocalTask {
   urgent: boolean;
 }
 
-function LeadPipeline({ leads, meta, loading, error, onCall, onStageChange }: {
+function LeadPipeline({ leads, meta, loading, error, onCall, onStageChange, onOpen }: {
   leads: any[];
   meta: any;
   loading: boolean;
   error: string | null;
   onCall: (phone: string, name: string) => void;
   onStageChange: (leadId: string, stage: LeadStage) => void;
+  onOpen: (lead: any) => void;
 }) {
   const stages = meta?.grouped || {
     'New Inquiries': [],
@@ -75,6 +76,7 @@ function LeadPipeline({ leads, meta, loading, error, onCall, onStageChange }: {
                    {leadsList.map((lead: any) => (
                      <div 
                        key={lead.id} 
+                       onClick={() => onOpen(lead)}
                        className={`p-4 rounded-xl border bg-[#121214] hover:-translate-y-1 transition-transform cursor-pointer group shadow-sm hover:shadow-md
                          ${lead.stage === 'FUNDED' ? 'border-aura-emerald/30 hover:border-aura-emerald/50' :
                          lead.stage === 'PENDING_KYC' ? 'border-aura-warning/30 hover:border-aura-warning/50' :
@@ -83,7 +85,7 @@ function LeadPipeline({ leads, meta, loading, error, onCall, onStageChange }: {
                      >
                        <div className="flex items-start justify-between mb-3">
                           <div className="font-medium text-sm text-aura-platinum">{lead.firstName} {lead.lastName}</div>
-                          <button className="text-aura-platinum/30 hover:text-aura-platinum opacity-0 group-hover:opacity-100 transition-opacity"><MoreHorizontal className="w-4 h-4" /></button>
+                          <button onClick={e => { e.stopPropagation(); onOpen(lead); }} className="text-aura-platinum/30 hover:text-aura-platinum opacity-0 group-hover:opacity-100 transition-opacity"><MoreHorizontal className="w-4 h-4" /></button>
                        </div>
                        <div className="grid grid-cols-2 gap-2 mb-4 text-xs font-mono">
                           <div>
@@ -122,13 +124,13 @@ function LeadPipeline({ leads, meta, loading, error, onCall, onStageChange }: {
                        <div className="flex justify-between items-center border-t border-glass-border pt-3">
                           <span className="text-[9px] uppercase tracking-widest text-aura-platinum/40">{lead.acquisitionSource?.leadSource || 'Unknown'}</span>
                           <div className="flex gap-1">
-                            <button className="w-6 h-6 rounded bg-black/40 border border-white/5 flex items-center justify-center hover:bg-white/10 hover:border-white/10 transition-colors">
+                            <button onClick={e => { e.stopPropagation(); onOpen(lead); }} className="w-6 h-6 rounded bg-black/40 border border-white/5 flex items-center justify-center hover:bg-white/10 hover:border-white/10 transition-colors">
                               <FileText className="w-3 h-3 text-aura-platinum/60" />
                             </button>
                             <button
                               title={lead.phone ? `Call ${lead.firstName}` : "No phone number"}
                               disabled={!lead.phone}
-                              onClick={() => lead.phone && onCall(lead.phone, `${lead.firstName} ${lead.lastName}`.trim())}
+                              onClick={e => { e.stopPropagation(); lead.phone && onCall(lead.phone, `${lead.firstName} ${lead.lastName}`.trim()); }}
                               className="w-6 h-6 rounded bg-black/40 border border-white/5 flex items-center justify-center hover:bg-aura-emerald/20 hover:border-aura-emerald/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                             >
                               <Phone className={`w-3 h-3 ${lead.phone ? 'text-aura-emerald' : 'text-aura-platinum/30'}`} />
@@ -151,10 +153,83 @@ function LeadPipeline({ leads, meta, loading, error, onCall, onStageChange }: {
   );
 }
 
+function leadStageLabel(stage: string): string {
+  const found = LEAD_STAGES.find(s => s.value === stage);
+  return found ? found.label : (stage || '\u2014');
+}
+
+function LeadRow({ label, value }: { label: string; value: any }) {
+  const empty = value === null || value === undefined || value === '';
+  return (
+    <div className="py-2 border-b border-glass-border/60">
+      <div className="text-[9px] uppercase tracking-widest text-aura-platinum/40 mb-0.5">{label}</div>
+      <div className="text-xs text-aura-platinum break-words">{empty ? '\u2014' : String(value)}</div>
+    </div>
+  );
+}
+
+function LeadDetailsModal({ lead, onClose, onCall }: {
+  lead: any | null;
+  onClose: () => void;
+  onCall: (phone: string, name: string) => void;
+}) {
+  if (!lead) return null;
+  const fullName = `${lead.firstName ?? lead.first_name ?? ''} ${lead.lastName ?? lead.last_name ?? ''}`.trim() || lead.name || lead.email || 'Lead';
+  const src = lead.acquisitionSource || lead.acquisition_source || {};
+  return (
+    <Modal isOpen={!!lead} onClose={onClose} title={fullName} subtitle={leadStageLabel(lead.stage)}>
+      <div className="max-h-[70vh] overflow-y-auto custom-scrollbar pr-1">
+        <div className="grid grid-cols-2 gap-x-4">
+          <LeadRow label="First Name" value={lead.firstName ?? lead.first_name} />
+          <LeadRow label="Last Name" value={lead.lastName ?? lead.last_name} />
+          <LeadRow label="Email" value={lead.email} />
+          <LeadRow label="Phone" value={lead.phone} />
+          <LeadRow label="Country" value={lead.country} />
+          <LeadRow label="Capacity" value={lead.capacity} />
+          <LeadRow label="Timezone" value={lead.timezone} />
+          <LeadRow label="Stage" value={leadStageLabel(lead.stage)} />
+          <LeadRow label="Source" value={src.source || src.leadSource} />
+          <LeadRow label="Assigned Agent" value={lead.assigned_agent_id} />
+          <LeadRow label="Created" value={lead.created_at ? new Date(lead.created_at).toLocaleString() : null} />
+          <LeadRow label="Updated" value={lead.updated_at ? new Date(lead.updated_at).toLocaleString() : null} />
+        </div>
+
+        {lead.notes && (
+          <div className="mt-3 py-2">
+            <div className="text-[9px] uppercase tracking-widest text-aura-platinum/40 mb-1">Notes</div>
+            <div className="text-xs text-aura-platinum whitespace-pre-wrap break-words">{lead.notes}</div>
+          </div>
+        )}
+
+        {src && Object.keys(src).length > 0 && (
+          <div className="mt-3 py-2">
+            <div className="text-[9px] uppercase tracking-widest text-aura-platinum/40 mb-1">Acquisition Source</div>
+            <div className="space-y-1">
+              {Object.entries(src).map(([k, v]) => (
+                <div key={k} className="flex justify-between gap-3 text-[11px]">
+                  <span className="text-aura-platinum/50">{k}</span>
+                  <span className="text-aura-platinum break-all text-right">{String(v)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {lead.phone && (
+          <Button variant="primary" className="w-full mt-5" onClick={() => onCall(lead.phone, fullName)}>
+            <Phone className="w-3.5 h-3.5 fill-black" /> Call {fullName}
+          </Button>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 export function AgentWorkspace() {
   const { t } = useI18n();
   const { openDialer } = usePhoneDialer();
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [selectedLead, setSelectedLead] = useState<any | null>(null);
   const [localTasks, setLocalTasks] = useState<LocalTask[]>([]);
   const [taskName, setTaskName] = useState('');
   const [taskType, setTaskType] = useState('Call');
@@ -390,6 +465,13 @@ export function AgentWorkspace() {
         error={error}
         onCall={(phone, name) => openDialer({ phone, name })}
         onStageChange={handleStageChange}
+        onOpen={setSelectedLead}
+      />
+
+      <LeadDetailsModal
+        lead={selectedLead}
+        onClose={() => setSelectedLead(null)}
+        onCall={(phone, name) => openDialer({ phone, name })}
       />
 
       <Modal 
