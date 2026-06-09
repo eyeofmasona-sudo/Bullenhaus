@@ -1,15 +1,34 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import type { ChangeEvent } from "react";
 import type { BalanceFlashDirection } from "../hooks/useClients";
 import { useI18n } from "../lib/i18n";
 import {
   Search, Phone, Mail, Globe, Loader2, AlertCircle, RefreshCw,
-  DollarSign, User, TrendingUp, ArrowDownLeft, ArrowUpRight, X, WifiOff
+  DollarSign, User, TrendingUp, ArrowDownLeft, ArrowUpRight, X, WifiOff,
+  Upload, FileText, Download, Trash2, Paperclip
 } from "lucide-react";
 import { supabase } from "../../../lib/supabase/browserClient";
 import { usePhoneDialer } from "../contexts/PhoneDialerContext";
 import { fetchClientTransactions, type ClientTransaction } from "../hooks/useClients";
+import { useClientFiles, validateFile, ACCEPTED_EXTENSIONS } from "../hooks/useClientFiles";
+import { authStorage } from "../lib/auth";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
+
+// Roles allowed to view & manage client file attachments.
+// 'superadmin' is forward-compat only (not a real role in the DB yet).
+const CLIENT_FILE_ROLES = ['superadmin', 'admin', 'director', 'manager'];
+function canManageClientFiles(): boolean {
+  return CLIENT_FILE_ROLES.includes((authStorage.getRole() || '').toLowerCase());
+}
+
+function formatBytes(bytes: number | null): string {
+  if (!bytes || bytes <= 0) return '—';
+  const units = ['B', 'KB', 'MB'];
+  let n = bytes, i = 0;
+  while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+  return `${n.toFixed(n >= 10 || i === 0 ? 0 : 1)} ${units[i]}`;
+}
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -47,12 +66,133 @@ function mapRow(u: any): AgentClient {
   };
 }
 
+// ── Client Files Tab ──────────────────────────────────────────────────────────
+
+function ClientFilesTab({ clientId }: { clientId: string }) {
+  const { files, loading, error, uploadFile, deleteFile } = useClientFiles(clientId);
+  const [uploading, setUploading] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const onPick = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (inputRef.current) inputRef.current.value = '';
+    if (!file) return;
+
+    const validationError = validateFile(file);
+    if (validationError) { setLocalError(validationError); return; }
+
+    setLocalError(null);
+    setUploading(true);
+    try {
+      await uploadFile(file);
+    } catch (err: any) {
+      setLocalError(err?.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const onDelete = async (id: string) => {
+    setBusyId(id);
+    setLocalError(null);
+    try {
+      await deleteFile(id);
+    } catch (err: any) {
+      setLocalError(err?.message || 'Delete failed');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Upload button */}
+      <input
+        ref={inputRef}
+        type="file"
+        accept={ACCEPTED_EXTENSIONS}
+        onChange={onPick}
+        className="hidden"
+      />
+      <Button
+        variant="outline"
+        size="md"
+        className="w-full"
+        isLoading={uploading}
+        onClick={() => inputRef.current?.click()}
+      >
+        {!uploading && <Upload className="w-3.5 h-3.5" />}
+        {uploading ? 'Uploading…' : 'Upload File'}
+      </Button>
+
+      <p className="text-[9px] text-aura-platinum/30 text-center">
+        PDF, images, Office docs · max 15 MB
+      </p>
+
+      {(localError || error) && (
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-aura-ruby/10 border border-aura-ruby/20 text-aura-ruby text-[10px]">
+          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+          <span>{localError || error}</span>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 text-aura-gold animate-spin" /></div>
+      ) : files.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 gap-2">
+          <Paperclip className="w-8 h-8 text-aura-platinum/10" />
+          <span className="text-xs text-aura-platinum/30">No files attached</span>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {files.map(f => (
+            <div key={f.id} className="flex items-center gap-3 p-3 rounded-lg bg-black/30 border border-glass-border">
+              <FileText className="w-4 h-4 text-aura-gold shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="text-xs text-aura-platinum truncate">{f.file_name}</div>
+                <div className="text-[9px] text-aura-platinum/40">
+                  {formatBytes(f.size_bytes)} · {new Date(f.created_at).toLocaleDateString('en-US', { dateStyle: 'medium' })}
+                </div>
+              </div>
+              {f.signed_url && (
+                <a
+                  href={f.signed_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-1.5 rounded-lg hover:bg-white/5 text-aura-platinum/40 hover:text-aura-gold transition-colors"
+                  title="Download"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                </a>
+              )}
+              <button
+                onClick={() => onDelete(f.id)}
+                disabled={busyId === f.id}
+                className="p-1.5 rounded-lg hover:bg-white/5 text-aura-platinum/40 hover:text-aura-ruby transition-colors disabled:opacity-40"
+                title="Delete"
+              >
+                {busyId === f.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Client Drawer (no KYC tab) ────────────────────────────────────────────────
+
+type DrawerTab = 'overview' | 'transactions' | 'files';
 
 function ClientDrawer({ client, onClose }: { client: AgentClient | null; onClose: () => void }) {
   const { t } = useI18n();
   const { openDialer } = usePhoneDialer();
-  const [tab, setTab] = useState<'overview' | 'transactions'>('overview');
+  const showFiles = canManageClientFiles();
+  const TABS: DrawerTab[] = showFiles ? ['overview', 'transactions', 'files'] : ['overview', 'transactions'];
+  const [tab, setTab] = useState<DrawerTab>('overview');
   const [txList, setTxList] = useState<ClientTransaction[]>([]);
   const [txLoading, setTxLoading] = useState(false);
 
@@ -97,12 +237,12 @@ function ClientDrawer({ client, onClose }: { client: AgentClient | null; onClose
 
         {/* Tabs */}
         <div className="flex border-b border-glass-border">
-          {(['overview', 'transactions'] as const).map(t => (
-            <button key={t} onClick={() => setTab(t)}
+          {TABS.map(tb => (
+            <button key={tb} onClick={() => setTab(tb)}
               className={`flex-1 py-2.5 text-[10px] font-bold uppercase tracking-widest transition-colors ${
-                tab === t ? 'text-aura-gold border-b-2 border-aura-gold -mb-px bg-aura-gold/5' : 'text-aura-platinum/40 hover:text-aura-platinum'
+                tab === tb ? 'text-aura-gold border-b-2 border-aura-gold -mb-px bg-aura-gold/5' : 'text-aura-platinum/40 hover:text-aura-platinum'
               }`}>
-              {t}
+              {tb}
             </button>
           ))}
         </div>
@@ -204,6 +344,10 @@ function ClientDrawer({ client, onClose }: { client: AgentClient | null; onClose
                 })}
               </div>
             )
+          )}
+
+          {tab === 'files' && showFiles && (
+            <ClientFilesTab clientId={client.id} />
           )}
         </div>
       </div>
@@ -378,91 +522,4 @@ export function AgentClients() {
         </button>
       </div>
 
-      {error && <div className="p-4 rounded-xl border border-aura-ruby/30 bg-aura-ruby/5 text-aura-ruby text-sm flex items-center gap-2"><AlertCircle className="w-4 h-4" />{error}</div>}
-
-      {/* Grid */}
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {[1,2,3,4,5,6].map(i => (
-            <div key={i} className="rounded-xl border border-glass-border bg-[#121214] p-5 animate-pulse">
-              <div className="h-4 bg-white/5 rounded w-3/4 mb-3" />
-              <div className="h-3 bg-white/5 rounded w-1/2 mb-5" />
-              <div className="h-8 bg-white/5 rounded" />
-            </div>
-          ))}
-        </div>
-      ) : clients.length === 0 ? (
-        <div className="rounded-xl border border-glass-border bg-[#121214] py-20 flex flex-col items-center gap-3">
-          <User className="w-10 h-10 text-aura-platinum/10" />
-          <p className="text-sm text-aura-platinum/30">{search ? t('agcNoMatch') : t('agcNoneAssigned')}</p>
-          <p className="text-xs text-aura-platinum/20">{t('agcAskManager')}</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {clients.map(c => {
-            const name  = `${c.firstName} ${c.lastName}`.trim() || c.email;
-            const init  = `${c.firstName.charAt(0)}${c.lastName.charAt(0)}`.toUpperCase() || c.email.charAt(0).toUpperCase();
-            const isNew = Date.now() - new Date(c.createdAt).getTime() < 48 * 3600_000;
-            return (
-              <div key={c.id}
-                onClick={() => setSelected(c)}
-                className={`rounded-xl border bg-[#121214] p-5 cursor-pointer group relative transition-all duration-200 hover:bg-white/5 ${
-                  isNew ? 'border-aura-emerald/40 hover:border-aura-emerald/60' : 'border-glass-border hover:border-aura-gold/20'
-                }`}>
-                {isNew && (
-                  <div className="absolute top-0 left-0 bg-aura-emerald text-black text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-br flex items-center gap-1">
-                    <span className="w-1 h-1 rounded-full bg-black animate-pulse" /> {t('agcNew')}
-                  </div>
-                )}
-
-                {/* Avatar + name */}
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-aura-gold/20 to-transparent border border-aura-gold/20 flex items-center justify-center text-[11px] font-bold text-aura-gold shrink-0">{init}</div>
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium text-aura-platinum truncate">{name}</div>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className={`text-[9px] font-bold uppercase tracking-wider ${c.tier === 'Titanium' ? 'text-aura-gold' : c.tier === 'Platinum' ? 'text-aura-platinum/70' : 'text-aura-platinum/40'}`}>{c.tier}</span>
-                      {c.country && <><span className="text-aura-platinum/20">·</span><span className="text-[9px] text-aura-platinum/40">{c.country}</span></>}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Info row */}
-                <div className="grid grid-cols-2 gap-2 mb-4 text-xs">
-                  <div className={`bg-black/40 rounded p-2 border border-aura-gold/10 transition-all duration-300 ${flashMap[c.id] === 'up' ? 'balance-flash-up' : flashMap[c.id] === 'down' ? 'balance-flash-down' : ''}`}>
-                    <div className="text-[8px] text-aura-platinum/40 uppercase tracking-wider">Balance</div>
-                    <div className="font-mono text-aura-gold font-medium mt-0.5">{fmt(c.totalBalance)}</div>
-                  </div>
-                  <div className="bg-black/40 rounded p-2 border border-glass-border">
-                    <div className="text-[8px] text-aura-platinum/40 uppercase tracking-wider">KYC</div>
-                    <div className={`text-[10px] font-bold mt-0.5 ${c.kyc_status === 'VERIFIED' ? 'text-aura-emerald' : c.kyc_status === 'REJECTED' ? 'text-aura-ruby' : 'text-yellow-400'}`}>{c.kyc_status}</div>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-2 border-t border-glass-border pt-3" onClick={e => e.stopPropagation()}>
-                  <button
-                    disabled={!c.phone}
-                    onClick={() => c.phone && openDialer({ phone: c.phone, name, clientId: c.id })}
-                    title={c.phone || 'No phone'}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-glass-border bg-black/20 text-[10px] font-bold text-aura-platinum/60 hover:bg-aura-emerald/10 hover:border-aura-emerald/30 hover:text-aura-emerald transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                  >
-                    <Phone className="w-3 h-3" /> {c.phone ? t('call') : t('agcNoPhone')}
-                  </button>
-                  <button
-                    onClick={() => setSelected(c)}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-glass-border bg-black/20 text-[10px] font-bold text-aura-platinum/60 hover:bg-white/5 hover:text-aura-platinum transition-all"
-                  >
-                    {t('agcView')}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      <ClientDrawer client={selected} onClose={() => setSelected(null)} />
-    </div>
-  );
-}
+      {error && <div className="p-4 rounded-xl border border-aura-ruby/30 bg-aura-ruby/5 text-aura-ruby text-sm flex items-center gap-2"><AlertCircle className="w-4 h-4" 
