@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../../lib/supabase/browserClient';
 
-const LEADS_SELECT = 'id, first_name, last_name, email, phone, stage, capacity, acquisition_source, notes, created_at';
+const LEADS_SELECT = 'id, first_name, last_name, email, phone, country, stage, capacity, acquisition_source, notes, created_at';
 
 function mapLead(row: any) {
   return {
     ...row,
     firstName: row.first_name ?? '',
     lastName: row.last_name ?? '',
+    country: row.country ?? row.acquisition_source?.country ?? null,
     acquisitionSource: row.acquisition_source ?? {},
   };
 }
@@ -22,20 +23,36 @@ export function useLeads(page = 1, limit = 50, search = '') {
     setLoading(true);
     setError(null);
     try {
-      let q = supabase
-        .from('leads')
-        .select(LEADS_SELECT)
-        .order('created_at', { ascending: false })
-        .range((page - 1) * limit, page * limit - 1);
+      // PostgREST caps a single request to a page window, so the board
+      // previously showed only the first slice. Page through ALL matching
+      // leads in chunks so the full base is visible.
+      const CHUNK = 1000;
+      const SAFETY_MAX = 100000;
+      let from = 0;
+      let allRows: any[] = [];
 
-      if (search) {
-        q = q.or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%`);
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        let q = supabase
+          .from('leads')
+          .select(LEADS_SELECT)
+          .order('created_at', { ascending: false })
+          .range(from, from + CHUNK - 1);
+
+        if (search) {
+          q = q.or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%`);
+        }
+
+        const { data: chunk, error: dbError } = await q;
+        if (dbError) throw new Error(dbError.message);
+
+        const batch = chunk ?? [];
+        allRows = allRows.concat(batch);
+        if (batch.length < CHUNK || from + CHUNK >= SAFETY_MAX) break;
+        from += CHUNK;
       }
 
-      const { data: leads, error: dbError } = await q;
-      if (dbError) throw new Error(dbError.message);
-
-      const rows = (leads ?? []).map(mapLead);
+      const rows = allRows.map(mapLead);
       const grouped = {
         'New Inquiries': rows.filter((l: any) => l.stage === 'NEW_INQUIRY'),
         'In Discussion': rows.filter((l: any) => l.stage === 'IN_DISCUSSION'),
@@ -44,13 +61,13 @@ export function useLeads(page = 1, limit = 50, search = '') {
       };
 
       setData(rows);
-      setMeta({ page, limit, total: rows.length, grouped });
+      setMeta({ page: 1, limit: rows.length, total: rows.length, grouped });
     } catch (err: any) {
       setError(err.message || 'Failed to load leads');
     } finally {
       setLoading(false);
     }
-  }, [page, limit, search]);
+  }, [search]);
 
   useEffect(() => {
     fetchLeads().catch(() => {});
