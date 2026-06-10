@@ -81,8 +81,8 @@ function LeadPipeline({ leads, meta, loading, error, onCall, onStageChange, onOp
                    {leadsList.map((lead: any) => (
                      <div 
                        key={lead.id} 
-                       onClick={() => onOpen(lead)}
-                       className={`p-4 rounded-xl border bg-[#121214] hover:-translate-y-1 transition-transform cursor-pointer group shadow-sm hover:shadow-md
+                       onClick={() => selectable ? onToggleSelect(lead.id) : onOpen(lead)}
+                       className={`p-4 rounded-xl border bg-[#121214] hover:-translate-y-1 transition-transform cursor-pointer group shadow-sm hover:shadow-md ${selectedIds.has(lead.id) ? 'ring-2 ring-aura-gold border-aura-gold/60' : ''}
                          ${lead.stage === 'FUNDED' ? 'border-aura-emerald/30 hover:border-aura-emerald/50' :
                          lead.stage === 'PENDING_KYC' ? 'border-aura-warning/30 hover:border-aura-warning/50' :
                          'border-glass-border hover:border-aura-platinum/30'}
@@ -96,7 +96,7 @@ function LeadPipeline({ leads, meta, loading, error, onCall, onStageChange, onOp
                                 checked={selectedIds.has(lead.id)}
                                 onClick={e => e.stopPropagation()}
                                 onChange={() => onToggleSelect(lead.id)}
-                                className="accent-aura-gold w-3.5 h-3.5 cursor-pointer shrink-0"
+                                className="accent-aura-gold w-4 h-4 cursor-pointer shrink-0"
                               />
                             )}
                             <div className="font-medium text-sm text-aura-platinum">{lead.firstName} {lead.lastName}</div>
