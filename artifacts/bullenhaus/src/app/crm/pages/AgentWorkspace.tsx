@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Phone, Clock, FileText, PlayCircle, Plus, ChevronRight, MoreHorizontal, Loader2, AlertCircle, ChevronDown, Upload } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
@@ -15,7 +15,7 @@ interface LocalTask {
   urgent: boolean;
 }
 
-function LeadPipeline({ leads, meta, loading, error, onCall, onStageChange, onOpen }: {
+function LeadPipeline({ leads, meta, loading, error, onCall, onStageChange, onOpen, selectable, selectedIds, onToggleSelect }: {
   leads: any[];
   meta: any;
   loading: boolean;
@@ -23,6 +23,9 @@ function LeadPipeline({ leads, meta, loading, error, onCall, onStageChange, onOp
   onCall: (phone: string, name: string) => void;
   onStageChange: (leadId: string, stage: LeadStage) => void;
   onOpen: (lead: any) => void;
+  selectable: boolean;
+  selectedIds: Set<string>;
+  onToggleSelect: (id: string) => void;
 }) {
   const stages = meta?.grouped || {
     'New Inquiries': [],
@@ -86,7 +89,18 @@ function LeadPipeline({ leads, meta, loading, error, onCall, onStageChange, onOp
                        `}
                      >
                        <div className="flex items-start justify-between mb-3">
-                          <div className="font-medium text-sm text-aura-platinum">{lead.firstName} {lead.lastName}</div>
+                          <div className="flex items-center gap-2">
+                            {selectable && (
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.has(lead.id)}
+                                onClick={e => e.stopPropagation()}
+                                onChange={() => onToggleSelect(lead.id)}
+                                className="accent-aura-gold w-3.5 h-3.5 cursor-pointer shrink-0"
+                              />
+                            )}
+                            <div className="font-medium text-sm text-aura-platinum">{lead.firstName} {lead.lastName}</div>
+                          </div>
                           <button onClick={e => { e.stopPropagation(); onOpen(lead); }} className="text-aura-platinum/30 hover:text-aura-platinum opacity-0 group-hover:opacity-100 transition-opacity"><MoreHorizontal className="w-4 h-4" /></button>
                        </div>
                        <div className="grid grid-cols-2 gap-2 mb-4 text-xs font-mono">
@@ -159,6 +173,12 @@ function LeadPipeline({ leads, meta, loading, error, onCall, onStageChange, onOp
 const LEAD_UPLOAD_ROLES = ['super-admin', 'superadmin', 'admin', 'crm_admin', 'director'];
 function canUploadLeads(): boolean {
   return LEAD_UPLOAD_ROLES.includes((authStorage.getRole() || '').toLowerCase());
+}
+
+// Roles allowed to bulk-assign leads to an agent (agent excluded).
+const LEAD_ASSIGN_ROLES = ['manager', 'director', 'admin', 'crm_admin', 'super-admin', 'superadmin'];
+function canAssignLeads(): boolean {
+  return LEAD_ASSIGN_ROLES.includes((authStorage.getRole() || '').toLowerCase());
 }
 
 // Minimal CSV parser (header row + comma-separated, basic quote support).
@@ -364,6 +384,57 @@ export function AgentWorkspace() {
   const { openDialer } = usePhoneDialer();
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<any | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [agents, setAgents] = useState<any[]>([]);
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [agentSearch, setAgentSearch] = useState('');
+  const [chosenAgentId, setChosenAgentId] = useState<string | null>(null);
+  const [assigning, setAssigning] = useState(false);
+  const [assignResult, setAssignResult] = useState<any | null>(null);
+
+  const toggleSelect = (id: string) => setSelectedIds(prev => {
+    const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n;
+  });
+  const clearSelection = () => setSelectedIds(new Set());
+
+  useEffect(() => {
+    if (!canAssignLeads()) return;
+    supabase.from('users').select('id, full_name, display_name, email').eq('role', 'agent').order('full_name')
+      .then(({ data }) => setAgents(data ?? []));
+  }, []);
+
+  const doAssign = async () => {
+    if (!chosenAgentId || selectedIds.size === 0) return;
+    setAssigning(true);
+    try {
+      const { data, error } = await supabase.rpc('assign_leads_bulk', {
+        p_agent_id: chosenAgentId,
+        p_lead_ids: Array.from(selectedIds),
+      });
+      if (error) throw new Error(error.message);
+      setAssignResult(data);
+      setAssignOpen(false);
+      setChosenAgentId(null);
+      clearSelection();
+      await refetch();
+    } catch (err: any) {
+      const map: Record<string, string> = {
+        insufficient_privileges: 'Недостаточно прав для назначения лидов',
+        invalid_agent: 'Выбранный пользователь не является агентом',
+        empty_selection: 'Не выбран ни один лид',
+        limit_exceeded: 'За одну операцию можно назначить не более 500 лидов',
+      };
+      const raw = err?.message || 'Assignment failed';
+      const key = Object.keys(map).find(k => raw.includes(k));
+      setAssignResult({ error: key ? map[key] : raw });
+      setAssignOpen(false);
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  const agentName = (a: any) => a?.full_name || a?.display_name || a?.email || 'Agent';
+  const filteredAgents = agents.filter(a => agentName(a).toLowerCase().includes(agentSearch.toLowerCase()));
   const [localTasks, setLocalTasks] = useState<LocalTask[]>([]);
   const [taskName, setTaskName] = useState('');
   const [taskType, setTaskType] = useState('Call');
@@ -601,7 +672,80 @@ export function AgentWorkspace() {
         onCall={(phone, name) => openDialer({ phone, name })}
         onStageChange={handleStageChange}
         onOpen={setSelectedLead}
+        selectable={canAssignLeads()}
+        selectedIds={selectedIds}
+        onToggleSelect={toggleSelect}
       />
+
+      {/* Bulk selection action bar */}
+      {canAssignLeads() && selectedIds.size > 0 && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-4 px-5 py-3 rounded-xl border border-aura-gold/30 bg-[#121214] shadow-2xl">
+          <span className="text-xs text-aura-platinum">Выбрано: <b className="text-aura-gold">{selectedIds.size}</b></span>
+          <Button variant="primary" size="sm" onClick={() => { setAgentSearch(''); setChosenAgentId(null); setAssignOpen(true); }}>
+            Назначить агенту
+          </Button>
+          <button onClick={clearSelection} className="text-[10px] uppercase tracking-widest text-aura-platinum/50 hover:text-aura-platinum">Снять выбор</button>
+        </div>
+      )}
+
+      {/* Agent picker modal */}
+      <Modal isOpen={assignOpen} onClose={() => setAssignOpen(false)} title="Назначить агенту" subtitle={`${selectedIds.size} лид(ов) выбрано`}>
+        <div className="space-y-3">
+          <input
+            value={agentSearch}
+            onChange={e => setAgentSearch(e.target.value)}
+            placeholder="Поиск агента..."
+            className="w-full bg-black/40 border border-glass-border rounded px-4 py-2 text-xs text-aura-platinum outline-none focus:border-aura-gold/50"
+          />
+          <div className="max-h-64 overflow-y-auto custom-scrollbar space-y-1">
+            {filteredAgents.length === 0 ? (
+              <div className="text-[11px] text-aura-platinum/40 py-4 text-center">Агенты не найдены</div>
+            ) : filteredAgents.map(a => (
+              <button
+                key={a.id}
+                onClick={() => setChosenAgentId(a.id)}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border text-left text-xs transition-colors ${
+                  chosenAgentId === a.id ? 'border-aura-gold/50 bg-aura-gold/10 text-aura-platinum' : 'border-glass-border bg-black/20 text-aura-platinum/70 hover:bg-white/5'
+                }`}
+              >
+                <span>{agentName(a)}</span>
+                {chosenAgentId === a.id && <span className="text-aura-gold text-[10px] uppercase tracking-widest">Выбран</span>}
+              </button>
+            ))}
+          </div>
+          <Button
+            variant="primary"
+            className="w-full"
+            isLoading={assigning}
+            disabled={!chosenAgentId || assigning}
+            onClick={doAssign}
+          >
+            Назначить {selectedIds.size} лид(ов)
+          </Button>
+        </div>
+      </Modal>
+
+      {/* Result modal */}
+      <Modal isOpen={!!assignResult} onClose={() => setAssignResult(null)} title="Назначение лидов" subtitle={assignResult?.error ? 'Ошибка' : 'Результат'}>
+        {assignResult && (assignResult.error ? (
+          <div className="flex items-start gap-2 text-xs text-aura-ruby"><AlertCircle className="w-4 h-4 shrink-0" /><span>{assignResult.error}</span></div>
+        ) : (
+          <div className="space-y-2 text-xs text-aura-platinum">
+            <div>Запрошено: <b>{assignResult.requested}</b></div>
+            <div>Назначено: <b className="text-aura-emerald">{assignResult.assigned}</b></div>
+            <div>Пропущено: <b>{assignResult.summary?.skipped ?? 0}</b></div>
+            {Array.isArray(assignResult.skipped) && assignResult.skipped.length > 0 && (
+              <div className="mt-2 max-h-40 overflow-y-auto custom-scrollbar space-y-1">
+                {assignResult.skipped.map((sk: any, i: number) => (
+                  <div key={i} className="flex justify-between gap-2 text-[10px] text-aura-platinum/50">
+                    <span className="truncate">{sk.lead_id}</span><span>{sk.reason}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </Modal>
 
       <LeadDetailsModal
         lead={selectedLead}
