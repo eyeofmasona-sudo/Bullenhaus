@@ -44,9 +44,15 @@ async function apiHeaders(): Promise<HeadersInit> {
 }
 
 async function apiFetchWorkers(): Promise<Worker[]> {
-  const res = await fetch("/api/crm/workers", { headers: await apiHeaders() });
-  if (!res.ok) throw new Error((await res.json()).error || "Failed to load workers");
-  return (await res.json()).workers;
+  // Read CRM workers directly via Supabase (RLS lets admin/manager read users).
+  // Avoids depending on the serverless API for the read path (counts/table).
+  const { data, error } = await supabase
+    .from("users")
+    .select("id, email, full_name, display_name, role, kyc_status, created_at, updated_at")
+    .in("role", ["agent", "manager", "director", "admin"])
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Worker[];
 }
 
 async function apiCreateWorker(body: { email: string; password: string; full_name: string; role: string }) {
