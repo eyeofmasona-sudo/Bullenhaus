@@ -35,14 +35,6 @@ const ROLE_COLORS: Record<string, "success" | "warning" | "danger" | "info" | "d
 
 // ── API helpers ────────────────────────────────────────────────────────────────
 
-async function apiHeaders(): Promise<HeadersInit> {
-  const { data: { session } } = await supabase.auth.getSession();
-  return {
-    "Content-Type": "application/json",
-    ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
-  };
-}
-
 async function apiFetchWorkers(): Promise<Worker[]> {
   // Read CRM workers directly via Supabase (RLS lets admin/manager read users).
   // Avoids depending on the serverless API for the read path (counts/table).
@@ -55,32 +47,46 @@ async function apiFetchWorkers(): Promise<Worker[]> {
   return (data ?? []) as Worker[];
 }
 
-async function apiCreateWorker(body: { email: string; password: string; full_name: string; role: string }) {
-  const res = await fetch("/api/crm/workers", {
-    method: "POST", headers: await apiHeaders(), body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error((await res.json()).error || "Failed to create worker");
+// Privileged worker operations (create/delete/reset) run in the Supabase
+// Edge Function "crm-workers" (uses service_role, enforces admin role).
+async function invokeWorkerFn(payload: Record<string, unknown>) {
+  const { data, error } = await supabase.functions.invoke("crm-workers", { body: payload });
+  if (error) {
+    let msg = error.message;
+    try {
+      const body = await (error as any).context?.json?.();
+      if (body?.error) msg = body.error;
+    } catch { /* ignore */ }
+    throw new Error(msg || "Request failed");
+  }
+  if ((data as any)?.error) throw new Error((data as any).error);
+  return data;
 }
 
+async function apiCreateWorker(body: { email: string; password: string; full_name: string; role: string }) {
+  await invokeWorkerFn({ action: "create", ...body });
+}
+
+// Role / name change is RLS-permitted for admins → done directly via Supabase.
 async function apiUpdateWorker(id: string, body: { role?: string; full_name?: string }) {
-  const res = await fetch(`/api/crm/workers/${id}`, {
-    method: "PATCH", headers: await apiHeaders(), body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error((await res.json()).error || "Failed to update worker");
+  const updates: Record<string, string> = {};
+  if (body.role) updates.role = body.role;
+  if (body.full_name !== undefined) {
+    updates.full_name = body.full_name;
+    updates.display_name = body.full_name;
+  }
+  if (Object.keys(updates).length > 0) {
+    const { error } = await supabase.from("users").update(updates).eq("id", id);
+    if (error) throw new Error(error.message);
+  }
 }
 
 async function apiDeleteWorker(id: string) {
-  const res = await fetch(`/api/crm/workers/${id}`, {
-    method: "DELETE", headers: await apiHeaders(),
-  });
-  if (!res.ok) throw new Error((await res.json()).error || "Failed to delete worker");
+  await invokeWorkerFn({ action: "delete", id });
 }
 
 async function apiResetPassword(id: string, password: string) {
-  const res = await fetch(`/api/crm/workers/${id}/reset-password`, {
-    method: "POST", headers: await apiHeaders(), body: JSON.stringify({ password }),
-  });
-  if (!res.ok) throw new Error((await res.json()).error || "Failed to reset password");
+  await invokeWorkerFn({ action: "reset-password", id, password });
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
