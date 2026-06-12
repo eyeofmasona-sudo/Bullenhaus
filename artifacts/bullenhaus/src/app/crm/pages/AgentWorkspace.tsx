@@ -420,10 +420,10 @@ export function AgentWorkspace() {
       await refetch();
     } catch (err: any) {
       const map: Record<string, string> = {
-        insufficient_privileges: 'Недостаточно прав для назначения лидов',
-        invalid_agent: 'Выбранный пользователь не является агентом',
-        empty_selection: 'Не выбран ни один лид',
-        limit_exceeded: 'За одну операцию можно назначить не более 500 лидов',
+        insufficient_privileges: t('leadErrInsufficient'),
+        invalid_agent: t('leadErrInvalidAgent'),
+        empty_selection: t('leadErrEmptySelection'),
+        limit_exceeded: t('leadErrLimit'),
       };
       const raw = err?.message || 'Assignment failed';
       const key = Object.keys(map).find(k => raw.includes(k));
@@ -681,26 +681,26 @@ export function AgentWorkspace() {
       {/* Bulk selection action bar */}
       {canAssignLeads(role) && selectedIds.size > 0 && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-4 px-5 py-3 rounded-xl border border-aura-gold/30 bg-[#121214] shadow-2xl">
-          <span className="text-xs text-aura-platinum">Выбрано: <b className="text-aura-gold">{selectedIds.size}</b></span>
+          <span className="text-xs text-aura-platinum">{t('leadSelectedLabel')}: <b className="text-aura-gold">{selectedIds.size}</b></span>
           <Button variant="primary" size="sm" onClick={() => { setAgentSearch(''); setChosenAgentId(null); setAssignOpen(true); }}>
-            Назначить агенту
+            {t('leadAssignToAgent')}
           </Button>
-          <button onClick={clearSelection} className="text-[10px] uppercase tracking-widest text-aura-platinum/50 hover:text-aura-platinum">Снять выбор</button>
+          <button onClick={clearSelection} className="text-[10px] uppercase tracking-widest text-aura-platinum/50 hover:text-aura-platinum">{t('leadClearSelection')}</button>
         </div>
       )}
 
       {/* Agent picker modal */}
-      <Modal isOpen={assignOpen} onClose={() => setAssignOpen(false)} title="Назначить агенту" subtitle={`${selectedIds.size} лид(ов) выбрано`}>
+      <Modal isOpen={assignOpen} onClose={() => setAssignOpen(false)} title={t('leadAssignToAgent')} subtitle={`${selectedIds.size} ${t('leadsSelectedSuffix')}`}>
         <div className="space-y-3">
           <input
             value={agentSearch}
             onChange={e => setAgentSearch(e.target.value)}
-            placeholder="Поиск агента..."
+            placeholder={t('leadSearchAgent')}
             className="w-full bg-black/40 border border-glass-border rounded px-4 py-2 text-xs text-aura-platinum outline-none focus:border-aura-gold/50"
           />
           <div className="max-h-64 overflow-y-auto custom-scrollbar space-y-1">
             {filteredAgents.length === 0 ? (
-              <div className="text-[11px] text-aura-platinum/40 py-4 text-center">Агенты не найдены</div>
+              <div className="text-[11px] text-aura-platinum/40 py-4 text-center">{t('leadNoAgents')}</div>
             ) : filteredAgents.map(a => (
               <button
                 key={a.id}
@@ -710,7 +710,7 @@ export function AgentWorkspace() {
                 }`}
               >
                 <span>{agentName(a)}</span>
-                {chosenAgentId === a.id && <span className="text-aura-gold text-[10px] uppercase tracking-widest">Выбран</span>}
+                {chosenAgentId === a.id && <span className="text-aura-gold text-[10px] uppercase tracking-widest">{t('leadChosen')}</span>}
               </button>
             ))}
           </div>
@@ -721,20 +721,20 @@ export function AgentWorkspace() {
             disabled={!chosenAgentId || assigning}
             onClick={doAssign}
           >
-            Назначить {selectedIds.size} лид(ов)
+            {t('leadAssignAction')} {selectedIds.size} {t('leadsWordLower')}
           </Button>
         </div>
       </Modal>
 
       {/* Result modal */}
-      <Modal isOpen={!!assignResult} onClose={() => setAssignResult(null)} title="Назначение лидов" subtitle={assignResult?.error ? 'Ошибка' : 'Результат'}>
+      <Modal isOpen={!!assignResult} onClose={() => setAssignResult(null)} title={t('leadAssignmentTitle')} subtitle={assignResult?.error ? t('commonError') : t('commonResult')}>
         {assignResult && (assignResult.error ? (
           <div className="flex items-start gap-2 text-xs text-aura-ruby"><AlertCircle className="w-4 h-4 shrink-0" /><span>{assignResult.error}</span></div>
         ) : (
           <div className="space-y-2 text-xs text-aura-platinum">
-            <div>Запрошено: <b>{assignResult.requested}</b></div>
-            <div>Назначено: <b className="text-aura-emerald">{assignResult.assigned}</b></div>
-            <div>Пропущено: <b>{assignResult.summary?.skipped ?? 0}</b></div>
+            <div>{t('leadRequested')}: <b>{assignResult.requested}</b></div>
+            <div>{t('leadAssigned')}: <b className="text-aura-emerald">{assignResult.assigned}</b></div>
+            <div>{t('leadSkipped')}: <b>{assignResult.summary?.skipped ?? 0}</b></div>
             {Array.isArray(assignResult.skipped) && assignResult.skipped.length > 0 && (
               <div className="mt-2 max-h-40 overflow-y-auto custom-scrollbar space-y-1">
                 {assignResult.skipped.map((sk: any, i: number) => (
