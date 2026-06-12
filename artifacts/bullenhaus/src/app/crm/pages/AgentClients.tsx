@@ -11,15 +11,15 @@ import { supabase } from "../../../lib/supabase/browserClient";
 import { usePhoneDialer } from "../contexts/PhoneDialerContext";
 import { fetchClientTransactions, type ClientTransaction } from "../hooks/useClients";
 import { useClientFiles, validateFile, ACCEPTED_EXTENSIONS } from "../hooks/useClientFiles";
-import { authStorage } from "../lib/auth";
+import { useAuth } from "../../trading/contexts/AuthContext";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 
 // Roles allowed to view & manage client file attachments.
 // 'superadmin' is forward-compat only (not a real role in the DB yet).
-const CLIENT_FILE_ROLES = ['superadmin', 'admin', 'director', 'manager'];
-function canManageClientFiles(): boolean {
-  return CLIENT_FILE_ROLES.includes((authStorage.getRole() || '').toLowerCase());
+const CLIENT_FILE_ROLES = ['superadmin', 'super-admin', 'admin', 'crm_admin', 'director', 'manager'];
+function canManageClientFiles(role?: string | null): boolean {
+  return CLIENT_FILE_ROLES.includes((role || '').toLowerCase());
 }
 
 function formatBytes(bytes: number | null): string {
@@ -163,7 +163,8 @@ type DrawerTab = 'overview' | 'transactions' | 'files';
 function ClientDrawer({ client, onClose }: { client: AgentClient | null; onClose: () => void }) {
   const { t } = useI18n();
   const { openDialer } = usePhoneDialer();
-  const showFiles = canManageClientFiles();
+  const { role } = useAuth();
+  const showFiles = canManageClientFiles(role);
   const TABS: DrawerTab[] = showFiles ? ['overview', 'transactions', 'files'] : ['overview', 'transactions'];
   const [tab, setTab] = useState<DrawerTab>('overview');
   const [txList, setTxList] = useState<ClientTransaction[]>([]);

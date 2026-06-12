@@ -5,7 +5,7 @@ import { Modal } from "../components/ui/Modal";
 import { useLeads, updateLeadStage, LEAD_STAGES, type LeadStage } from "../hooks/useLeads";
 import { useI18n } from "../lib/i18n";
 import { usePhoneDialer } from "../contexts/PhoneDialerContext";
-import { authStorage } from "../lib/auth";
+import { useAuth } from "../../trading/contexts/AuthContext";
 import { supabase } from "../../../lib/supabase/browserClient";
 
 interface LocalTask {
@@ -171,14 +171,14 @@ function LeadPipeline({ leads, meta, loading, error, onCall, onStageChange, onOp
 
 // Roles allowed to bulk-upload leads.
 const LEAD_UPLOAD_ROLES = ['super-admin', 'superadmin', 'admin', 'crm_admin', 'director'];
-function canUploadLeads(): boolean {
-  return LEAD_UPLOAD_ROLES.includes((authStorage.getRole() || '').toLowerCase());
+function canUploadLeads(role?: string | null): boolean {
+  return LEAD_UPLOAD_ROLES.includes((role || '').toLowerCase());
 }
 
 // Roles allowed to bulk-assign leads to an agent (agent excluded).
 const LEAD_ASSIGN_ROLES = ['manager', 'director', 'admin', 'crm_admin', 'super-admin', 'superadmin'];
-function canAssignLeads(): boolean {
-  return LEAD_ASSIGN_ROLES.includes((authStorage.getRole() || '').toLowerCase());
+function canAssignLeads(role?: string | null): boolean {
+  return LEAD_ASSIGN_ROLES.includes((role || '').toLowerCase());
 }
 
 // Minimal CSV parser (header row + comma-separated, basic quote support).
@@ -218,12 +218,12 @@ function pick(row: Record<string, string>, keys: string[]): string {
 
 type UploadResult = { parsed: number; inserted: number; skipped: number; error?: string };
 
-function LeadUploadButton({ onDone }: { onDone: () => void }) {
+function LeadUploadButton({ onDone, role }: { onDone: () => void; role?: string | null }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<UploadResult | null>(null);
 
-  if (!canUploadLeads()) return null;
+  if (!canUploadLeads(role)) return null;
 
   const onPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -382,6 +382,7 @@ function LeadDetailsModal({ lead, onClose, onCall }: {
 export function AgentWorkspace() {
   const { t } = useI18n();
   const { openDialer } = usePhoneDialer();
+  const { role } = useAuth();
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<any | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -398,10 +399,10 @@ export function AgentWorkspace() {
   const clearSelection = () => setSelectedIds(new Set());
 
   useEffect(() => {
-    if (!canAssignLeads()) return;
+    if (!canAssignLeads(role)) return;
     supabase.from('users').select('id, full_name, display_name, email').eq('role', 'agent').order('full_name')
       .then(({ data }) => setAgents(data ?? []));
-  }, []);
+  }, [role]);
 
   const doAssign = async () => {
     if (!chosenAgentId || selectedIds.size === 0) return;
@@ -527,7 +528,7 @@ export function AgentWorkspace() {
                <div className="text-[9px] uppercase tracking-widest text-aura-platinum/40">FTD Today</div>
              </div>
            </div>
-           <LeadUploadButton onDone={refetch} />
+           <LeadUploadButton onDone={refetch} role={role} />
            <Button variant="secondary" size="icon" onClick={() => setIsTaskModalOpen(true)}>
              <Plus className="w-4 h-4" />
            </Button>
@@ -672,13 +673,13 @@ export function AgentWorkspace() {
         onCall={(phone, name) => openDialer({ phone, name })}
         onStageChange={handleStageChange}
         onOpen={setSelectedLead}
-        selectable={canAssignLeads()}
+        selectable={canAssignLeads(role)}
         selectedIds={selectedIds}
         onToggleSelect={toggleSelect}
       />
 
       {/* Bulk selection action bar */}
-      {canAssignLeads() && selectedIds.size > 0 && (
+      {canAssignLeads(role) && selectedIds.size > 0 && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-4 px-5 py-3 rounded-xl border border-aura-gold/30 bg-[#121214] shadow-2xl">
           <span className="text-xs text-aura-platinum">Выбрано: <b className="text-aura-gold">{selectedIds.size}</b></span>
           <Button variant="primary" size="sm" onClick={() => { setAgentSearch(''); setChosenAgentId(null); setAssignOpen(true); }}>
