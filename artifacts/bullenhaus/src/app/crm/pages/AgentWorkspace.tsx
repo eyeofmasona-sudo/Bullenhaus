@@ -8,6 +8,8 @@ import { usePhoneDialer } from "../contexts/PhoneDialerContext";
 import { useAuth } from "../../trading/contexts/AuthContext";
 import { supabase } from "../../../lib/supabase/browserClient";
 
+const VISIBLE_PER_STAGE = 100;
+
 interface LocalTask {
   name: string;
   type: string;
@@ -26,7 +28,9 @@ function LeadPipeline({ leads, meta, loading, error, onCall, onStageChange, onOp
   selectable: boolean;
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
+  onSelectMany: (ids: string[], selected: boolean) => void;
 }) {
+  const { t } = useI18n();
   const stages = meta?.grouped || {
     'New Inquiries': [],
     'In Discussion': [],
@@ -74,11 +78,21 @@ function LeadPipeline({ leads, meta, loading, error, onCall, onStageChange, onOp
                      }`} />
                      <h4 className="text-[10px] font-bold uppercase tracking-widest text-aura-platinum/60">{stage}</h4>
                    </div>
-                   <span className="text-[10px] font-mono text-aura-platinum/40 bg-white/5 px-2 py-0.5 rounded">{leadsList.length}</span>
+                   <div className="flex items-center gap-2">
+                     {selectable && leadsList.length > 0 && (
+                       <button
+                         onClick={() => onSelectMany(leadsList.map((l: any) => l.id), !leadsList.every((l: any) => selectedIds.has(l.id)))}
+                         className="text-[9px] uppercase tracking-widest text-aura-gold/70 hover:text-aura-gold"
+                       >
+                         {leadsList.every((l: any) => selectedIds.has(l.id)) ? t('leadDeselectAll') : t('leadSelectAll')}
+                       </button>
+                     )}
+                     <span className="text-[10px] font-mono text-aura-platinum/40 bg-white/5 px-2 py-0.5 rounded">{leadsList.length}</span>
+                   </div>
                  </div>
                  
                  <div className="space-y-3">
-                   {leadsList.map((lead: any) => (
+                   {leadsList.slice(0, VISIBLE_PER_STAGE).map((lead: any) => (
                      <div 
                        key={lead.id} 
                        onClick={() => selectable ? onToggleSelect(lead.id) : onOpen(lead)}
@@ -158,6 +172,11 @@ function LeadPipeline({ leads, meta, loading, error, onCall, onStageChange, onOp
                    {leadsList.length === 0 && (
                      <div className="p-4 rounded-xl border border-dashed border-glass-border bg-transparent flex items-center justify-center h-24">
                        <span className="text-[10px] uppercase tracking-widest text-aura-platinum/30">Empty</span>
+                     </div>
+                   )}
+                   {leadsList.length > VISIBLE_PER_STAGE && (
+                     <div className="p-2 text-center text-[9px] uppercase tracking-widest text-aura-platinum/40">
+                       +{leadsList.length - VISIBLE_PER_STAGE} {t('leadMore')}
                      </div>
                    )}
                  </div>
@@ -397,6 +416,9 @@ export function AgentWorkspace() {
     const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n;
   });
   const clearSelection = () => setSelectedIds(new Set());
+  const selectMany = (ids: string[], sel: boolean) => setSelectedIds(prev => {
+    const n = new Set(prev); ids.forEach(id => { if (sel) n.add(id); else n.delete(id); }); return n;
+  });
 
   useEffect(() => {
     if (!canAssignLeads(role)) return;
@@ -676,6 +698,7 @@ export function AgentWorkspace() {
         selectable={canAssignLeads(role)}
         selectedIds={selectedIds}
         onToggleSelect={toggleSelect}
+        onSelectMany={selectMany}
       />
 
       {/* Bulk selection action bar */}
