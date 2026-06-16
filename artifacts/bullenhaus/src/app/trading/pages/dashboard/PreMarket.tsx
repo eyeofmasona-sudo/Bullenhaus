@@ -61,15 +61,27 @@ export const PreMarket: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Asset Card */}
-        <div className="glass-card p-8 border-accent-primary/20 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-48 h-48 bg-accent-primary/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="glass-card border-accent-primary/20 relative overflow-hidden group">
+          {/* Beautiful Image Background */}
+          <div className="absolute inset-0 z-0">
+            <img 
+              src="/neuralink-poster.png" 
+              alt="Neuralink" 
+              className="w-full h-full object-cover opacity-40 mix-blend-screen transition-transform duration-700 group-hover:scale-105 pointer-events-none"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/60 to-black/95 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent pointer-events-none" />
+          </div>
           
-          <div className="flex justify-between items-start mb-6">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-12 h-12 rounded-full bg-surface border border-border flex items-center justify-center font-bold text-white text-xl shadow-[0_0_15px_rgba(212,175,55,0.2)]">
-                  N
-                </div>
+          <div className="absolute top-0 right-0 w-64 h-64 bg-accent-primary/10 rounded-full blur-3xl pointer-events-none" />
+          
+          <div className="p-8 relative z-10 flex flex-col h-full">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-12 h-12 rounded-xl bg-black/50 border border-white/10 flex items-center justify-center font-bold text-white text-xl shadow-[0_0_15px_rgba(212,175,55,0.2)] backdrop-blur-md">
+                    N
+                  </div>
                 <div>
                   <h3 className="text-2xl font-bold text-white tracking-tight">{asset.name}</h3>
                   <p className="text-xs font-bold text-accent-primary uppercase tracking-widest">{asset.symbol}</p>
@@ -135,10 +147,11 @@ export const PreMarket: React.FC = () => {
               )}
             </button>
           </div>
+          </div>
         </div>
 
         {/* Info / FAQ */}
-        <div className="space-y-6">
+        <div className="space-y-6 flex flex-col justify-end">
           <div className="glass-card p-6 border-white/5">
             <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-4">About Pre-Market</h3>
             <p className="text-sm text-slate-400 leading-relaxed">
