@@ -61,21 +61,22 @@ export const PreMarket: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Asset Card */}
-        <div className="glass-card border-accent-primary/20 relative overflow-hidden group">
-          {/* Beautiful Image Background */}
-          <div className="absolute inset-0 z-0">
+        <div className="glass-card border-accent-primary/20 relative overflow-hidden group flex flex-col">
+          {/* Top Image Poster */}
+          <div className="w-full h-[450px] relative overflow-hidden shrink-0 bg-black/50">
             <img 
               src="/neuralink-poster.png" 
-              alt="Neuralink" 
-              className="w-full h-full object-cover opacity-40 mix-blend-screen transition-transform duration-700 group-hover:scale-105 pointer-events-none"
+              alt="Neuralink Poster" 
+              className="w-full h-full object-cover object-top opacity-90 transition-transform duration-700 group-hover:scale-105"
             />
-            <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/60 to-black/95 pointer-events-none" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent pointer-events-none" />
+            {/* Smooth transition gradient into the card body */}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0A0E17] via-[#0A0E17]/60 to-transparent" />
           </div>
           
           <div className="absolute top-0 right-0 w-64 h-64 bg-accent-primary/10 rounded-full blur-3xl pointer-events-none" />
           
-          <div className="p-8 relative z-10 flex flex-col h-full">
+          {/* Card Content - lifted slightly to overlap the fade */}
+          <div className="p-8 relative z-10 flex flex-col flex-1 -mt-32">
             <div className="flex justify-between items-start mb-6">
               <div>
                 <div className="flex items-center gap-3 mb-2">
