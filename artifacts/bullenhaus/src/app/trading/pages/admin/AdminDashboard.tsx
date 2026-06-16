@@ -6,6 +6,7 @@ import {
   Clock, XCircle, RefreshCw,
 } from 'lucide-react';
 import { MarketControlPanel } from './MarketControlPanel';
+import { AdminPreMarket } from './AdminPreMarket';
 import { supabase } from '../../lib/supabase';
 
 interface Metrics {
@@ -25,7 +26,7 @@ interface TxEvent {
   created_at: string;
 }
 
-const TABS = ['overview', 'forex', 'system'] as const;
+const TABS = ['overview', 'forex', 'premarket', 'system'] as const;
 type Tab = typeof TABS[number];
 
 const statusIcon = (s: string) => {
@@ -284,6 +285,12 @@ export const AdminDashboard: React.FC = () => {
 
         {activeTab === 'forex' && (
           <MarketControlPanel />
+        )}
+
+        {activeTab === 'premarket' && (
+          <div className="col-span-12">
+            <AdminPreMarket />
+          </div>
         )}
 
         {activeTab === 'system' && (
