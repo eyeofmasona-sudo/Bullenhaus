@@ -1,10 +1,7 @@
-import React, { createContext, useContext, useMemo, useState } from "react";
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 
-export type Locale = "en" | "de";
-
-type Dictionary = Record<string, string>;
-
-const dictionaries: Record<Locale, Dictionary> = {
+export const crmDictionaries: Record<string, any> = {
   en: {
     language: "EN",
     switchLanguage: "Switch language",
@@ -483,38 +480,18 @@ const dictionaries: Record<Locale, Dictionary> = {
   },
 };
 
-const LanguageContext = createContext<{
-  locale: Locale;
-  setLocale: (locale: Locale) => void;
-  toggleLocale: () => void;
-  t: (key: string) => string;
-} | null>(null);
 
-export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(() => {
-    const saved = localStorage.getItem("i18n-lang") || localStorage.getItem("aura_locale");
-    return saved === "de" ? "de" : "en";
-  });
 
-  const value = useMemo(() => {
-    const setLocale = (next: Locale) => {
-      localStorage.setItem("i18n-lang", next);
-      localStorage.setItem("aura_locale", next);
-      setLocaleState(next);
-    };
-    return {
-      locale,
-      setLocale,
-      toggleLocale: () => setLocale(locale === "en" ? "de" : "en"),
-      t: (key: string) => dictionaries[locale][key] || dictionaries.en[key] || key,
-    };
-  }, [locale]);
-
-  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
-}
-
+// Proxy hook to adapt existing CRM components to react-i18next
 export function useI18n() {
-  const context = useContext(LanguageContext);
-  if (!context) throw new Error("useI18n must be used inside LanguageProvider");
-  return context;
+  const { t, i18n } = useTranslation('crm');
+  return {
+    t: (key: string) => {
+      const val = t(key);
+      return val;
+    },
+    locale: i18n.language,
+    setLocale: (l: string) => i18n.changeLanguage(l),
+    toggleLocale: () => i18n.changeLanguage(i18n.language === 'en' ? 'de' : 'en')
+  };
 }

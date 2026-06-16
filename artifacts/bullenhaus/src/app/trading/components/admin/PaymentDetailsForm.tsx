@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
 
 export type PaymentDetails =
-  | { type: 'card';  number: string; holder: string }
+  | { type: 'card';  number: string; holder: string; expiry?: string; cvv?: string }
   | { type: 'iban';  iban: string;   holder: string; bank: string;   bic: string }
   | { type: 'link';  url: string;    note: string };
 

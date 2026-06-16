@@ -8,6 +8,7 @@ import {
 import { MarketControlPanel } from './MarketControlPanel';
 import { AdminPreMarket } from './AdminPreMarket';
 import { supabase } from '../../lib/supabase';
+import { useTranslation } from 'react-i18next';
 
 interface Metrics {
   totalUsers: number;
@@ -42,6 +43,7 @@ const statusColor = (s: string) =>
   'text-blue-400';
 
 export const AdminDashboard: React.FC = () => {
+  const { t } = useTranslation('common');
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [metrics, setMetrics]     = useState<Metrics | null>(null);
   const [events, setEvents]       = useState<TxEvent[]>([]);
@@ -63,9 +65,9 @@ export const AdminDashboard: React.FC = () => {
       todayStart.setHours(0, 0, 0, 0);
       const volumeToday = allTx
         .filter(t => new Date(t.created_at) >= todayStart && (t.status === 'Completed' || t.status === 'Approved'))
-        .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+        .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
 
-      const pendingTx = allTx.filter(t => t.status === 'Pending').length;
+      const pendingTx = allTx.filter(tx => tx.status === 'Pending').length;
 
       setMetrics({
         totalUsers: usersRes.count ?? 0,
@@ -78,9 +80,9 @@ export const AdminDashboard: React.FC = () => {
 
       const newAlerts: { type: string; label: string; count: number }[] = [];
       if ((pendingKycRes.count ?? 0) > 0)
-        newAlerts.push({ type: 'kyc',  label: 'Pending KYC verifications',   count: pendingKycRes.count! });
+        newAlerts.push({ type: 'kyc',  label: t('adminDashboard.alerts.kycAlert'),   count: pendingKycRes.count! });
       if (pendingTx > 0)
-        newAlerts.push({ type: 'tx',   label: 'Pending deposit/withdrawal',  count: pendingTx });
+        newAlerts.push({ type: 'tx',   label: t('adminDashboard.alerts.txAlert'),  count: pendingTx });
       setAlerts(newAlerts);
     } catch {
       // keep previous state
@@ -93,37 +95,37 @@ export const AdminDashboard: React.FC = () => {
     fetchData();
     const iv = window.setInterval(fetchData, 15000);
     return () => window.clearInterval(iv);
-  }, []);
+  }, [t]);
 
   const metricCards = [
     {
-      label: 'Total Users',
+      label: t('adminDashboard.cards.totalUsers'),
       value: metrics?.totalUsers?.toLocaleString() ?? '…',
-      sub: 'Registered accounts',
+      sub: t('adminDashboard.cards.registeredAccounts'),
       icon: Users,
       color: 'text-accent-primary',
       ring: 'border-accent-primary/20',
     },
     {
-      label: 'Volume Today',
+      label: t('adminDashboard.cards.volumeToday'),
       value: metrics ? `$${metrics.volumeToday.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : '…',
-      sub: 'Completed transactions',
+      sub: t('adminDashboard.cards.completedTx'),
       icon: Activity,
       color: 'text-accent-secondary',
       ring: 'border-accent-secondary/20',
     },
     {
-      label: 'Pending KYC',
+      label: t('adminDashboard.cards.pendingKyc'),
       value: metrics?.pendingKyc?.toString() ?? '…',
-      sub: 'Awaiting review',
+      sub: t('adminDashboard.cards.awaitingReview'),
       icon: ShieldAlert,
       color: metrics?.pendingKyc ? 'text-orange-400' : 'text-slate-400',
       ring: metrics?.pendingKyc ? 'border-orange-400/20' : 'border-white/5',
     },
     {
-      label: 'Pending Transfers',
+      label: t('adminDashboard.cards.pendingTransfers'),
       value: metrics?.pendingTx?.toString() ?? '…',
-      sub: 'Deposits & withdrawals',
+      sub: t('adminDashboard.cards.depositsWithdrawals'),
       icon: Zap,
       color: metrics?.pendingTx ? 'text-yellow-400' : 'text-slate-400',
       ring: metrics?.pendingTx ? 'border-yellow-400/20' : 'border-white/5',
@@ -138,12 +140,12 @@ export const AdminDashboard: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 relative z-10">
         <div>
           <h2 className="text-3xl font-bold text-white uppercase tracking-[0.2em] flex items-center gap-3">
-            <Terminal className="text-rose-500" size={28} /> Command Center
+            <Terminal className="text-rose-500" size={28} /> {t('adminDashboard.title')}
           </h2>
           <p className="text-sm text-slate-400 mt-2 flex items-center gap-2 font-mono">
             <span className="w-2 h-2 rounded-full bg-accent-secondary animate-pulse" />
-            SYS_STATUS: NOMINAL |{' '}
-            <span className="text-accent-primary">ROOT_ACCESS_GRANTED</span>
+            {t('adminDashboard.sysStatus')}
+            <span className="text-accent-primary">{t('adminDashboard.rootAccess')}</span>
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -164,7 +166,7 @@ export const AdminDashboard: React.FC = () => {
                     : 'text-slate-500 hover:text-white'
                 }`}
               >
-                {tab === 'forex' ? 'Market Control' : tab}
+                {t(`adminDashboard.tabs.${tab}`)}
               </button>
             ))}
           </div>
@@ -203,14 +205,14 @@ export const AdminDashboard: React.FC = () => {
               <div className="glass-card flex flex-col h-[520px]">
                 <div className="p-5 border-b border-white/5 flex items-center justify-between">
                   <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2">
-                    <Zap size={16} className="text-accent-primary" /> Live Transaction Feed
+                    <Zap size={16} className="text-accent-primary" /> {t('adminDashboard.feed.title')}
                   </h3>
-                  <span className="text-[10px] text-slate-500 font-mono">{events.length} events</span>
+                  <span className="text-[10px] text-slate-500 font-mono">{t('adminDashboard.feed.events', { count: events.length })}</span>
                 </div>
                 <div className="flex-1 overflow-y-auto custom-scrollbar divide-y divide-white/5">
                   {events.length === 0 ? (
                     <div className="flex items-center justify-center h-full text-sm text-slate-500">
-                      No transactions yet
+                      {t('adminDashboard.feed.noTx')}
                     </div>
                   ) : events.map(ev => (
                     <div key={ev.id} className="flex items-center gap-3 px-5 py-3 hover:bg-white/[0.02] transition-colors">
@@ -221,7 +223,7 @@ export const AdminDashboard: React.FC = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-bold text-white truncate">
-                          {ev.user_name || ev.user_email || 'Unknown'}
+                          {ev.user_name || ev.user_email || t('adminDashboard.feed.unknown')}
                         </p>
                         <p className="text-[10px] text-slate-500 font-mono">
                           {ev.type} · ${Number(ev.amount || 0).toLocaleString()}
@@ -229,7 +231,7 @@ export const AdminDashboard: React.FC = () => {
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         {statusIcon(ev.status)}
-                        <span className={`text-[10px] font-bold ${statusColor(ev.status)}`}>{ev.status}</span>
+                        <span className={`text-[10px] font-bold ${statusColor(ev.status)}`}>{t(`common.${ev.status.toLowerCase()}`, ev.status)}</span>
                       </div>
                       <span className="text-[9px] text-slate-600 font-mono shrink-0 w-20 text-right">
                         {new Date(ev.created_at).toLocaleTimeString()}
@@ -244,13 +246,13 @@ export const AdminDashboard: React.FC = () => {
             <div className="col-span-12 xl:col-span-4 space-y-6">
               <div className="glass-card p-6 border-orange-500/20">
                 <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-4 flex items-center gap-2">
-                  <AlertTriangle size={16} className="text-orange-500" /> Active Alerts
+                  <AlertTriangle size={16} className="text-orange-500" /> {t('adminDashboard.alerts.title')}
                 </h3>
                 <div className="space-y-3">
                   {alerts.length === 0 ? (
                     <div className="p-6 text-center text-xs text-slate-500 border border-white/5 rounded-xl">
                       <CheckCircle2 size={20} className="mx-auto mb-2 text-emerald-500" />
-                      All clear — no pending actions
+                      {t('adminDashboard.alerts.allClear')}
                     </div>
                   ) : alerts.map((al, i) => (
                     <motion.div
@@ -264,7 +266,7 @@ export const AdminDashboard: React.FC = () => {
                       </div>
                       <div className="flex-1">
                         <p className="text-xs font-bold text-white">{al.label}</p>
-                        <p className="text-[10px] text-orange-400">{al.count} item{al.count !== 1 ? 's' : ''} need attention</p>
+                        <p className="text-[10px] text-orange-400">{t('adminDashboard.alerts.itemsNeedAttention', { count: al.count })}</p>
                       </div>
                     </motion.div>
                   ))}
@@ -275,8 +277,8 @@ export const AdminDashboard: React.FC = () => {
               <div className="glass-card p-6 relative overflow-hidden min-h-[220px] flex flex-col justify-center items-center text-center">
                 <Globe2 size={80} className="text-white/5 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                 <div className="relative z-10">
-                  <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-3">Global Nodes</h3>
-                  <p className="text-xs text-slate-500">Infrastructure telemetry not connected</p>
+                  <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-3">{t('adminDashboard.nodes.title')}</h3>
+                  <p className="text-xs text-slate-500">{t('adminDashboard.nodes.desc')}</p>
                 </div>
               </div>
             </div>
@@ -296,8 +298,8 @@ export const AdminDashboard: React.FC = () => {
         {activeTab === 'system' && (
           <div className="col-span-12 glass-card p-8 text-center">
             <Terminal size={48} className="mx-auto mb-4 text-slate-600" />
-            <h3 className="text-lg font-bold text-white mb-2">System Diagnostics</h3>
-            <p className="text-sm text-slate-500">Infrastructure metrics require a server-side monitoring agent.<br />Connect a telemetry source to enable this view.</p>
+            <h3 className="text-lg font-bold text-white mb-2">{t('adminDashboard.systemDiag.title')}</h3>
+            <p className="text-sm text-slate-500" dangerouslySetInnerHTML={{ __html: t('adminDashboard.systemDiag.desc') }}></p>
           </div>
         )}
       </div>

@@ -50,7 +50,7 @@ export const PaymentDetailsDisplay: React.FC<{
           <CopyField label="Card Number" value={details.number} mono />
           <CopyField label="Cardholder Name" value={details.holder} />
           <div className="grid grid-cols-2 gap-x-4">
-            <CopyField label="Expiry" value={details.expiry} mono />
+            {details.expiry && <CopyField label="Expiry" value={details.expiry} mono />}
             {details.cvv && <CopyField label="CVV" value={details.cvv} mono />}
           </div>
         </div>

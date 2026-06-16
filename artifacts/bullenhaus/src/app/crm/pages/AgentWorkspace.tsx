@@ -17,7 +17,7 @@ interface LocalTask {
   urgent: boolean;
 }
 
-function LeadPipeline({ leads, meta, loading, error, onCall, onStageChange, onOpen, selectable, selectedIds, onToggleSelect }: {
+function LeadPipeline({ leads, meta, loading, error, onCall, onStageChange, onOpen, selectable, selectedIds, onToggleSelect, onSelectMany }: {
   leads: any[];
   meta: any;
   loading: boolean;
