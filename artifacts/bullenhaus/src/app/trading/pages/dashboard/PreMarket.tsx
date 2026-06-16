@@ -63,11 +63,11 @@ export const PreMarket: React.FC = () => {
         {/* Asset Card */}
         <div className="glass-card border-accent-primary/20 relative overflow-hidden group flex flex-col">
           {/* Top Image Poster */}
-          <div className="w-full h-[450px] relative overflow-hidden shrink-0 bg-black/50">
+          <div className="w-full h-[350px] relative overflow-hidden shrink-0 bg-[#0A0E17]">
             <img 
               src="/neuralink-poster.png" 
               alt="Neuralink Poster" 
-              className="w-full h-full object-cover object-top opacity-90 transition-transform duration-700 group-hover:scale-105"
+              className="w-full h-full object-cover object-center opacity-100 transition-transform duration-700 group-hover:scale-105"
             />
             {/* Smooth transition gradient into the card body */}
             <div className="absolute inset-0 bg-gradient-to-t from-[#0A0E17] via-[#0A0E17]/60 to-transparent" />
