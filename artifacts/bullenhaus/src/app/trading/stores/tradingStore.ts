@@ -26,6 +26,16 @@ export interface Position {
   closedAt?: string;
 }
 
+export interface Asset {
+  id: string;
+  symbol: string;
+  name: string;
+  amount: number;
+  buyPrice: number;
+  currentPrice: number;
+  createdAt: string;
+}
+
 export interface Order {
   id: string;
   symbol: string;
@@ -50,6 +60,7 @@ interface TradingState {
   wallet: Wallet;
   positions: Position[];
   orders: Order[];
+  assets: Asset[];
   prices: Record<string, number>;
   priceChanges: Record<string, number>;
   priceOverrides: Record<string, number>;
@@ -69,6 +80,7 @@ interface TradingState {
   checkOrders: () => void; // checks limit/stop orders against current prices
   addBalance: (amount: number) => void;
   setWalletBalance: (amount: number) => void;
+  buyAsset: (symbol: string, name: string, price: number, amount: number) => boolean;
 }
 
 export const useTradingStore = create<TradingState>()(
@@ -81,6 +93,7 @@ export const useTradingStore = create<TradingState>()(
       },
       positions: [],
       orders: [],
+      assets: [],
       prices: {},
       priceChanges: {},
       priceOverrides: {},
@@ -770,6 +783,66 @@ export const useTradingStore = create<TradingState>()(
             balance: amount
           }
         }));
+      },
+      
+      buyAsset: (symbol, name, price, amount) => {
+        const state = get();
+        const cost = price * amount;
+        if (state.wallet.balance - state.wallet.marginUsed < cost) {
+          return false;
+        }
+
+        const newId = crypto.randomUUID();
+        const newAsset: Asset = {
+          id: newId,
+          symbol,
+          name,
+          amount,
+          buyPrice: price,
+          currentPrice: price,
+          createdAt: new Date().toISOString()
+        };
+
+        set((state) => ({
+          assets: [...(state.assets || []), newAsset],
+          wallet: {
+            ...state.wallet,
+            balance: state.wallet.balance - cost,
+          }
+        }));
+
+        // Background database sync
+        (async () => {
+          try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            // Log transaction
+            const { error: txErr } = await supabase.from('transactions').insert({
+              user_id: user.id,
+              user_email: user.email,
+              user_name: user.user_metadata?.full_name || user.email,
+              type: 'Trade',
+              amount: cost,
+              currency: 'USD',
+              method: 'Other',
+              status: 'Completed',
+              instructions: `Pre-Market Purchase: ${amount} ${symbol} at $${price.toLocaleString()}`,
+            });
+            if (txErr) throw txErr;
+
+            // Update balance
+            const currentWallet = get().wallet;
+            const { error: userErr } = await supabase.from('users').update({
+              balance: currentWallet.balance,
+            }).eq('id', user.id);
+            if (userErr) throw userErr;
+          } catch (err) {
+            console.error('[buyAsset] Failed to persist to Supabase:', err);
+          }
+        })();
+
+        return true;
       }
     }),
     {
@@ -777,6 +850,7 @@ export const useTradingStore = create<TradingState>()(
       partialize: (state) => ({
         positions: state.positions,
         orders: state.orders,
+        assets: state.assets,
       }),
     }
   )

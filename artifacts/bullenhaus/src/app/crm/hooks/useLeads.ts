@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../../lib/supabase/browserClient';
 
-const LEADS_SELECT = 'id, name, first_name, last_name, email, phone, country, stage, capacity, timezone, acquisition_source, notes, assigned_agent_id, created_at, updated_at';
+const LEADS_SELECT = 'id, first_name, last_name, email, phone, country, stage, capacity, acquisition_source, notes, created_at';
 
 function mapLead(row: any) {
   return {
@@ -23,13 +23,13 @@ export function useLeads(page = 1, limit = 50, search = '') {
     setLoading(true);
     setError(null);
     try {
-      // PostgREST caps a single request to a page window, so the board
-      // previously showed only the first slice. Page through ALL matching
-      // leads in chunks so the full base is visible.
+      // Supabase/PostgREST caps a single request to a page window, so the
+      // board previously showed only the first slice. Page through ALL
+      // matching leads in chunks so the full base is visible.
       const CHUNK = 1000;
-      const SAFETY_MAX = 100000;
+      const SAFETY_MAX = 100_000;
       let from = 0;
-      let allRows: any[] = [];
+      let all: any[] = [];
 
       // eslint-disable-next-line no-constant-condition
       while (true) {
@@ -47,12 +47,12 @@ export function useLeads(page = 1, limit = 50, search = '') {
         if (dbError) throw new Error(dbError.message);
 
         const batch = chunk ?? [];
-        allRows = allRows.concat(batch);
+        all = all.concat(batch);
         if (batch.length < CHUNK || from + CHUNK >= SAFETY_MAX) break;
         from += CHUNK;
       }
 
-      const rows = allRows.map(mapLead);
+      const rows = all.map(mapLead);
       const grouped = {
         'New Inquiries': rows.filter((l: any) => l.stage === 'NEW_INQUIRY'),
         'In Discussion': rows.filter((l: any) => l.stage === 'IN_DISCUSSION'),

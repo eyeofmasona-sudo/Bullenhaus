@@ -32,6 +32,7 @@ import { useMarketEngine } from './app/trading/hooks/useMarketEngine';
 const TradeDashboard = React.lazy(() => import('./app/trading/components/dashboard/Dashboard').then(m => ({ default: m.Dashboard })));
 const TradeMarkets = React.lazy(() => import('./app/trading/pages/dashboard/Markets').then(m => ({ default: m.Markets })));
 const TradeTerminal = React.lazy(() => import('./app/trading/pages/dashboard/Trade').then(m => ({ default: m.Trade })));
+const TradePreMarket = React.lazy(() => import('./app/trading/pages/dashboard/PreMarket').then(m => ({ default: m.PreMarket })));
 const TradePortfolio = React.lazy(() => import('./app/trading/pages/dashboard/Portfolio').then(m => ({ default: m.Portfolio })));
 const TradeTransactions = React.lazy(() => import('./app/trading/pages/dashboard/Transactions').then(m => ({ default: m.Transactions })));
 const TradeReferrals = React.lazy(() => import('./app/trading/pages/dashboard/Referrals').then(m => ({ default: m.Referrals })));
@@ -169,6 +170,7 @@ const AppContent = () => {
                 <Route path="dashboard" element={<TradeDashboard />} />
                 <Route path="markets" element={<TradeMarkets />} />
                 <Route path="terminal" element={<TradeTerminal />} />
+                <Route path="pre-market" element={<TradePreMarket />} />
                 <Route path="portfolio" element={<TradePortfolio />} />
                 <Route path="transactions" element={<TradeTransactions />} />
                 <Route path="referrals" element={<TradeReferrals />} />

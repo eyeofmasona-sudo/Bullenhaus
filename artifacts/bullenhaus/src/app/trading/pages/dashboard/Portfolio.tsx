@@ -20,6 +20,7 @@ export const Portfolio: React.FC = () => {
   const wallet = useTradingStore(s => s.wallet);
   const requests = useTransactionStore(s => s.requests);
   const positions = useTradingStore(s => s.positions);
+  const assets = useTradingStore(s => s.assets) || [];
 
   const closedPositions = useMemo(() => {
     return positions.filter(p => p.status === 'closed').sort((a, b) => {
@@ -40,13 +41,36 @@ export const Portfolio: React.FC = () => {
     });
   }, [closedPositions]);
 
-  const holdings = useMemo(() => wallet.balance > 0 ? [{
-    name: 'USD',
-    description: 'Account Wallet',
-    balance: wallet.balance,
-    value: wallet.balance,
-    allocation: 100,
-  }] : [], [wallet.balance]);
+  const holdings = useMemo(() => {
+    const list = wallet.balance > 0 ? [{
+      name: 'USD',
+      description: 'Account Wallet',
+      balance: wallet.balance,
+      value: wallet.balance,
+      allocation: 0,
+    }] : [];
+    
+    let totalValue = wallet.balance;
+    assets.forEach(a => {
+      const val = a.amount * a.currentPrice;
+      totalValue += val;
+      list.push({
+        name: a.symbol,
+        description: a.name,
+        balance: a.amount,
+        value: val,
+        allocation: 0,
+      });
+    });
+
+    if (totalValue > 0) {
+      list.forEach(item => {
+        item.allocation = Math.round((item.value / totalValue) * 100);
+      });
+    }
+
+    return list;
+  }, [wallet.balance, assets]);
 
   useEffect(() => {
     const loadTransactions = async () => {
@@ -263,8 +287,8 @@ export const Portfolio: React.FC = () => {
                {holdings.length > 0 ? (
                  <>
                    <span className="label-eyebrow">Total Value</span>
-                   <span className="text-2xl font-bold text-text font-mono mt-2">${wallet.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                   <span className="text-xs text-text-dim mt-2">100% USD wallet balance</span>
+                   <span className="text-2xl font-bold text-text font-mono mt-2">${holdings.reduce((acc, h) => acc + h.value, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                   <span className="text-xs text-text-dim mt-2">USD + Assets</span>
                  </>
                ) : (
                  <>

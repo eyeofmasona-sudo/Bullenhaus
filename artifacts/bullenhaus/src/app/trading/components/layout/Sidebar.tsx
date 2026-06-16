@@ -23,7 +23,8 @@ import {
   GraduationCap,
   Terminal,
   X,
-  ChevronRight
+  ChevronRight,
+  Rocket
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useTranslation } from 'react-i18next';
@@ -112,6 +113,7 @@ export const Sidebar = ({ onClose }: { onClose?: () => void }) => {
         <SidebarItem icon={LayoutDashboard} label={t('dashboard')} to="/trade/dashboard" active={currentPath === '/trade/dashboard'} onClick={onClose} />
         <SidebarItem icon={BarChart3} label={t('markets')} to="/trade/markets" active={currentPath === '/trade/markets'} onClick={onClose} />
         <SidebarItem icon={Repeat} label={t('trade')} to="/trade/terminal" active={currentPath === '/trade/terminal'} onClick={onClose} />
+        <SidebarItem icon={Rocket} label={t('pre_market', { defaultValue: 'Pre-Market' })} to="/trade/pre-market" active={currentPath === '/trade/pre-market'} onClick={onClose} />
         <SidebarItem icon={Briefcase} label={t('portfolio')} to="/trade/portfolio" active={currentPath === '/trade/portfolio'} onClick={onClose} />
         <SidebarItem icon={History} label={t('transactions')} to="/trade/transactions" active={currentPath === '/trade/transactions'} onClick={onClose} />
 

@@ -11,15 +11,15 @@ import { supabase } from "../../../lib/supabase/browserClient";
 import { usePhoneDialer } from "../contexts/PhoneDialerContext";
 import { fetchClientTransactions, type ClientTransaction } from "../hooks/useClients";
 import { useClientFiles, validateFile, ACCEPTED_EXTENSIONS } from "../hooks/useClientFiles";
-import { useAuth } from "../../trading/contexts/AuthContext";
+import { authStorage } from "../lib/auth";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 
 // Roles allowed to view & manage client file attachments.
 // 'superadmin' is forward-compat only (not a real role in the DB yet).
-const CLIENT_FILE_ROLES = ['superadmin', 'super-admin', 'admin', 'crm_admin', 'director', 'manager'];
-function canManageClientFiles(role?: string | null): boolean {
-  return CLIENT_FILE_ROLES.includes((role || '').toLowerCase());
+const CLIENT_FILE_ROLES = ['superadmin', 'admin', 'director', 'manager'];
+function canManageClientFiles(): boolean {
+  return CLIENT_FILE_ROLES.includes((authStorage.getRole() || '').toLowerCase());
 }
 
 function formatBytes(bytes: number | null): string {
@@ -79,8 +79,10 @@ function ClientFilesTab({ clientId }: { clientId: string }) {
     const file = e.target.files?.[0];
     if (inputRef.current) inputRef.current.value = '';
     if (!file) return;
+
     const validationError = validateFile(file);
     if (validationError) { setLocalError(validationError); return; }
+
     setLocalError(null);
     setUploading(true);
     try {
@@ -106,12 +108,28 @@ function ClientFilesTab({ clientId }: { clientId: string }) {
 
   return (
     <div className="space-y-4">
-      <input ref={inputRef} type="file" accept={ACCEPTED_EXTENSIONS} onChange={onPick} className="hidden" />
-      <Button variant="outline" size="md" className="w-full" isLoading={uploading} onClick={() => inputRef.current?.click()}>
+      {/* Upload button */}
+      <input
+        ref={inputRef}
+        type="file"
+        accept={ACCEPTED_EXTENSIONS}
+        onChange={onPick}
+        className="hidden"
+      />
+      <Button
+        variant="outline"
+        size="md"
+        className="w-full"
+        isLoading={uploading}
+        onClick={() => inputRef.current?.click()}
+      >
         {!uploading && <Upload className="w-3.5 h-3.5" />}
         {uploading ? 'Uploading…' : 'Upload File'}
       </Button>
-      <p className="text-[9px] text-aura-platinum/30 text-center">PDF, images, Office docs · max 15 MB</p>
+
+      <p className="text-[9px] text-aura-platinum/30 text-center">
+        PDF, images, Office docs · max 15 MB
+      </p>
 
       {(localError || error) && (
         <div className="flex items-center gap-2 p-3 rounded-lg bg-aura-ruby/10 border border-aura-ruby/20 text-aura-ruby text-[10px]">
@@ -139,13 +157,22 @@ function ClientFilesTab({ clientId }: { clientId: string }) {
                 </div>
               </div>
               {f.signed_url && (
-                <a href={f.signed_url} target="_blank" rel="noopener noreferrer"
-                   className="p-1.5 rounded-lg hover:bg-white/5 text-aura-platinum/40 hover:text-aura-gold transition-colors" title="Download">
+                <a
+                  href={f.signed_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-1.5 rounded-lg hover:bg-white/5 text-aura-platinum/40 hover:text-aura-gold transition-colors"
+                  title="Download"
+                >
                   <Download className="w-3.5 h-3.5" />
                 </a>
               )}
-              <button onClick={() => onDelete(f.id)} disabled={busyId === f.id}
-                className="p-1.5 rounded-lg hover:bg-white/5 text-aura-platinum/40 hover:text-aura-ruby transition-colors disabled:opacity-40" title="Delete">
+              <button
+                onClick={() => onDelete(f.id)}
+                disabled={busyId === f.id}
+                className="p-1.5 rounded-lg hover:bg-white/5 text-aura-platinum/40 hover:text-aura-ruby transition-colors disabled:opacity-40"
+                title="Delete"
+              >
                 {busyId === f.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
               </button>
             </div>
@@ -163,8 +190,7 @@ type DrawerTab = 'overview' | 'transactions' | 'files';
 function ClientDrawer({ client, onClose }: { client: AgentClient | null; onClose: () => void }) {
   const { t } = useI18n();
   const { openDialer } = usePhoneDialer();
-  const { role } = useAuth();
-  const showFiles = canManageClientFiles(role);
+  const showFiles = canManageClientFiles();
   const TABS: DrawerTab[] = showFiles ? ['overview', 'transactions', 'files'] : ['overview', 'transactions'];
   const [tab, setTab] = useState<DrawerTab>('overview');
   const [txList, setTxList] = useState<ClientTransaction[]>([]);
