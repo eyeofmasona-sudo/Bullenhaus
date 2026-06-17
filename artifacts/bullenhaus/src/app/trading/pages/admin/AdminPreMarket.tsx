@@ -83,6 +83,22 @@ export const AdminPreMarket = () => {
     }
   };
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error(t('adminPremarket.imageTooLarge', { defaultValue: 'Image must be less than 2MB' }));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setFormData(prev => ({ ...prev, image_url: reader.result as string }));
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleDelete = async (id: string) => {
     if (!canEdit) return;
     if (!window.confirm(t('adminPremarket.confirmDelete'))) return;
@@ -126,9 +142,20 @@ export const AdminPreMarket = () => {
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{t('adminPremarket.priceUsd')}</label>
               <input type="number" min="0.01" step="0.01" value={formData.price} onChange={e => setFormData({ ...formData, price: parseFloat(e.target.value) })} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-white font-mono focus:border-accent-primary/50 transition-colors" />
             </div>
-            <div>
+            <div className="md:col-span-2">
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{t('adminPremarket.imageUrl')}</label>
-              <input type="text" value={formData.image_url} onChange={e => setFormData({ ...formData, image_url: e.target.value })} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-accent-primary/50 transition-colors" placeholder="e.g. /neuralink-poster.png or https://..." />
+              <div className="flex gap-2">
+                <input type="text" value={formData.image_url} onChange={e => setFormData({ ...formData, image_url: e.target.value })} className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-accent-primary/50 transition-colors" placeholder="e.g. /neuralink-poster.png or https://..." />
+                <label className="bg-white/5 hover:bg-white/10 text-white cursor-pointer flex items-center justify-center px-4 rounded-xl border border-white/10 transition-colors">
+                  <ImageIcon size={18} />
+                  <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                </label>
+              </div>
+              {formData.image_url && formData.image_url.startsWith('data:image') && (
+                 <div className="mt-2">
+                   <img src={formData.image_url} alt="Preview" className="h-16 w-16 object-cover rounded-lg border border-white/10" />
+                 </div>
+              )}
             </div>
             <div className="md:col-span-2">
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{t('adminPremarket.description')}</label>
