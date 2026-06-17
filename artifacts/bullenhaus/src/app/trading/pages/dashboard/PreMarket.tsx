@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { supabase } from '../../lib/supabase';
 import { useTradingStore } from '../../stores/tradingStore';
 import { toast } from 'sonner';
-import { Rocket, ShieldCheck, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Rocket, ShieldCheck, AlertCircle, CheckCircle2, Download } from 'lucide-react';
 import { ContractModal } from '../../components/dashboard/ContractModal';
 
 const AssetCard = ({ asset, wallet, buyAsset, isBuyingItem, setIsBuyingItem, contractSigned, checkContractSignature }: any) => {
@@ -185,6 +185,21 @@ export const PreMarket: React.FC = () => {
             {t('premarket.subtitle')}
           </p>
         </div>
+        
+        {contractSigned && (
+          <div>
+            <a 
+              href="/premarket_contract_v1.pdf" 
+              download 
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-colors border border-white/10 text-sm font-medium"
+            >
+              <Download size={16} />
+              {t('premarket.downloadContract', 'Download Contract')}
+            </a>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
