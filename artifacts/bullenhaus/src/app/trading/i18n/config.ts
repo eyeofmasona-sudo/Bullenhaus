@@ -171,6 +171,328 @@ i18n
           toastDeleteSuccess: "Asset deleted successfully",
           toastErrorDelete: "Error deleting asset"
         },
+        adminUsers: {
+          title: "User Directory",
+          desc: "Manage all registered users and their permissions.",
+          search: "Search UUID, email, name, phone...",
+          columns: {
+            identity: "Identity",
+            contact: "Contact",
+            uuid: "UUID",
+            role: "Role",
+            kyc: "KYC",
+            balance: "Balance",
+            created: "Created",
+            actions: "Actions"
+          },
+          empty: {
+            loading: "Loading users...",
+            noUsers: "No users found",
+            adjust: "Adjust your search or wait for registrations."
+          },
+          tooltips: {
+            view: "View Details",
+            edit: "Edit User",
+            addBal: "Add Balance",
+            remBal: "Remove Balance"
+          },
+          details: {
+            title: "User Details",
+            close: "Close",
+            identity: "Identity",
+            contact: "Contact",
+            noPhone: "No phone",
+            noCountry: "No country",
+            access: "Access",
+            role: "Role",
+            wallet: "Wallet"
+          },
+          actions: {
+            editUser: "Edit User",
+            addAssets: "Add Assets",
+            removeAssets: "Remove Assets",
+            editAssets: "Edit Assets",
+            cancel: "Cancel",
+            saveChanges: "Save Changes",
+            saving: "Saving..."
+          },
+          editModal: {
+            title: "Edit User",
+            firstName: "First Name",
+            lastName: "Last Name",
+            displayName: "Display Name",
+            phone: "Phone",
+            country: "Country",
+            role: "Role",
+            kycStatus: "KYC Status"
+          },
+          toasts: {
+            userUpdated: "User updated",
+            failedUpdateUser: "Failed to update user",
+            enterValidAmount: "Enter a valid non-negative amount",
+            balanceNegative: "Wallet balance cannot be negative",
+            walletUpdated: "Wallet updated",
+            failedUpdateWallet: "Failed to update wallet",
+            prompts: {
+              amountToAdd: "Amount to add for {{name}}",
+              amountToRemove: "Amount to remove for {{name}}",
+              amountToSet: "Amount to set for {{name}}",
+              confirmAdd: "Add ${{amount}} to {{name}}?",
+              confirmRemove: "Remove ${{amount}} from {{name}}?",
+              confirmSet: "Set ${{amount}} for {{name}}?"
+            }
+          }
+        },
+        adminSettings: {
+          title: "System Configuration",
+          desc: "Manage platform-wide settings, security policies, and AI features.",
+          platform: {
+            title: "Platform Defaults",
+            balance: "Default Starting Balance",
+            save: "Save",
+            maintenance: "Maintenance Mode",
+            enable: "Enable",
+            balanceUpdated: "Starting balance updated successfully",
+            maintenanceFlipped: "Maintenance Mode status flipped"
+          },
+          ai: {
+            title: "AI Live Chat",
+            desc: "Navigation assistant powered by OpenRouter. API key is secured server-side — never exposed to the browser.",
+            checking: "Checking…",
+            active: "OpenRouter — Server key active",
+            notConfigured: "AI service not configured",
+            freeTier: "Free tier · No per-request cost",
+            modelTitle: "Model (Free tier)",
+            saving: "Saving…",
+            savePref: "Save Model Preference",
+            savedToast: "AI model preference saved",
+            models: {
+              deepseek: "DeepSeek V4 Flash — Free (recommended)",
+              gpt20: "OpenAI GPT-OSS 20B — Free",
+              gpt120: "OpenAI GPT-OSS 120B — Free (slowest)"
+            }
+          },
+          security: {
+            title: "Security Policies",
+            mfaTitle: "Require MFA for Admins",
+            mfaDesc: "Enforce hardware keys or TOTP",
+            mfaEnabled: "Require MFA Enabled",
+            mfaDisabled: "Require MFA Disabled",
+            banTitle: "Auto-Ban Flagged IPs",
+            banDesc: "Block VPNs and bad actors",
+            banEnabled: "Auto-Ban Enabled",
+            banDisabled: "Auto-Ban Disabled"
+          }
+        },
+        adminPaymentDetails: {
+          title: "Send Payment Details",
+          tabs: {
+            card: "Credit Card",
+            iban: "IBAN",
+            link: "Link"
+          },
+          fields: {
+            cardNumber: "Card Number *",
+            cardHolder: "Cardholder Name *",
+            accountHolder: "Account Holder *",
+            bankName: "Bank Name",
+            bic: "BIC / SWIFT",
+            url: "Payment URL *",
+            note: "Note (optional)"
+          },
+          actions: {
+            send: "Send to Client",
+            sending: "Sending..."
+          },
+          toast: {
+            fillRequired: "Please fill in all required fields",
+            sent: "Payment details sent to client",
+            failed: "Failed to send details"
+          },
+          badge: {
+            sent: "Sent"
+          }
+        },
+        adminKyc: {
+          title: "KYC Review",
+          desc: "Review client identity documents and approve or reject verifications.",
+          pendingBadge: "{{count}} pending",
+          filters: {
+            pending: "Pending",
+            all: "All Users"
+          },
+          columns: {
+            client: "Client",
+            status: "KYC Status",
+            balance: "Balance",
+            documents: "Documents",
+            submitted: "Submitted",
+            actions: "Actions"
+          },
+          empty: {
+            loading: "Loading...",
+            noPending: "No pending KYC requests",
+            noUsers: "No users found",
+            noDocs: "No documents uploaded yet"
+          },
+          actions: {
+            approve: "Approve",
+            reject: "Reject"
+          },
+          toast: {
+            loadError: "Could not load: {{error}}",
+            approved: "KYC approved for {{email}}",
+            approveFailed: "Approval failed",
+            rejectConfirm: "Reject KYC for {{email}}?",
+            rejected: "KYC rejected for {{email}}",
+            rejectFailed: "Rejection failed"
+          },
+          docs: {
+            files: "{{count}} files",
+            file: "{{count}} file"
+          }
+        },
+        adminMarket: {
+          title: "Market Control",
+          desc: "Override market trends, volatility, and spreads for simulation pairs.",
+          globalTitle: "Global Market Overrides",
+          adminTool: "Admin Manipulation Tool",
+          symbolLabel: "Asset Symbol (e.g. BTCUSDT, XAUUSD, EURUSD)",
+          fixedPriceLabel: "Fixed Price (leave empty to remove override)",
+          fixPriceBtn: "Fix Price",
+          toast: {
+            symbolReq: "Symbol required",
+            removed: "Removed override for {{symbol}}",
+            set: "Override set: {{symbol}} = {{price}}",
+            failedGlobal: "Failed to update override for {{symbol}}",
+            pinFailed: "Failed to pin {{symbol}}",
+            unpinFailed: "Failed to unpin {{symbol}}",
+            trendFailed: "Failed to update trend",
+            volFailed: "Failed to update volatility",
+            spreadFailed: "Failed to update spread"
+          },
+          engine: {
+            title: "Crypto, Forex & Metals Simulation Engine",
+            pinnedHint: "Pinned pairs are frozen — simulation + API won't override",
+            tabs: {
+              crypto: "Crypto",
+              forex: "Forex",
+              metals: "Metals"
+            },
+            cards: {
+              liveRate: "Live Rate",
+              fixedRate: "Fixed Rate",
+              unpinDesc: "Remove fix & resume live feed",
+              pinDesc: "Fix price at {{price}} & halt feed",
+              setCustomPin: "Set custom pin",
+              pauseFeed: "Pause Feed",
+              resumeFeed: "Resume Feed",
+              trend: "Trend Bias",
+              trendNeutral: "Neutral",
+              trendBull: "Bullish (+{{val}}%)",
+              trendBear: "Bearish ({{val}}%)",
+              volatility: "Volatility ({{val}}%)",
+              spread: "Spread Markup ({{val}}%)"
+            }
+          }
+        },
+        adminCrm: {
+          metrics: {
+            connection: "CRM Connection",
+            notConfigured: "Not Configured",
+            na: "N/A",
+            uptime: "Uptime (30d)",
+            synced: "Events Synced (24h)",
+            vsYesterday: "{{val}}% vs yesterday",
+            pending: "Pending Retries",
+            active: "{{val}} Active",
+            deadLetter: "Dead Letter Queue"
+          },
+          secret: {
+            title: "Webhook Signing Secret",
+            subtitle: "Secure your data transmissions",
+            hide: "Hide Settings",
+            configure: "Configure Secrets",
+            warningTitle: "Security Warning",
+            warningDesc: "Webhook secrets are used to sign requests sent to your CRM. If the secret is compromised, attackers could spoof webhook events. Never share this key or commit it to version control.",
+            enable: "Enable Verification",
+            enableDesc: "Sign all outgoing payloads with this secret",
+            activeKey: "Active Secret Key",
+            rotate: "Rotate Secret",
+            save: "Save Changes"
+          },
+          endpoints: {
+            title: "Webhook Endpoints",
+            none: "No webhook endpoints configured",
+            add: "+ Add New Endpoint"
+          },
+          dataPolicy: {
+            title: "Data Handling Policy",
+            desc: "Financial figures, such as <1>balances, transaction amounts, and portfolio values</1>, must come from account records or synchronized CRM events before reporting.",
+            balanceTitle: "Balance Classification",
+            balanceDesc: "Balances synced to the CRM must carry an explicit source and currency classification before reporting.",
+            retentionTitle: "Data Retention",
+            retentionDesc: "Sync logs are purged every 30 days. PII (KYC data) is transmitted once and never cached locally."
+          },
+          audit: {
+            title: "Audit Log",
+            none: "No recent sync events",
+            target: "Target: {{user}}",
+            retries: "Retries: {{count}}/5",
+            forceRetry: "Force Retry",
+            viewAll: "View All Logs"
+          }
+        },
+        adminLayout: {
+          sidebar: {
+            admin: "ADMIN",
+            controlSystem: "Control System",
+            overview: "Overview",
+            userManager: "User Manager",
+            kycQueue: "KYC Queue",
+            deposits: "Deposits",
+            withdrawals: "Withdrawals",
+            marketControl: "Market Control",
+            transactions: "Transactions",
+            systemConfig: "System Config",
+            switchZone: "Switch Zone",
+            tradePlatform: "Trade Platform",
+            crmAdmin: "CRM Admin",
+            signOut: "Sign Out"
+          },
+          header: {
+            systemStatus: "System Status: ",
+            operational: "Operational"
+          }
+        },
+        adminTx: {
+          globalTitle: "Global Transactions",
+          globalDesc: "Monitor all deposits, withdrawals, and fee collections.",
+          searchTx: "Search TXID or user...",
+          columns: {
+            txid: "TXID",
+            user: "User",
+            type: "Type",
+            amount: "Amount",
+            status: "Status",
+            date: "Date"
+          },
+          noRealTx: "No real transactions found.",
+          depositsTitle: "Pending Deposits",
+          depositsDesc: "Review and approve fiat/crypto deposit requests.",
+          withdrawalsTitle: "Pending Withdrawals",
+          withdrawalsDesc: "Review and process user withdrawal requests.",
+          noPending: "No pending requests found.",
+          approve: "Approve",
+          reject: "Reject",
+          processing: "Processing...",
+          approveDepositMsg: "Approve deposit of {{amount}} for {{user}}?",
+          rejectDepositMsg: "Reject deposit of {{amount}} for {{user}}?",
+          approveWithdrawalMsg: "Approve withdrawal of {{amount}} for {{user}}?",
+          rejectWithdrawalMsg: "Reject withdrawal of {{amount}} for {{user}}?",
+          toastUpdated: "Request updated successfully",
+          toastFailed: "Failed to update request"
+        },
         adminDashboard: {
           title: "Command Center",
           sysStatus: "SYS_STATUS: NOMINAL | ",
@@ -368,6 +690,328 @@ i18n
           confirmDelete: "Sind Sie sicher, dass Sie diese Anlage löschen möchten?",
           toastDeleteSuccess: "Anlage erfolgreich gelöscht",
           toastErrorDelete: "Fehler beim Löschen der Anlage"
+        },
+        adminUsers: {
+          title: "Benutzerverzeichnis",
+          desc: "Verwalten Sie alle registrierten Benutzer und deren Berechtigungen.",
+          search: "UUID, E-Mail, Name, Telefon suchen...",
+          columns: {
+            identity: "Identität",
+            contact: "Kontakt",
+            uuid: "UUID",
+            role: "Rolle",
+            kyc: "KYC",
+            balance: "Guthaben",
+            created: "Erstellt",
+            actions: "Aktionen"
+          },
+          empty: {
+            loading: "Benutzer werden geladen...",
+            noUsers: "Keine Benutzer gefunden",
+            adjust: "Passen Sie Ihre Suche an oder warten Sie auf Registrierungen."
+          },
+          tooltips: {
+            view: "Details ansehen",
+            edit: "Benutzer bearbeiten",
+            addBal: "Guthaben hinzufügen",
+            remBal: "Guthaben entfernen"
+          },
+          details: {
+            title: "Benutzerdetails",
+            close: "Schließen",
+            identity: "Identität",
+            contact: "Kontakt",
+            noPhone: "Kein Telefon",
+            noCountry: "Kein Land",
+            access: "Zugang",
+            role: "Rolle",
+            wallet: "Brieftasche"
+          },
+          actions: {
+            editUser: "Benutzer bearbeiten",
+            addAssets: "Anlagen hinzufügen",
+            removeAssets: "Anlagen entfernen",
+            editAssets: "Anlagen bearbeiten",
+            cancel: "Abbrechen",
+            saveChanges: "Änderungen speichern",
+            saving: "Speichern..."
+          },
+          editModal: {
+            title: "Benutzer bearbeiten",
+            firstName: "Vorname",
+            lastName: "Nachname",
+            displayName: "Anzeigename",
+            phone: "Telefon",
+            country: "Land",
+            role: "Rolle",
+            kycStatus: "KYC-Status"
+          },
+          toasts: {
+            userUpdated: "Benutzer aktualisiert",
+            failedUpdateUser: "Fehler beim Aktualisieren des Benutzers",
+            enterValidAmount: "Geben Sie einen gültigen, nicht negativen Betrag ein",
+            balanceNegative: "Brieftaschenguthaben kann nicht negativ sein",
+            walletUpdated: "Brieftasche aktualisiert",
+            failedUpdateWallet: "Fehler beim Aktualisieren der Brieftasche",
+            prompts: {
+              amountToAdd: "Betrag zum Hinzufügen für {{name}}",
+              amountToRemove: "Betrag zum Entfernen für {{name}}",
+              amountToSet: "Betrag zum Festlegen für {{name}}",
+              confirmAdd: "${{amount}} zu {{name}} hinzufügen?",
+              confirmRemove: "${{amount}} von {{name}} entfernen?",
+              confirmSet: "${{amount}} für {{name}} festlegen?"
+            }
+          }
+        },
+        adminSettings: {
+          title: "Systemkonfiguration",
+          desc: "Verwalten Sie plattformweite Einstellungen, Sicherheitsrichtlinien und KI-Funktionen.",
+          platform: {
+            title: "Plattform-Standards",
+            balance: "Standard-Startguthaben",
+            save: "Speichern",
+            maintenance: "Wartungsmodus",
+            enable: "Aktivieren",
+            balanceUpdated: "Startguthaben erfolgreich aktualisiert",
+            maintenanceFlipped: "Wartungsmodus-Status umgeschaltet"
+          },
+          ai: {
+            title: "KI-Live-Chat",
+            desc: "Navigationsassistent unterstützt von OpenRouter. Der API-Schlüssel ist serverseitig gesichert — er wird dem Browser nie zugänglich gemacht.",
+            checking: "Wird überprüft…",
+            active: "OpenRouter — Serverschlüssel aktiv",
+            notConfigured: "KI-Dienst nicht konfiguriert",
+            freeTier: "Kostenlose Stufe · Keine Kosten pro Anfrage",
+            modelTitle: "Modell (Kostenlose Stufe)",
+            saving: "Speichern…",
+            savePref: "Modelleinstellung speichern",
+            savedToast: "KI-Modelleinstellung gespeichert",
+            models: {
+              deepseek: "DeepSeek V4 Flash — Kostenlos (empfohlen)",
+              gpt20: "OpenAI GPT-OSS 20B — Kostenlos",
+              gpt120: "OpenAI GPT-OSS 120B — Kostenlos (am langsamsten)"
+            }
+          },
+          security: {
+            title: "Sicherheitsrichtlinien",
+            mfaTitle: "MFA für Admins anfordern",
+            mfaDesc: "Hardware-Schlüssel oder TOTP erzwingen",
+            mfaEnabled: "MFA-Anforderung aktiviert",
+            mfaDisabled: "MFA-Anforderung deaktiviert",
+            banTitle: "Markierte IPs automatisch sperren",
+            banDesc: "VPNs und böswillige Akteure blockieren",
+            banEnabled: "Auto-Bann aktiviert",
+            banDisabled: "Auto-Bann deaktiviert"
+          }
+        },
+        adminPaymentDetails: {
+          title: "Zahlungsdetails senden",
+          tabs: {
+            card: "Kreditkarte",
+            iban: "IBAN",
+            link: "Link"
+          },
+          fields: {
+            cardNumber: "Kartennummer *",
+            cardHolder: "Karteninhaber *",
+            accountHolder: "Kontoinhaber *",
+            bankName: "Bankname",
+            bic: "BIC / SWIFT",
+            url: "Zahlungs-URL *",
+            note: "Notiz (optional)"
+          },
+          actions: {
+            send: "An Kunde senden",
+            sending: "Senden..."
+          },
+          toast: {
+            fillRequired: "Bitte füllen Sie alle erforderlichen Felder aus",
+            sent: "Zahlungsdetails an den Kunden gesendet",
+            failed: "Fehler beim Senden der Details"
+          },
+          badge: {
+            sent: "Gesendet"
+          }
+        },
+        adminKyc: {
+          title: "KYC-Überprüfung",
+          desc: "Überprüfen Sie Identitätsdokumente von Kunden und genehmigen oder lehnen Sie Verifizierungen ab.",
+          pendingBadge: "{{count}} ausstehend",
+          filters: {
+            pending: "Ausstehend",
+            all: "Alle Benutzer"
+          },
+          columns: {
+            client: "Kunde",
+            status: "KYC-Status",
+            balance: "Guthaben",
+            documents: "Dokumente",
+            submitted: "Eingereicht",
+            actions: "Aktionen"
+          },
+          empty: {
+            loading: "Laden...",
+            noPending: "Keine ausstehenden KYC-Anfragen",
+            noUsers: "Keine Benutzer gefunden",
+            noDocs: "Noch keine Dokumente hochgeladen"
+          },
+          actions: {
+            approve: "Genehmigen",
+            reject: "Ablehnen"
+          },
+          toast: {
+            loadError: "Laden fehlgeschlagen: {{error}}",
+            approved: "KYC genehmigt für {{email}}",
+            approveFailed: "Genehmigung fehlgeschlagen",
+            rejectConfirm: "KYC ablehnen für {{email}}?",
+            rejected: "KYC abgelehnt für {{email}}",
+            rejectFailed: "Ablehnung fehlgeschlagen"
+          },
+          docs: {
+            files: "{{count}} Dateien",
+            file: "{{count}} Datei"
+          }
+        },
+        adminMarket: {
+          title: "Marktkontrolle",
+          desc: "Überschreiben Sie Markttrends, Volatilität und Spreads für Simulationspaare.",
+          globalTitle: "Globale Markt-Überschreibungen",
+          adminTool: "Admin-Manipulationswerkzeug",
+          symbolLabel: "Asset-Symbol (z.B. BTCUSDT, XAUUSD, EURUSD)",
+          fixedPriceLabel: "Fester Preis (leer lassen, um Überschreibung zu entfernen)",
+          fixPriceBtn: "Preis festlegen",
+          toast: {
+            symbolReq: "Symbol erforderlich",
+            removed: "Überschreibung für {{symbol}} entfernt",
+            set: "Überschreibung gesetzt: {{symbol}} = {{price}}",
+            failedGlobal: "Fehler beim Aktualisieren der Überschreibung für {{symbol}}",
+            pinFailed: "Fehler beim Anheften von {{symbol}}",
+            unpinFailed: "Fehler beim Lösen von {{symbol}}",
+            trendFailed: "Fehler beim Aktualisieren des Trends",
+            volFailed: "Fehler beim Aktualisieren der Volatilität",
+            spreadFailed: "Fehler beim Aktualisieren des Spreads"
+          },
+          engine: {
+            title: "Krypto-, Forex- & Metall-Simulations-Engine",
+            pinnedHint: "Angeheftete Paare sind eingefroren — Simulation + API überschreiben nicht",
+            tabs: {
+              crypto: "Krypto",
+              forex: "Forex",
+              metals: "Metalle"
+            },
+            cards: {
+              liveRate: "Live-Kurs",
+              fixedRate: "Fester Kurs",
+              unpinDesc: "Fixierung entfernen & Live-Feed fortsetzen",
+              pinDesc: "Preis bei {{price}} fixieren & Feed anhalten",
+              setCustomPin: "Benutzerdefinierten Pin setzen",
+              pauseFeed: "Feed pausieren",
+              resumeFeed: "Feed fortsetzen",
+              trend: "Trendausrichtung",
+              trendNeutral: "Neutral",
+              trendBull: "Bullisch (+{{val}}%)",
+              trendBear: "Bärisch ({{val}}%)",
+              volatility: "Volatilität ({{val}}%)",
+              spread: "Spread-Aufschlag ({{val}}%)"
+            }
+          }
+        },
+        adminCrm: {
+          metrics: {
+            connection: "CRM-Verbindung",
+            notConfigured: "Nicht konfiguriert",
+            na: "N/A",
+            uptime: "Verfügbarkeit (30d)",
+            synced: "Synchronisierte Events (24h)",
+            vsYesterday: "{{val}}% im Vergleich zu gestern",
+            pending: "Ausstehende Wiederholungen",
+            active: "{{val}} Aktiv",
+            deadLetter: "Dead-Letter-Queue"
+          },
+          secret: {
+            title: "Webhook-Signaturgeheimnis",
+            subtitle: "Sichern Sie Ihre Datenübertragungen",
+            hide: "Einstellungen ausblenden",
+            configure: "Geheimnisse konfigurieren",
+            warningTitle: "Sicherheitswarnung",
+            warningDesc: "Webhook-Geheimnisse werden verwendet, um Anfragen an Ihr CRM zu signieren. Wenn das Geheimnis kompromittiert ist, könnten Angreifer Webhook-Ereignisse fälschen. Teilen Sie diesen Schlüssel niemals und committen Sie ihn nicht in die Versionskontrolle.",
+            enable: "Verifizierung aktivieren",
+            enableDesc: "Signieren Sie alle ausgehenden Payloads mit diesem Geheimnis",
+            activeKey: "Aktiver geheimer Schlüssel",
+            rotate: "Geheimnis rotieren",
+            save: "Änderungen speichern"
+          },
+          endpoints: {
+            title: "Webhook-Endpunkte",
+            none: "Keine Webhook-Endpunkte konfiguriert",
+            add: "+ Neuen Endpunkt hinzufügen"
+          },
+          dataPolicy: {
+            title: "Datenrichtlinie",
+            desc: "Finanzielle Kennzahlen wie <1>Guthaben, Transaktionsbeträge und Portfoliowerte</1> müssen aus Kontounterlagen oder synchronisierten CRM-Ereignissen stammen, bevor sie gemeldet werden.",
+            balanceTitle: "Guthabenklassifizierung",
+            balanceDesc: "Guthaben, die mit dem CRM synchronisiert werden, müssen vor der Meldung eine explizite Quellen- und Währungsklassifizierung tragen.",
+            retentionTitle: "Vorratsdatenspeicherung",
+            retentionDesc: "Sync-Protokolle werden alle 30 Tage gelöscht. PII (KYC-Daten) werden einmal übertragen und niemals lokal zwischengespeichert."
+          },
+          audit: {
+            title: "Audit-Protokoll",
+            none: "Keine aktuellen Synchronisierungsereignisse",
+            target: "Ziel: {{user}}",
+            retries: "Wiederholungen: {{count}}/5",
+            forceRetry: "Erneuter Versuch erzwingen",
+            viewAll: "Alle Protokolle anzeigen"
+          }
+        },
+        adminLayout: {
+          sidebar: {
+            admin: "ADMIN",
+            controlSystem: "Kontrollsystem",
+            overview: "Übersicht",
+            userManager: "Benutzerverwaltung",
+            kycQueue: "KYC-Warteschlange",
+            deposits: "Einzahlungen",
+            withdrawals: "Auszahlungen",
+            marketControl: "Marktkontrolle",
+            transactions: "Transaktionen",
+            systemConfig: "Systemkonfiguration",
+            switchZone: "Zonenwechsel",
+            tradePlatform: "Handelsplattform",
+            crmAdmin: "CRM-Admin",
+            signOut: "Abmelden"
+          },
+          header: {
+            systemStatus: "Systemstatus: ",
+            operational: "Betriebsbereit"
+          }
+        },
+        adminTx: {
+          globalTitle: "Globale Transaktionen",
+          globalDesc: "Überwachen Sie alle Einzahlungen, Auszahlungen und Gebühreneinzüge.",
+          searchTx: "TXID oder Benutzer suchen...",
+          columns: {
+            txid: "TXID",
+            user: "Benutzer",
+            type: "Typ",
+            amount: "Betrag",
+            status: "Status",
+            date: "Datum"
+          },
+          noRealTx: "Keine echten Transaktionen gefunden.",
+          depositsTitle: "Ausstehende Einzahlungen",
+          depositsDesc: "Überprüfen und genehmigen Sie Fiat-/Krypto-Einzahlungsanfragen.",
+          withdrawalsTitle: "Ausstehende Auszahlungen",
+          withdrawalsDesc: "Überprüfen und bearbeiten Sie Auszahlungsanfragen von Benutzern.",
+          noPending: "Keine ausstehenden Anfragen gefunden.",
+          approve: "Genehmigen",
+          reject: "Ablehnen",
+          processing: "Wird bearbeitet...",
+          approveDepositMsg: "Einzahlung von {{amount}} für {{user}} genehmigen?",
+          rejectDepositMsg: "Einzahlung von {{amount}} für {{user}} ablehnen?",
+          approveWithdrawalMsg: "Auszahlung von {{amount}} für {{user}} genehmigen?",
+          rejectWithdrawalMsg: "Auszahlung von {{amount}} für {{user}} ablehnen?",
+          toastUpdated: "Anfrage erfolgreich aktualisiert",
+          toastFailed: "Fehler beim Aktualisieren der Anfrage"
         },
         adminDashboard: {
           title: "Kommandozentrale",

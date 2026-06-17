@@ -7,6 +7,7 @@ import {
 import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase';
 import { motion, AnimatePresence } from 'motion/react';
+import { useTranslation } from 'react-i18next';
 
 interface KycDoc {
   type: string;
@@ -41,6 +42,7 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
 };
 
 const DocViewer: React.FC<{ doc: KycDoc; userId: string }> = ({ doc, userId }) => {
+  const { t } = useTranslation(['common']);
   const [url, setUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -54,7 +56,7 @@ const DocViewer: React.FC<{ doc: KycDoc; userId: string }> = ({ doc, userId }) =
       if (error) throw error;
       setUrl(data.signedUrl);
     } catch (e: any) {
-      toast.error(`Could not load: ${e.message}`);
+      toast.error(t('adminKyc.toast.loadError', { error: e.message }));
     } finally {
       setLoading(false);
     }
@@ -103,6 +105,7 @@ const KycRow: React.FC<{
   onApprove: (id: string, email: string) => void;
   onReject:  (id: string, email: string) => void;
 }> = ({ item, onApprove, onReject }) => {
+  const { t } = useTranslation(['common']);
   const [expanded, setExpanded] = useState(false);
   const docs: KycDoc[] = Array.isArray(item.kyc_documents) ? item.kyc_documents : [];
 
@@ -128,7 +131,7 @@ const KycRow: React.FC<{
         </td>
         <td className="px-6 py-4">
           <span className={`inline-flex items-center gap-1 text-[10px] font-bold ${docs.length > 0 ? 'text-accent-primary' : 'text-text-dim'}`}>
-            <FileText size={11} /> {docs.length} file{docs.length !== 1 ? 's' : ''}
+            <FileText size={11} /> {docs.length !== 1 ? t('adminKyc.docs.files', { count: docs.length }) : t('adminKyc.docs.file', { count: 1 })}
           </span>
         </td>
         <td className="px-6 py-4 text-text-dim text-xs font-mono">
@@ -140,13 +143,13 @@ const KycRow: React.FC<{
               onClick={() => onApprove(item.id, item.email)}
               className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 font-bold text-[10px] uppercase tracking-wider transition-all"
             >
-              <Check size={11} /> Approve
+              <Check size={11} /> {t('adminKyc.actions.approve')}
             </button>
             <button
               onClick={() => onReject(item.id, item.email)}
               className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500/20 font-bold text-[10px] uppercase tracking-wider transition-all"
             >
-              <XCircle size={11} /> Reject
+              <XCircle size={11} /> {t('adminKyc.actions.reject')}
             </button>
             <span className="text-text-dim ml-1">
               {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -167,7 +170,7 @@ const KycRow: React.FC<{
               >
                 <div className="bg-black/20 border border-white/5 rounded-xl p-4">
                   {docs.length === 0 ? (
-                    <p className="text-xs text-text-dim text-center py-2">No documents uploaded yet</p>
+                    <p className="text-xs text-text-dim text-center py-2">{t('adminKyc.empty.noDocs')}</p>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       {docs.map((doc, i) => (
@@ -186,6 +189,7 @@ const KycRow: React.FC<{
 };
 
 export const AdminKYC = () => {
+  const { t } = useTranslation(['common']);
   const [users, setUsers]     = useState<KycUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter]   = useState<'PENDING' | 'ALL'>('PENDING');
@@ -214,22 +218,22 @@ export const AdminKYC = () => {
     try {
       const { error } = await supabase.from('users').update({ kyc_status: 'VERIFIED' }).eq('id', id);
       if (error) throw error;
-      toast.success(`KYC approved for ${email}`);
+      toast.success(t('adminKyc.toast.approved', { email }));
       fetchUsers();
     } catch (e: any) {
-      toast.error(e.message || 'Approval failed');
+      toast.error(e.message || t('adminKyc.toast.approveFailed'));
     }
   };
 
   const handleReject = async (id: string, email: string) => {
-    if (!confirm(`Reject KYC for ${email}?`)) return;
+    if (!confirm(t('adminKyc.toast.rejectConfirm', { email }) as string)) return;
     try {
       const { error } = await supabase.from('users').update({ kyc_status: 'REJECTED' }).eq('id', id);
       if (error) throw error;
-      toast.success(`KYC rejected for ${email}`);
+      toast.success(t('adminKyc.toast.rejected', { email }));
       fetchUsers();
     } catch (e: any) {
-      toast.error(e.message || 'Rejection failed');
+      toast.error(e.message || t('adminKyc.toast.rejectFailed'));
     }
   };
 
@@ -240,13 +244,13 @@ export const AdminKYC = () => {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h2 className="font-serif text-2xl font-light italic tracking-tight text-text flex items-center gap-3">
-            <ShieldCheck className="text-accent-primary" size={22} /> KYC Review
+            <ShieldCheck className="text-accent-primary" size={22} /> {t('adminKyc.title')}
           </h2>
           <p className="text-sm text-text-muted mt-1">
-            Review client identity documents and approve or reject verifications.
+            {t('adminKyc.desc')}
             {filter === 'PENDING' && pendingCount > 0 && (
               <span className="ml-2 px-1.5 py-0.5 bg-orange-500/10 text-orange-400 rounded text-[10px] font-bold">
-                {pendingCount} pending
+                {t('adminKyc.pendingBadge', { count: pendingCount })}
               </span>
             )}
           </p>
@@ -263,7 +267,7 @@ export const AdminKYC = () => {
                     : 'text-text-dim hover:text-text'
                 }`}
               >
-                {f === 'PENDING' ? <><Clock size={10} className="inline mr-1" />Pending</> : 'All Users'}
+                {f === 'PENDING' ? <><Clock size={10} className="inline mr-1" />{t('adminKyc.filters.pending')}</> : t('adminKyc.filters.all')}
               </button>
             ))}
           </div>
@@ -280,12 +284,12 @@ export const AdminKYC = () => {
         <table className="w-full text-left">
           <thead>
             <tr className="border-b border-border text-[10px] font-bold text-text-dim uppercase tracking-widest bg-surface/60">
-              <th className="px-6 py-4">Client</th>
-              <th className="px-6 py-4">KYC Status</th>
-              <th className="px-6 py-4">Balance</th>
-              <th className="px-6 py-4">Documents</th>
-              <th className="px-6 py-4">Submitted</th>
-              <th className="px-6 py-4 text-right">Actions</th>
+              <th className="px-6 py-4">{t('adminKyc.columns.client')}</th>
+              <th className="px-6 py-4">{t('adminKyc.columns.status')}</th>
+              <th className="px-6 py-4">{t('adminKyc.columns.balance')}</th>
+              <th className="px-6 py-4">{t('adminKyc.columns.documents')}</th>
+              <th className="px-6 py-4">{t('adminKyc.columns.submitted')}</th>
+              <th className="px-6 py-4 text-right">{t('adminKyc.columns.actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -297,7 +301,7 @@ export const AdminKYC = () => {
                       <UserX size={20} className="text-text-dim" />
                     </div>
                     <p className="text-sm font-medium text-text-muted">
-                      {loading ? 'Loading...' : filter === 'PENDING' ? 'No pending KYC requests' : 'No users found'}
+                      {loading ? t('adminKyc.empty.loading') : filter === 'PENDING' ? t('adminKyc.empty.noPending') : t('adminKyc.empty.noUsers')}
                     </p>
                   </div>
                 </td>

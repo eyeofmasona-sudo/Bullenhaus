@@ -5,6 +5,7 @@ import { Activity, Play, Pause, Zap, BarChart2, Hash, Edit3, Lock, Unlock } from
 import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase';
 import { ASSETS } from '../../components/dashboard/AssetSelector';
+import { useTranslation } from 'react-i18next';
 
 // Dynamic slider ranges per symbol type
 function volRange(symbol: string) {
@@ -36,6 +37,7 @@ function fmtPrice(symbol: string, price: number) {
 }
 
 export const MarketControlPanel = () => {
+  const { t } = useTranslation(['common']);
   const {
     pairs,
     pinPrice,
@@ -57,7 +59,7 @@ export const MarketControlPanel = () => {
   // Global override (any symbol including crypto)
   const handleSetGlobalOverride = async () => {
     if (!globalSymbol.trim()) {
-      toast.error('Symbol required');
+      toast.error(t('adminMarket.toast.symbolReq'));
       return;
     }
     const sym = globalSymbol.trim().toUpperCase();
@@ -65,7 +67,7 @@ export const MarketControlPanel = () => {
       if (!globalPrice) {
         setPriceOverride(sym, null);
         await supabase.from('price_overrides').delete().eq('symbol', sym);
-        toast.success(`Removed override for ${sym}`);
+        toast.success(t('adminMarket.toast.removed', { symbol: sym }));
       } else {
         const price = parseFloat(globalPrice);
         setPriceOverride(sym, price);
@@ -73,12 +75,12 @@ export const MarketControlPanel = () => {
           pinPrice(sym, price);
         }
         await supabase.from('price_overrides').upsert({ symbol: sym, price }, { onConflict: 'symbol' });
-        toast.success(`Override set: ${sym} = ${globalPrice}`);
+        toast.success(t('adminMarket.toast.overrideSet', { sym, price: globalPrice }));
       }
       setGlobalSymbol('');
       setGlobalPrice('');
     } catch {
-      toast.error(`Failed to update override for ${sym}`);
+      toast.error(t('adminMarket.toast.overrideFail', { sym }));
     }
   };
 
@@ -88,17 +90,17 @@ export const MarketControlPanel = () => {
       {/* ── Global Override ── */}
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2">
-          <Zap size={18} className="text-accent-secondary" /> Global Market Overrides
+          <Zap size={18} className="text-accent-secondary" /> {t('adminMarket.engine.global.title')}
         </h3>
         <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-2 py-1 bg-white/5 rounded border border-white/10">
-          Admin Manipulation Tool
+          {t('adminMarket.engine.global.adminTool')}
         </span>
       </div>
 
       <div className="bg-white/5 p-4 rounded-2xl border border-white/10 flex flex-wrap items-end gap-4">
         <div className="flex-1 min-w-[200px]">
           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">
-            Asset Symbol (e.g. BTCUSDT, XAUUSD, EURUSD)
+            {t('adminMarket.engine.global.symbolLabel')}
           </label>
           <input
             type="text"
@@ -110,7 +112,7 @@ export const MarketControlPanel = () => {
         </div>
         <div className="flex-1 min-w-[200px]">
           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">
-            Fixed Price (leave empty to remove override)
+            {t('adminMarket.engine.global.priceLabel')}
           </label>
           <input
             type="number"
@@ -125,7 +127,7 @@ export const MarketControlPanel = () => {
           onClick={handleSetGlobalOverride}
           className="px-6 py-2 h-[38px] bg-accent-primary/20 hover:bg-accent-primary/30 text-accent-primary font-bold rounded-lg text-xs transition-colors flex items-center gap-2"
         >
-          <Lock size={14} /> Fix Price
+          <Lock size={14} /> {t('adminMarket.engine.global.fixBtn')}
         </button>
       </div>
 
@@ -151,13 +153,13 @@ export const MarketControlPanel = () => {
                       `${sym}_spread`,
                       `${sym}_isPaused`
                     ]);
-                    toast.success(`Override removed for ${sym}`);
+                    toast.success(t('adminMarket.toast.removed', { symbol: sym }));
                   } catch {
-                    toast.error(`Failed to remove override for ${sym}`);
+                    toast.error(t('adminMarket.toast.removeFail', { sym }));
                   }
                 }}
                 className="ml-1 hover:text-white transition-colors"
-                title="Remove override"
+                title={t('adminMarket.engine.cards.unfix')}
               >
                 &times;
               </button>
@@ -171,10 +173,10 @@ export const MarketControlPanel = () => {
       {/* ── Crypto, Forex & Metals Simulation Engine ── */}
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2">
-          <Zap size={18} className="text-slate-400" /> Crypto, Forex & Metals Simulation Engine
+          <Zap size={18} className="text-slate-400" /> {t('adminMarket.engine.title')}
         </h3>
         <span className="text-[9px] text-slate-500 uppercase tracking-widest">
-          <Lock size={9} className="inline mr-1" />Pinned pairs are frozen — simulation + API won't override
+          <Lock size={9} className="inline mr-1" />{t('adminMarket.engine.freezeNotice')}
           </span>
         </div>
 
@@ -185,11 +187,11 @@ export const MarketControlPanel = () => {
               onClick={() => setActiveTab(tab)}
               className={`px-6 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${
                 activeTab === tab
-                  ? 'bg-accent-primary text-black shadow-neon-gold'
-                  : 'bg-white/5 text-slate-500 hover:text-white hover:bg-white/10'
+                  ? 'bg-accent-secondary/10 text-accent-secondary border-accent-secondary/30'
+                  : 'bg-white/5 text-slate-400 border-white/5 hover:text-white hover:bg-white/10'
               }`}
             >
-              {tab}
+              {t(`adminMarket.engine.tabs.${tab.toLowerCase()}`)}
             </button>
           ))}
         </div>
@@ -237,7 +239,7 @@ export const MarketControlPanel = () => {
                     </h4>
                     {isPinned && (
                       <span className="text-[9px] font-bold text-accent-primary bg-accent-primary/10 border border-accent-primary/30 px-1.5 py-0.5 rounded uppercase tracking-widest flex items-center gap-1">
-                        <Lock size={8} /> Fixed
+                        <Lock size={8} /> {t('adminMarket.engine.cards.fixedBadge')}
                       </span>
                     )}
                   </div>
@@ -253,7 +255,7 @@ export const MarketControlPanel = () => {
                   <div className="flex gap-2">
                     <button
                       onClick={async () => {
-                        if (window.confirm('Reset market to default?')) {
+                        if (window.confirm(t('adminMarket.toast.confirmReset'))) {
                           try {
                             resetMarket(pair.symbol);
                             setPriceOverride(pair.symbol, null);
@@ -265,16 +267,16 @@ export const MarketControlPanel = () => {
                               `${pair.symbol}_spread`,
                               `${pair.symbol}_isPaused`
                             ]);
-                            toast.success(`${pair.symbol} reset to default`);
+                            toast.success(t('adminMarket.toast.resetOk', { sym: pair.symbol }));
                           } catch {
-                            toast.error('Failed to reset market on server');
+                            toast.error(t('adminMarket.toast.resetFail'));
                           }
                         }
                       }}
                       className="p-2 rounded-lg text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 transition-all shadow-lg text-[10px] font-bold uppercase tracking-widest"
-                      title="Reset to default"
+                      title={t('adminMarket.engine.cards.reset')}
                     >
-                      Reset
+                      {t('adminMarket.engine.cards.resetBtn')}
                     </button>
                     <button
                       onClick={async () => {
@@ -285,13 +287,13 @@ export const MarketControlPanel = () => {
                           await supabase.from('price_overrides').upsert({ symbol: `${pair.symbol}_isPaused`, price: nextPaused ? 1 : 0 }, { onConflict: 'symbol' });
                           toast.success(`${pair.symbol} ${nextPaused ? 'paused' : 'resumed'}`);
                         } catch {
-                          toast.error('Failed to sync paused state');
+                          toast.error(t('adminMarket.toast.pauseFail'));
                         }
                       }}
                       className={`p-2 rounded-lg text-white transition-all shadow-lg ${
                         pair.isPaused ? 'bg-orange-500 hover:bg-orange-400' : 'bg-slate-700 hover:bg-slate-600'
                       }`}
-                      title={pair.isPaused ? 'Resume simulation' : 'Pause simulation'}
+                      title={pair.isPaused ? t('adminMarket.engine.cards.resumeFeed') : t('adminMarket.engine.cards.pauseFeed')}
                     >
                       {pair.isPaused ? <Play size={16} /> : <Pause size={16} />}
                     </button>
@@ -303,13 +305,13 @@ export const MarketControlPanel = () => {
                 {/* Manual Price Pin */}
                 <div className="bg-white/5 p-3 rounded-xl border border-white/5">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1">
-                    <Hash size={12} /> Fix Price (freezes simulation)
+                    <Hash size={12} /> {t('adminMarket.engine.cards.fixPriceLabel')}
                   </label>
                   <div className="flex gap-2">
                     <input
                       type="number"
                       step="any"
-                      placeholder={`Enter price (now: ${fmtPrice(pair.symbol, pair.price)})`}
+                      placeholder={t('adminMarket.engine.cards.pricePlaceholder', { price: fmtPrice(pair.symbol, pair.price) })}
                       value={pairPrices[pair.symbol] || ''}
                       onChange={(e) => setPairPrices(prev => ({ ...prev, [pair.symbol]: e.target.value }))}
                       className="flex-1 bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-accent-primary"
@@ -318,21 +320,21 @@ export const MarketControlPanel = () => {
                       onClick={async () => {
                         ensureInit();
                         const val = pairPrices[pair.symbol];
-                        if (!val) { toast.error('Please enter a valid price'); return; }
+                        if (!val) { toast.error(t('adminMarket.toast.invalidPrice')); return; }
                         try {
                           const price = parseFloat(val);
                           pinPrice(pair.symbol, price);
                           setPriceOverride(pair.symbol, price);
                           await supabase.from('price_overrides').upsert({ symbol: pair.symbol, price }, { onConflict: 'symbol' });
-                          toast.success(`${pair.symbol} fixed at ${fmtPrice(pair.symbol, price)}`);
+                          toast.success(t('adminMarket.toast.fixedOk', { sym: pair.symbol, price: fmtPrice(pair.symbol, price) }));
                           setPairPrices(prev => ({ ...prev, [pair.symbol]: '' }));
                         } catch {
-                          toast.error(`Failed to fix price for ${pair.symbol}`);
+                          toast.error(t('adminMarket.toast.fixedFail', { sym: pair.symbol }));
                         }
                       }}
                       className="px-4 py-2 bg-accent-primary/20 hover:bg-accent-primary/30 text-accent-primary font-bold rounded-lg text-xs transition-colors flex items-center gap-1"
                     >
-                      <Lock size={12} /> Fix
+                      <Lock size={12} /> {t('adminMarket.engine.cards.fix')}
                     </button>
                     {isPinned && (
                       <button
@@ -347,14 +349,14 @@ export const MarketControlPanel = () => {
                               `${pair.symbol}_spread`,
                               `${pair.symbol}_isPaused`
                             ]);
-                            toast.success(`${pair.symbol} unfixed — simulation resumed`);
+                            toast.success(t('adminMarket.toast.unfixedOk', { sym: pair.symbol }));
                           } catch {
-                            toast.error(`Failed to unfix ${pair.symbol}`);
+                            toast.error(t('adminMarket.toast.unfixedFail', { sym: pair.symbol }));
                           }
                         }}
                         className="px-3 py-2 bg-white/10 hover:bg-white/20 text-slate-300 font-bold rounded-lg text-xs transition-colors flex items-center gap-1"
                       >
-                        <Unlock size={12} /> Unfix
+                        <Unlock size={12} /> {t('adminMarket.engine.cards.unfix')}
                       </button>
                     )}
                   </div>
@@ -364,7 +366,7 @@ export const MarketControlPanel = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-white/5 p-3 rounded-xl border border-white/5">
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1">
-                      <Activity size={12} /> Volatility
+                      <Activity size={12} /> {t('adminMarket.engine.cards.volatility')}
                     </label>
                     <input
                       type="range"
@@ -378,7 +380,7 @@ export const MarketControlPanel = () => {
                           const val = parseFloat((e.target as HTMLInputElement).value);
                           await supabase.from('price_overrides').upsert({ symbol: `${pair.symbol}_volatility`, price: val }, { onConflict: 'symbol' });
                         } catch {
-                          toast.error('Failed to sync volatility');
+                          toast.error(t('adminMarket.toast.volFailed'));
                         }
                       }}
                       onTouchEnd={async (e) => {
@@ -386,7 +388,7 @@ export const MarketControlPanel = () => {
                           const val = parseFloat((e.target as HTMLInputElement).value);
                           await supabase.from('price_overrides').upsert({ symbol: `${pair.symbol}_volatility`, price: val }, { onConflict: 'symbol' });
                         } catch {
-                          toast.error('Failed to sync volatility');
+                          toast.error(t('adminMarket.toast.volFailed'));
                         }
                       }}
                       className="w-full accent-white"
@@ -398,7 +400,7 @@ export const MarketControlPanel = () => {
                   </div>
                   <div className="bg-white/5 p-3 rounded-xl border border-white/5">
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1">
-                      <BarChart2 size={12} /> Spread
+                      <BarChart2 size={12} /> {t('adminMarket.engine.cards.spread')}
                     </label>
                     <input
                       type="range"
@@ -412,7 +414,7 @@ export const MarketControlPanel = () => {
                           const val = parseFloat((e.target as HTMLInputElement).value);
                           await supabase.from('price_overrides').upsert({ symbol: `${pair.symbol}_spread`, price: val }, { onConflict: 'symbol' });
                         } catch {
-                          toast.error('Failed to sync spread');
+                          toast.error(t('adminMarket.toast.spreadFailed'));
                         }
                       }}
                       onTouchEnd={async (e) => {
@@ -420,7 +422,7 @@ export const MarketControlPanel = () => {
                           const val = parseFloat((e.target as HTMLInputElement).value);
                           await supabase.from('price_overrides').upsert({ symbol: `${pair.symbol}_spread`, price: val }, { onConflict: 'symbol' });
                         } catch {
-                          toast.error('Failed to sync spread');
+                          toast.error(t('adminMarket.toast.spreadFailed'));
                         }
                       }}
                       className="w-full accent-white"
@@ -435,41 +437,41 @@ export const MarketControlPanel = () => {
                 {/* Scenarios */}
                 <div>
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">
-                    Market Scenarios
+                    {t('adminMarket.engine.cards.scenarios')}
                   </label>
                   <div className="flex flex-wrap gap-2">
                     {[
-                      { id: 'bull', label: 'Bull Run', col: 'text-accent-secondary border-accent-secondary/50 hover:bg-accent-secondary/10' },
-                      { id: 'bear', label: 'Bear Drop', col: 'text-rose-500 border-rose-500/50 hover:bg-rose-500/10' },
-                      { id: 'sideways', label: 'Sideways', col: 'text-slate-400 border-slate-600 hover:bg-white/10' },
-                      { id: 'crash', label: 'Flash Crash', col: 'text-orange-500 border-orange-500/50 hover:bg-orange-500/10 font-black tracking-widest animate-pulse' },
-                      { id: 'news', label: 'News Spike', col: 'text-accent-primary border-accent-primary/50 hover:bg-accent-primary/10' },
-                    ].map(t => (
+                      { id: 'bull', label: t('adminMarket.engine.scenarios.bull'), col: 'text-accent-secondary border-accent-secondary/50 hover:bg-accent-secondary/10' },
+                      { id: 'bear', label: t('adminMarket.engine.scenarios.bear'), col: 'text-rose-500 border-rose-500/50 hover:bg-rose-500/10' },
+                      { id: 'sideways', label: t('adminMarket.engine.scenarios.sideways'), col: 'text-slate-400 border-slate-600 hover:bg-white/10' },
+                      { id: 'crash', label: t('adminMarket.engine.scenarios.crash'), col: 'text-orange-500 border-orange-500/50 hover:bg-orange-500/10 font-black tracking-widest animate-pulse' },
+                      { id: 'news', label: t('adminMarket.engine.scenarios.news'), col: 'text-accent-primary border-accent-primary/50 hover:bg-accent-primary/10' },
+                    ].map(tItem => (
                       <button
-                        key={t.id}
+                        key={tItem.id}
                         disabled={isPinned}
                         onClick={async () => {
                           ensureInit();
-                          if (t.id === 'crash') {
-                            if (!window.confirm('Trigger Flash Crash for ' + pair.symbol + '?')) return;
+                          if (tItem.id === 'crash') {
+                            if (!window.confirm(t('adminMarket.engine.cards.confirmCrash', { sym: pair.symbol }))) return;
                           }
                           try {
-                            const trendVal = t.id as ForexTrend;
+                            const trendVal = tItem.id as ForexTrend;
                             setTrend(pair.symbol, trendVal);
                             const trendCode = trendVal === 'bull' ? 1 : trendVal === 'bear' ? 2 : trendVal === 'sideways' ? 3 : trendVal === 'crash' ? 4 : 5;
                             await supabase.from('price_overrides').upsert({ symbol: `${pair.symbol}_trend`, price: trendCode }, { onConflict: 'symbol' });
-                            toast.success(`${pair.symbol} → ${t.label}`);
+                            toast.success(`${pair.symbol} → ${tItem.label}`);
                           } catch {
-                            toast.error('Failed to sync trend with server');
+                            toast.error(t('adminMarket.toast.trendFailed'));
                           }
                         }}
                         className={`px-3 py-1.5 rounded-lg border text-[10px] font-bold uppercase transition-all disabled:opacity-30 disabled:cursor-not-allowed ${
-                          pair.trend === t.id
-                            ? t.col.replace('hover:bg', 'bg').replace('/10', '/30')
-                            : `bg-transparent ${t.col}`
+                          pair.trend === tItem.id
+                            ? tItem.col.replace('hover:bg', 'bg').replace('/10', '/30')
+                            : `bg-transparent ${tItem.col}`
                         }`}
                       >
-                        {t.label}
+                        {tItem.label}
                       </button>
                     ))}
                   </div>

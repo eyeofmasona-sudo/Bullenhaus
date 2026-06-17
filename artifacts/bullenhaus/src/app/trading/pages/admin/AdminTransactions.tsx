@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { Search, ArrowUpRight, ArrowDownRight, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 export const AdminTransactions = () => {
+  const { t } = useTranslation(['common']);
   const [requests, setRequests] = useState<any[]>([]);
 
   useEffect(() => {
@@ -67,14 +69,14 @@ export const AdminTransactions = () => {
     <div className="p-8 max-w-[1600px] mx-auto animate-in fade-in duration-150">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h2 className="font-serif text-2xl font-light italic tracking-tight text-text">Global Transactions</h2>
-          <p className="text-sm text-text-dim mt-1">Monitor all deposits, withdrawals, and fee collections.</p>
+          <h2 className="font-serif text-2xl font-light italic tracking-tight text-text">{t('adminTx.globalTitle')}</h2>
+          <p className="text-sm text-text-dim mt-1">{t('adminTx.globalDesc')}</p>
         </div>
         <div className="relative">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-dim" />
           <input
             type="text"
-            placeholder="Search TXID or user..."
+            placeholder={t('adminTx.searchTx')}
             className="input-dark pl-10 pr-4 py-2 w-64"
           />
         </div>
@@ -84,19 +86,19 @@ export const AdminTransactions = () => {
         <table className="w-full text-left">
           <thead>
             <tr className="border-b border-border text-[10px] font-bold text-text-dim uppercase tracking-widest bg-surface/60">
-              <th className="px-6 py-4">TXID</th>
-              <th className="px-6 py-4">User</th>
-              <th className="px-6 py-4">Type</th>
-              <th className="px-6 py-4">Amount</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4">Date</th>
+              <th className="px-6 py-4">{t('adminTx.columns.txid')}</th>
+              <th className="px-6 py-4">{t('adminTx.columns.user')}</th>
+              <th className="px-6 py-4">{t('adminTx.columns.type')}</th>
+              <th className="px-6 py-4">{t('adminTx.columns.amount')}</th>
+              <th className="px-6 py-4">{t('adminTx.columns.status')}</th>
+              <th className="px-6 py-4">{t('adminTx.columns.date')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border font-mono text-xs text-text">
             {allTxs.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-6 py-12 text-center text-sm text-text-dim">
-                  No real transactions found.
+                  {t('adminTx.noRealTx')}
                 </td>
               </tr>
             ) : allTxs.map((tx, idx) => (
@@ -106,14 +108,14 @@ export const AdminTransactions = () => {
                 <td className="px-6 py-4">
                   <div className={`flex items-center gap-2 ${tx.type === 'Deposit' ? 'text-emerald-500' : 'text-rose-500'}`}>
                     {tx.type === 'Deposit' ? <ArrowDownRight size={14} /> : <ArrowUpRight size={14} />}
-                    <span className="font-sans font-bold text-xs uppercase">{tx.type}</span>
+                    <span className="font-sans font-bold text-xs uppercase">{t(`common.${tx.type.toLowerCase()}s`) || tx.type}</span>
                   </div>
                 </td>
                 <td className="px-6 py-4 text-white font-bold">{tx.amount}</td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-1.5">
                     {getStatusIcon(tx.status)}
-                    <span className={getStatusColor(tx.status)}>{tx.status}</span>
+                    <span className={getStatusColor(tx.status)}>{t(`common.${tx.status.toLowerCase()}`) || tx.status}</span>
                   </div>
                 </td>
                 <td className="px-6 py-4 text-text-dim">{tx.date}</td>

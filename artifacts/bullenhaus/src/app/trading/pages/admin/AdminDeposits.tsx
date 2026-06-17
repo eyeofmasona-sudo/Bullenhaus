@@ -5,8 +5,10 @@ import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase';
 import { PaymentDetailsForm, PaymentDetailsSentBadge } from '../../components/admin/PaymentDetailsForm';
 import type { PaymentDetails } from '../../components/admin/PaymentDetailsForm';
+import { useTranslation } from 'react-i18next';
 
 export const AdminDeposits = () => {
+  const { t } = useTranslation(['common']);
   const [requests, setRequests]       = useState<any[]>([]);
   const [loading, setLoading]         = useState(false);
   const [formOpen, setFormOpen]       = useState(false);
@@ -56,12 +58,12 @@ export const AdminDeposits = () => {
         // Reject / other statuses — never touch the balance
         const { error } = await supabase.from('transactions').update({ status }).eq('id', id);
         if (error) throw error;
-        toast.success(`Request marked as ${status}`);
+        toast.success(t('adminTx.toastUpdated', 'Request updated successfully'));
       }
 
       fetchRequests();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update request');
+      toast.error(error instanceof Error ? error.message : t('adminTx.toastFailed', 'Failed to update request'));
     }
   };
 
@@ -75,9 +77,9 @@ export const AdminDeposits = () => {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h2 className="font-serif text-2xl font-light italic tracking-tight text-text flex items-center gap-3">
-            <Download className="text-success" size={22} /> Deposit Requests
+            <Download className="text-success" size={22} /> {t('adminTx.depositsTitle')}
           </h2>
-          <p className="text-sm text-text-muted mt-1">Review and approve incoming deposit requests.</p>
+          <p className="text-sm text-text-muted mt-1">{t('adminTx.depositsDesc')}</p>
         </div>
         <button onClick={fetchRequests} className="p-2 border border-border rounded-xl text-text-muted hover:text-text hover:border-border-strong transition-all">
           <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
@@ -88,12 +90,12 @@ export const AdminDeposits = () => {
         <table className="w-full text-left">
           <thead>
             <tr className="border-b border-border text-[10px] font-bold text-text-dim uppercase tracking-widest bg-surface/60">
-              <th className="px-6 py-4 font-bold">User</th>
-              <th className="px-6 py-4 font-bold">Amount</th>
-              <th className="px-6 py-4 font-bold">Method</th>
-              <th className="px-6 py-4 font-bold">Status</th>
+              <th className="px-6 py-4 font-bold">{t('adminTx.columns.user')}</th>
+              <th className="px-6 py-4 font-bold">{t('adminTx.columns.amount')}</th>
+              <th className="px-6 py-4 font-bold">{t('common.method')}</th>
+              <th className="px-6 py-4 font-bold">{t('adminTx.columns.status')}</th>
               <th className="px-6 py-4 font-bold">Payment Details</th>
-              <th className="px-6 py-4 font-bold">Created</th>
+              <th className="px-6 py-4 font-bold">{t('common.date')}</th>
               <th className="px-6 py-4 text-right font-bold">Actions</th>
             </tr>
           </thead>
@@ -106,7 +108,7 @@ export const AdminDeposits = () => {
                       <Users size={20} className="text-text-dim" />
                     </div>
                     <p className="text-sm font-medium text-text-muted">
-                      {loading ? 'Loading deposits...' : 'No deposit requests'}
+                      {loading ? t('adminTx.processing') : t('adminTx.noPending')}
                     </p>
                   </div>
                 </td>
@@ -118,7 +120,7 @@ export const AdminDeposits = () => {
                   <p className="text-[10px] text-text-dim mt-0.5">{req.user_email || '—'}</p>
                 </td>
                 <td className="px-6 py-4">
-                  <p className="text-text font-bold">${Number(req.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                  <p className="text-text font-bold">\${Number(req.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                   <p className="text-[10px] text-text-dim">{req.currency || 'USD'}</p>
                 </td>
                 <td className="px-6 py-4">
@@ -132,7 +134,7 @@ export const AdminDeposits = () => {
                     req.status === 'Pending'   ? 'bg-warning/10 text-warning' :
                     req.status === 'Rejected'  ? 'bg-danger/10 text-danger'  :
                     'bg-info/10 text-info'
-                  }`}>{req.status}</span>
+                  }`}>{t(`common.${req.status.toLowerCase()}`) || req.status}</span>
                 </td>
                 <td className="px-6 py-4">
                   {req.payment_details ? (
@@ -154,10 +156,10 @@ export const AdminDeposits = () => {
                 </td>
                 <td className="px-6 py-4 text-right space-x-2">
                   <button onClick={() => handleAction(req.id, 'Completed')} className="px-3 py-1 rounded bg-success/10 text-success hover:bg-success/20 font-bold text-[10px] uppercase transition-all">
-                    Approve
+                    {t('adminTx.approve')}
                   </button>
                   <button onClick={() => handleAction(req.id, 'Rejected')} className="px-3 py-1 rounded bg-danger/10 text-danger hover:bg-danger/20 font-bold text-[10px] uppercase transition-all">
-                    Reject
+                    {t('adminTx.reject')}
                   </button>
                 </td>
               </tr>

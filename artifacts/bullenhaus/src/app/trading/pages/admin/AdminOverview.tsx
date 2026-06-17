@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Users, Activity, ShieldAlert, Server, Globe2, AlertTriangle, Zap, Bell, CheckCircle2, ArrowDownRight, ArrowUpRight, Clock, XCircle, RefreshCw } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { useTranslation } from 'react-i18next';
 
 interface Metrics {
   totalUsers: number;
@@ -32,6 +33,7 @@ const statusColor = (s: string) =>
   s === 'Pending'  ? 'text-orange-400' : 'text-blue-400';
 
 export const AdminOverview = () => {
+  const { t } = useTranslation(['common', 'crm']);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [events,  setEvents]  = useState<TxEvent[]>([]);
   const [alerts,  setAlerts]  = useState<{ label: string; count: number }[]>([]);
@@ -52,28 +54,28 @@ export const AdminOverview = () => {
 
       const volumeToday = allTx
         .filter(t => new Date(t.created_at) >= todayStart && (t.status === 'Completed' || t.status === 'Approved'))
-        .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+        .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
 
-      const pendingDeposits    = allTx.filter(t => t.type === 'Deposit'    && t.status === 'Pending').length;
-      const pendingWithdrawals = allTx.filter(t => t.type === 'Withdrawal' && t.status === 'Pending').length;
+      const pendingDeposits    = allTx.filter(tx => tx.type === 'Deposit'    && tx.status === 'Pending').length;
+      const pendingWithdrawals = allTx.filter(tx => tx.type === 'Withdrawal' && tx.status === 'Pending').length;
 
       setMetrics({ totalUsers: usersRes.count ?? 0, pendingDeposits, pendingWithdrawals, volumeToday, pendingKyc: pendingKycRes.count ?? 0 });
       setEvents(allTx.slice(0, 15));
 
       const newAlerts: { label: string; count: number }[] = [];
       if ((pendingKycRes.count ?? 0) > 0)
-        newAlerts.push({ label: 'Pending KYC verifications',   count: pendingKycRes.count! });
+        newAlerts.push({ label: t('adminDashboard.alerts.kycAlert'),   count: pendingKycRes.count! });
       if (pendingDeposits > 0)
-        newAlerts.push({ label: 'Pending deposit requests',    count: pendingDeposits });
+        newAlerts.push({ label: t('common.pending') + ' ' + t('common.deposits'),    count: pendingDeposits });
       if (pendingWithdrawals > 0)
-        newAlerts.push({ label: 'Pending withdrawal requests', count: pendingWithdrawals });
+        newAlerts.push({ label: t('common.pending') + ' ' + t('common.withdrawals'), count: pendingWithdrawals });
       setAlerts(newAlerts);
     } catch {
       // keep previous state on error
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchData();
@@ -82,20 +84,20 @@ export const AdminOverview = () => {
   }, [fetchData]);
 
   const metricCards = [
-    { label: 'Total Users',         value: metrics?.totalUsers?.toLocaleString() ?? '…', sub: 'Registered accounts', icon: Users,      color: 'text-blue-400' },
-    { label: 'Volume Today',        value: metrics ? `$${metrics.volumeToday.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : '…', sub: 'Completed transfers', icon: Activity, color: 'text-accent-primary' },
-    { label: 'Pending Deposits',    value: metrics?.pendingDeposits?.toString()    ?? '…', sub: 'Action Required', icon: ShieldAlert, color: metrics?.pendingDeposits    ? 'text-orange-400' : 'text-emerald-500' },
-    { label: 'Pending Withdrawals', value: metrics?.pendingWithdrawals?.toString() ?? '…', sub: 'Action Required', icon: Server,      color: metrics?.pendingWithdrawals ? 'text-rose-400'   : 'text-emerald-500' },
+    { label: t('adminDashboard.cards.totalUsers'),         value: metrics?.totalUsers?.toLocaleString() ?? '…', sub: t('adminDashboard.cards.registeredAccounts'), icon: Users,      color: 'text-blue-400' },
+    { label: t('adminDashboard.cards.volumeToday'),        value: metrics ? `$${metrics.volumeToday.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : '…', sub: t('adminDashboard.cards.completedTx'), icon: Activity, color: 'text-accent-primary' },
+    { label: t('common.pending') + ' ' + t('common.deposits'),    value: metrics?.pendingDeposits?.toString()    ?? '…', sub: t('adminDashboard.cards.awaitingReview'), icon: ShieldAlert, color: metrics?.pendingDeposits    ? 'text-orange-400' : 'text-emerald-500' },
+    { label: t('common.pending') + ' ' + t('common.withdrawals'), value: metrics?.pendingWithdrawals?.toString() ?? '…', sub: t('adminDashboard.cards.awaitingReview'), icon: Server,      color: metrics?.pendingWithdrawals ? 'text-rose-400'   : 'text-emerald-500' },
   ];
 
   return (
     <div className="p-8 space-y-8 max-w-[1600px] mx-auto animate-in fade-in duration-200">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="font-serif text-2xl font-light italic tracking-tight text-text">System Overview</h2>
+          <h2 className="font-serif text-2xl font-light italic tracking-tight text-text">{t('adminDashboard.tabs.overview')}</h2>
           <p className="text-sm text-text-dim font-mono flex items-center gap-2 mt-1">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            NODE_STATUS: STABLE | LIVE DATA
+            {t('adminDashboard.sysStatus')} LIVE DATA
           </p>
         </div>
         <button onClick={fetchData} className="p-2 border border-border rounded-xl text-text-muted hover:text-text transition-all">
@@ -125,14 +127,14 @@ export const AdminOverview = () => {
           <div className="glass-card flex flex-col h-[420px]">
             <div className="p-5 border-b border-white/5 flex items-center justify-between">
               <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2">
-                <Zap size={16} className="text-rose-500" /> Live Transaction Feed
+                <Zap size={16} className="text-rose-500" /> {t('adminDashboard.feed.title')}
               </h3>
-              <span className="text-[10px] text-text-dim font-mono">{events.length} events</span>
+              <span className="text-[10px] text-text-dim font-mono">{t('adminDashboard.feed.events', { count: events.length })}</span>
             </div>
             <div className="flex-1 overflow-y-auto custom-scrollbar divide-y divide-white/5">
               {events.length === 0 ? (
                 <div className="flex items-center justify-center h-full">
-                  <p className="text-sm text-text-dim">No transactions yet</p>
+                  <p className="text-sm text-text-dim">{t('adminDashboard.feed.noTx')}</p>
                 </div>
               ) : events.map(ev => (
                 <div key={ev.id} className="flex items-center gap-3 px-5 py-3 hover:bg-white/[0.02] transition-colors">
@@ -142,12 +144,12 @@ export const AdminOverview = () => {
                       : <ArrowUpRight   size={12} className="text-rose-400" />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-white truncate">{ev.user_name || ev.user_email || 'Unknown'}</p>
-                    <p className="text-[10px] text-text-dim font-mono">{ev.type} · ${Number(ev.amount || 0).toLocaleString()}</p>
+                    <p className="text-xs font-bold text-white truncate">{ev.user_name || ev.user_email || t('adminDashboard.feed.unknown')}</p>
+                    <p className="text-[10px] text-text-dim font-mono">{t(`common.${ev.type.toLowerCase()}s`) || ev.type} · ${Number(ev.amount || 0).toLocaleString()}</p>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     {statusIcon(ev.status)}
-                    <span className={`text-[10px] font-bold ${statusColor(ev.status)}`}>{ev.status}</span>
+                    <span className={`text-[10px] font-bold ${statusColor(ev.status)}`}>{t(`common.${ev.status.toLowerCase()}`) || ev.status}</span>
                   </div>
                   <span className="text-[9px] text-text-dim font-mono shrink-0 w-20 text-right">
                     {new Date(ev.created_at).toLocaleTimeString()}
@@ -160,7 +162,7 @@ export const AdminOverview = () => {
           <div className="glass-card p-6 relative overflow-hidden min-h-[150px] flex flex-col justify-center">
             <Globe2 size={80} className="text-white/5 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
             <div className="relative z-10 w-full">
-              <h3 className="text-sm font-bold text-white uppercase tracking-widest text-left mb-4">Global Node Activity</h3>
+              <h3 className="text-sm font-bold text-white uppercase tracking-widest text-left mb-4">{t('adminDashboard.nodes.title')}</h3>
               <div className="grid grid-cols-3 gap-4">
                 {['EU_WEST_1', 'US_EAST_2', 'AP_SOUTHEAST_1'].map(node => (
                   <div key={node} className="p-3 bg-white/5 rounded-xl border border-white/10">
@@ -177,13 +179,13 @@ export const AdminOverview = () => {
         <div className="col-span-12 xl:col-span-4 space-y-6">
           <div className="glass-card p-6 border-orange-500/20">
             <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-4 flex items-center gap-2">
-              <AlertTriangle size={16} className="text-orange-500" /> Active Alerts
+              <AlertTriangle size={16} className="text-orange-500" /> {t('adminDashboard.alerts.title')}
             </h3>
             <div className="space-y-3">
               {alerts.length === 0 ? (
                 <div className="p-5 text-center border border-white/5 rounded-xl">
                   <CheckCircle2 size={20} className="mx-auto mb-2 text-emerald-500" />
-                  <p className="text-xs text-text-dim">All clear — no pending actions</p>
+                  <p className="text-xs text-text-dim">{t('adminDashboard.alerts.allClear')}</p>
                 </div>
               ) : alerts.map((al, i) => (
                 <div key={i} className="flex items-center gap-3 p-3 rounded-xl border border-orange-500/20 bg-orange-500/5">
@@ -192,7 +194,7 @@ export const AdminOverview = () => {
                   </div>
                   <div className="flex-1">
                     <p className="text-xs font-bold text-white">{al.label}</p>
-                    <p className="text-[10px] text-orange-400">{al.count} item{al.count !== 1 ? 's' : ''} need attention</p>
+                    <p className="text-[10px] text-orange-400">{t(al.count === 1 ? 'adminDashboard.alerts.itemsNeedAttention_one' : 'adminDashboard.alerts.itemsNeedAttention_other', { count: al.count })}</p>
                   </div>
                 </div>
               ))}
@@ -201,12 +203,12 @@ export const AdminOverview = () => {
 
           <div className="glass-card p-6 border-blue-500/20">
             <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-4 flex items-center gap-2">
-              <Bell size={16} className="text-blue-500" /> KYC Summary
+              <Bell size={16} className="text-blue-500" /> {t('adminDashboard.cards.pendingKyc')}
             </h3>
             <div className="space-y-2">
               {[
-                { label: 'Pending KYC', value: metrics?.pendingKyc ?? '…', color: metrics?.pendingKyc ? 'text-orange-400' : 'text-emerald-400' },
-                { label: 'Total Users', value: metrics?.totalUsers ?? '…', color: 'text-white' },
+                { label: t('adminDashboard.cards.pendingKyc'), value: metrics?.pendingKyc ?? '…', color: metrics?.pendingKyc ? 'text-orange-400' : 'text-emerald-400' },
+                { label: t('adminDashboard.cards.totalUsers'), value: metrics?.totalUsers ?? '…', color: 'text-white' },
               ].map(row => (
                 <div key={row.label} className="flex justify-between items-center py-2 border-b border-white/5 last:border-0">
                   <span className="text-[10px] text-text-dim uppercase tracking-wider">{row.label}</span>

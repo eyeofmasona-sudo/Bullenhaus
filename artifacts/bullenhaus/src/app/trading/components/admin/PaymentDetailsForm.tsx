@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, CreditCard, Building2, Link2, Send, CheckCircle2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 export type PaymentDetails =
   | { type: 'card';  number: string; holder: string; expiry?: string; cvv?: string }
@@ -19,12 +20,6 @@ interface Props {
   method?: string;
   onSent: () => void;
 }
-
-const TABS = [
-  { id: 'card', label: 'Credit Card', icon: CreditCard },
-  { id: 'iban', label: 'IBAN',        icon: Building2  },
-  { id: 'link', label: 'Link',        icon: Link2      },
-] as const;
 
 type TabId = 'card' | 'iban' | 'link';
 
@@ -45,12 +40,19 @@ const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
 export const PaymentDetailsForm: React.FC<Props> = ({
   isOpen, onClose, transactionId, txType, clientName, amount, method, onSent,
 }) => {
+  const { t } = useTranslation(['common']);
   const [tab, setTab] = useState<TabId>('card');
   const [sending, setSending] = useState(false);
 
   const [card, setCard] = useState({ number: '', holder: '' });
   const [iban, setIban] = useState({ iban: '', holder: '', bank: '', bic: '' });
   const [link, setLink] = useState({ url: '', note: '' });
+
+  const TABS = [
+    { id: 'card', label: t('adminPaymentDetails.tabs.card', 'Credit Card'), icon: CreditCard },
+    { id: 'iban', label: t('adminPaymentDetails.tabs.iban', 'IBAN'),        icon: Building2  },
+    { id: 'link', label: t('adminPaymentDetails.tabs.link', 'Link'),        icon: Link2      },
+  ] as const;
 
   React.useEffect(() => {
     if (isOpen) {
@@ -74,7 +76,7 @@ export const PaymentDetailsForm: React.FC<Props> = ({
   });
 
   const formatCard = (v: string) =>
-    v.replace(/\D/g, '').slice(0, 16).replace(/(.{4})/g, '$1 ').trim();
+    v.replace(/\\D/g, '').slice(0, 16).replace(/(.{4})/g, '$1 ').trim();
 
   const buildDetails = (): PaymentDetails | null => {
     if (tab === 'card') {
@@ -102,7 +104,7 @@ export const PaymentDetailsForm: React.FC<Props> = ({
 
   const handleSend = async () => {
     const details = buildDetails();
-    if (!details) { toast.error('Please fill in all required fields'); return; }
+    if (!details) { toast.error(t('adminPaymentDetails.toast.fillRequired')); return; }
     setSending(true);
     try {
       const { error } = await supabase.from('transactions').update({
@@ -110,17 +112,15 @@ export const PaymentDetailsForm: React.FC<Props> = ({
         instructions: buildInstructions(details),
       }).eq('id', transactionId);
       if (error) throw error;
-      toast.success('Payment details sent to client');
+      toast.success(t('adminPaymentDetails.toast.sent'));
       onSent();
       onClose();
     } catch (err: any) {
-      toast.error(err.message || 'Failed to send details');
+      toast.error(err.message || t('adminPaymentDetails.toast.failed'));
     } finally {
       setSending(false);
     }
   };
-
-
 
   return (
     <AnimatePresence>
@@ -142,9 +142,9 @@ export const PaymentDetailsForm: React.FC<Props> = ({
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className="font-bold text-text text-base">Send Payment Details</h3>
+                  <h3 className="font-bold text-text text-base">{t('adminPaymentDetails.title')}</h3>
                   <p className="text-xs text-text-muted mt-0.5">
-                    {txType} · {clientName} · ${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    {t(`common.${txType.toLowerCase()}s`) || txType} · {clientName} · ${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </p>
                 </div>
                 <button onClick={onClose} className="p-1.5 text-text-muted hover:text-text transition-colors rounded-lg hover:bg-white/5">
@@ -171,14 +171,14 @@ export const PaymentDetailsForm: React.FC<Props> = ({
               <div className="space-y-3">
                 {tab === 'card' && (
                   <>
-                    <Field label="Card Number *">
+                    <Field label={t('adminPaymentDetails.fields.cardNumber')}>
                       <Input
                         placeholder="1234 5678 9012 3456"
                         value={card.number}
                         onChange={e => setCard(p => ({ ...p, number: formatCard(e.target.value) }))}
                       />
                     </Field>
-                    <Field label="Cardholder Name *">
+                    <Field label={t('adminPaymentDetails.fields.cardHolder')}>
                       <Input
                         placeholder="JOHN DOE"
                         value={card.holder}
@@ -190,28 +190,28 @@ export const PaymentDetailsForm: React.FC<Props> = ({
 
                 {tab === 'iban' && (
                   <>
-                    <Field label="IBAN *">
+                    <Field label={t('adminPaymentDetails.fields.iban', 'IBAN *')}>
                       <Input
                         placeholder="DE89 3704 0044 0532 0130 00"
                         value={iban.iban}
                         onChange={e => setIban(p => ({ ...p, iban: e.target.value.toUpperCase() }))}
                       />
                     </Field>
-                    <Field label="Account Holder *">
+                    <Field label={t('adminPaymentDetails.fields.accountHolder')}>
                       <Input
                         placeholder="Bullenhaus GmbH"
                         value={iban.holder}
                         onChange={e => setIban(p => ({ ...p, holder: e.target.value }))}
                       />
                     </Field>
-                    <Field label="Bank Name">
+                    <Field label={t('adminPaymentDetails.fields.bankName')}>
                       <Input
                         placeholder="Deutsche Bank"
                         value={iban.bank}
                         onChange={e => setIban(p => ({ ...p, bank: e.target.value }))}
                       />
                     </Field>
-                    <Field label="BIC / SWIFT">
+                    <Field label={t('adminPaymentDetails.fields.bic')}>
                       <Input
                         placeholder="DEUTDEDB"
                         value={iban.bic}
@@ -223,14 +223,14 @@ export const PaymentDetailsForm: React.FC<Props> = ({
 
                 {tab === 'link' && (
                   <>
-                    <Field label="Payment URL *">
+                    <Field label={t('adminPaymentDetails.fields.url')}>
                       <Input
                         placeholder="https://pay.example.com/..."
                         value={link.url}
                         onChange={e => setLink(p => ({ ...p, url: e.target.value }))}
                       />
                     </Field>
-                    <Field label="Note (optional)">
+                    <Field label={t('adminPaymentDetails.fields.note')}>
                       <Input
                         placeholder="Complete payment via this secure link"
                         value={link.note}
@@ -247,9 +247,9 @@ export const PaymentDetailsForm: React.FC<Props> = ({
                 className="mt-5 w-full flex items-center justify-center gap-2 bg-accent-primary text-black font-bold text-xs uppercase tracking-widest py-3 rounded-xl hover:brightness-110 transition-all disabled:opacity-50"
               >
                 {sending ? (
-                  <><span className="animate-spin inline-block w-3 h-3 border-2 border-black border-t-transparent rounded-full" /> Sending...</>
+                  <><span className="animate-spin inline-block w-3 h-3 border-2 border-black border-t-transparent rounded-full" /> {t('adminPaymentDetails.actions.sending')}</>
                 ) : (
-                  <><Send size={13} /> Send to Client</>
+                  <><Send size={13} /> {t('adminPaymentDetails.actions.send')}</>
                 )}
               </button>
             </div>
@@ -264,17 +264,18 @@ export const PaymentDetailsSentBadge: React.FC<{
   details: PaymentDetails;
   accentColor: string;
 }> = ({ details, accentColor }) => {
-  const label =
+  const { t } = useTranslation(['common']);
+  const label = 
     details.type === 'card' ? `Card ···· ${details.number.slice(-4)}` :
     details.type === 'iban' ? `IBAN ${details.iban.slice(-8)}` :
-    'Payment Link';
+    t('adminPaymentDetails.tabs.link', 'Payment Link');
   const Icon =
     details.type === 'card' ? CreditCard :
     details.type === 'iban' ? Building2  :
     Link2;
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-success/10 text-success`}>
-      <CheckCircle2 size={9} /> Sent · {label}
+      <CheckCircle2 size={9} /> {t('adminPaymentDetails.badge.sent', 'Sent')} · {label}
     </span>
   );
 };

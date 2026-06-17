@@ -16,6 +16,7 @@ import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { cn } from '../../lib/utils';
 import { supabase } from '../../lib/supabase';
+import { useTranslation } from 'react-i18next';
 
 // ── Notification counts ────────────────────────────────────────────────────────
 interface AdminCounts {
@@ -108,6 +109,7 @@ const AdminSidebarItem = ({
 
 // ── Sign-out ───────────────────────────────────────────────────────────────────
 const AdminSignOutButton = () => {
+  const { t } = useTranslation(['common']);
   const navigate = useNavigate();
   const { signOut } = useAuth();
   return (
@@ -116,13 +118,14 @@ const AdminSignOutButton = () => {
       className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:text-white w-full transition-all hover:bg-white/5"
     >
       <LogOut size={18} />
-      <span className="text-xs font-bold uppercase tracking-widest">Sign Out</span>
+      <span className="text-xs font-bold uppercase tracking-widest">{t('adminLayout.sidebar.signOut')}</span>
     </button>
   );
 };
 
 // ── Sidebar ────────────────────────────────────────────────────────────────────
 const AdminSidebar = ({ onClose }: { onClose?: () => void }) => {
+  const { t } = useTranslation(['common']);
   const location    = useLocation();
   const { role }    = useAuth();
   const counts      = useAdminNotifications();
@@ -135,58 +138,58 @@ const AdminSidebar = ({ onClose }: { onClose?: () => void }) => {
           <ShieldCheck size={20} className="text-white" />
         </div>
         <div>
-          <p className="text-xs font-black tracking-[0.2em] text-white">ADMIN</p>
-          <p className="text-[8px] font-bold text-rose-500/50 tracking-[0.1em] uppercase">Control System</p>
+          <p className="text-xs font-black tracking-[0.2em] text-white">{t('adminLayout.sidebar.admin')}</p>
+          <p className="text-[8px] font-bold text-rose-500/50 tracking-[0.1em] uppercase">{t('adminLayout.sidebar.controlSystem')}</p>
         </div>
       </div>
 
       <nav className="flex-1 min-h-0 space-y-1 overflow-y-auto">
         <AdminSidebarItem
-          icon={LayoutDashboard} label="Overview"
+          icon={LayoutDashboard} label={t('adminLayout.sidebar.overview')}
           to="/admin" active={currentPath === '/admin'}
         />
         <AdminSidebarItem
-          icon={Users} label="User Manager"
+          icon={Users} label={t('adminLayout.sidebar.userManager')}
           to="/admin/users" active={currentPath === '/admin/users'}
         />
         <AdminSidebarItem
-          icon={ShieldCheck} label="KYC Queue"
+          icon={ShieldCheck} label={t('adminLayout.sidebar.kycQueue')}
           to="/admin/kyc" active={currentPath === '/admin/kyc'}
           badge={counts.kyc}
         />
         <AdminSidebarItem
-          icon={History} label="Deposits"
+          icon={History} label={t('adminLayout.sidebar.deposits')}
           to="/admin/deposits" active={currentPath === '/admin/deposits'}
           badge={counts.deposits}
         />
         <AdminSidebarItem
-          icon={History} label="Withdrawals"
+          icon={History} label={t('adminLayout.sidebar.withdrawals')}
           to="/admin/withdrawals" active={currentPath === '/admin/withdrawals'}
           badge={counts.withdrawals}
         />
         <AdminSidebarItem
-          icon={BarChart2} label="Market Control"
+          icon={BarChart2} label={t('adminLayout.sidebar.marketControl')}
           to="/admin/market-control" active={currentPath === '/admin/market-control'}
         />
         <AdminSidebarItem
-          icon={History} label="Transactions"
+          icon={History} label={t('adminLayout.sidebar.transactions')}
           to="/admin/transactions" active={currentPath === '/admin/transactions'}
         />
         <AdminSidebarItem
-          icon={Settings} label="System Config"
+          icon={Settings} label={t('adminLayout.sidebar.systemConfig')}
           to="/admin/settings" active={currentPath === '/admin/settings'}
         />
 
         {(role === 'admin' || role === 'trade_admin') && (
           <div className="pt-3 mt-3 border-t border-rose-500/10">
-            <p className="text-[9px] font-bold tracking-[0.2em] text-slate-600 uppercase px-4 mb-2">Switch Zone</p>
+            <p className="text-[9px] font-bold tracking-[0.2em] text-slate-600 uppercase px-4 mb-2">{t('adminLayout.sidebar.switchZone')}</p>
             <Link to="/trade/dashboard">
               <motion.div
                 whileHover={{ x: 4 }}
                 className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-200 text-sky-400/70 hover:text-sky-400 hover:bg-sky-400/10 border border-sky-400/0 hover:border-sky-400/20"
               >
                 <BarChart2 size={18} />
-                <span className="font-bold text-xs tracking-wider uppercase">Trade Platform</span>
+                <span className="font-bold text-xs tracking-wider uppercase">{t('adminLayout.sidebar.tradePlatform')}</span>
               </motion.div>
             </Link>
             {role === 'admin' && (
@@ -196,7 +199,7 @@ const AdminSidebar = ({ onClose }: { onClose?: () => void }) => {
                   className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-200 text-aura-gold/70 hover:text-aura-gold hover:bg-aura-gold/10 border border-aura-gold/0 hover:border-aura-gold/20"
                 >
                   <Briefcase size={18} />
-                  <span className="font-bold text-xs tracking-wider uppercase">CRM Admin</span>
+                  <span className="font-bold text-xs tracking-wider uppercase">{t('adminLayout.sidebar.crmAdmin')}</span>
                 </motion.div>
               </Link>
             )}
@@ -213,6 +216,7 @@ const AdminSidebar = ({ onClose }: { onClose?: () => void }) => {
 
 // ── Layout ─────────────────────────────────────────────────────────────────────
 export const AdminLayout = () => {
+  const { t } = useTranslation(['common']);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { role } = useAuth();
 
@@ -259,7 +263,7 @@ export const AdminLayout = () => {
               </button>
               <h2 className="text-sm font-black tracking-widest text-white uppercase flex items-center gap-2">
                 <Activity size={16} className="text-rose-500" />
-                System Status: <span className="text-emerald-500">Operational</span>
+                {t('adminLayout.header.systemStatus')} <span className="text-emerald-500">{t('adminLayout.header.operational')}</span>
               </h2>
             </div>
             <div className="flex items-center gap-4 text-[10px] font-bold">
