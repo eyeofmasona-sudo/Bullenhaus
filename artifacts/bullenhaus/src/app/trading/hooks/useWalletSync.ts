@@ -42,6 +42,7 @@ export const useWalletSync = (pollMs = 30000) => {
   const setWallet = useTradingStore((s) => s.setWallet);
   const setPositions = useTradingStore((s) => s.setPositions);
   const setOrders = useTradingStore((s) => s.setOrders);
+  const setAssets = useTradingStore((s) => s.setAssets);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,14 +55,16 @@ export const useWalletSync = (pollMs = 30000) => {
         setWallet({ balance: 0, realizedPnL: 0, marginUsed: 0 });
         setPositions([]);
         setOrders([]);
+        setAssets([]);
         return;
       }
       const uid = session.user.id;
 
-      const [profileRes, posRes, ordRes] = await Promise.all([
+      const [profileRes, posRes, ordRes, txRes] = await Promise.all([
         supabase.from('users').select('balance, realized_pnl').eq('id', uid).maybeSingle(),
         supabase.from('positions').select('*').eq('user_id', uid).order('created_at', { ascending: false }).limit(150),
         supabase.from('orders').select('*').eq('user_id', uid).order('created_at', { ascending: false }).limit(150),
+        supabase.from('transactions').select('*').eq('user_id', uid).eq('type', 'Trade').ilike('instructions', 'Pre-Market Purchase%').order('created_at', { ascending: true })
       ]);
 
       if (profileRes.error) throw profileRes.error;
@@ -70,8 +73,26 @@ export const useWalletSync = (pollMs = 30000) => {
       const orders = (ordRes.data ?? []).map(mapDbOrder);
       const marginUsed = positions.filter(p => p.status === 'open').reduce((acc, p) => acc + p.margin, 0);
 
+      // Reconstruct assets from transactions
+      const parsedAssets: any[] = [];
+      (txRes.data ?? []).forEach(tx => {
+        const match = tx.instructions?.match(/Pre-Market Purchase: ([\d.]+) ([A-Z0-9]+) at \$([\d.,]+)/);
+        if (match) {
+          parsedAssets.push({
+            id: tx.id,
+            symbol: match[2],
+            name: match[2], // Use symbol as name since we don't store name in transaction
+            amount: parseFloat(match[1]),
+            buyPrice: parseFloat(match[3].replace(/,/g, '')),
+            currentPrice: parseFloat(match[3].replace(/,/g, '')), // This will be updated by real price feed later
+            createdAt: tx.created_at
+          });
+        }
+      });
+
       setPositions(positions);
       setOrders(orders);
+      setAssets(parsedAssets);
       setWallet({
         balance: Number(profileRes.data?.balance ?? 0),
         realizedPnL: Number(profileRes.data?.realized_pnl ?? 0),
@@ -94,6 +115,7 @@ export const useWalletSync = (pollMs = 30000) => {
         setWallet({ balance: 0, realizedPnL: 0, marginUsed: 0 });
         setPositions([]);
         setOrders([]);
+        setAssets([]);
       } else {
         refetch();
       }
@@ -108,7 +130,7 @@ export const useWalletSync = (pollMs = 30000) => {
       subscription.unsubscribe();
       window.clearInterval(interval);
     };
-  }, [pollMs, refetch, setWallet, setPositions, setOrders]);
+  }, [pollMs, refetch, setWallet, setPositions, setOrders, setAssets]);
 
   return { loading, error, refetch };
 };

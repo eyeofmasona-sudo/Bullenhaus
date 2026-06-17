@@ -83,6 +83,7 @@ interface TradingState {
   addBalance: (amount: number) => void;
   setWalletBalance: (amount: number) => void;
   buyAsset: (symbol: string, name: string, price: number, amount: number) => Promise<boolean>;
+  setAssets: (assets: Asset[]) => void;
 }
 
 export const useTradingStore = create<TradingState>()(
