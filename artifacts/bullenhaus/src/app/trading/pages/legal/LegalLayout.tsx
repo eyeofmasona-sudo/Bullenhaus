@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Shield } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface Section {
   heading: string;
@@ -14,15 +15,18 @@ interface LegalLayoutProps {
   sections: Section[];
 }
 
-const NAV_LINKS = [
-  { label: 'Contact & Compliance', href: '/legal/contact'   },
-  { label: 'Terms of Service',     href: '/legal/terms'     },
-  { label: 'Privacy Policy',       href: '/legal/privacy'   },
-  { label: 'AML & Compliance',     href: '/legal/aml'       },
-  { label: 'Corporate Data',       href: '/legal/corporate' },
-];
+export const LegalLayout: React.FC<LegalLayoutProps> = ({ title, subtitle, lastUpdated, sections }) => {
+  const { t } = useTranslation('common');
+  
+  const NAV_LINKS = [
+    { label: t('legal.nav.contact'), href: '/legal/contact'   },
+    { label: t('legal.nav.terms'),     href: '/legal/terms'     },
+    { label: t('legal.nav.privacy'),       href: '/legal/privacy'   },
+    { label: t('legal.nav.aml'),     href: '/legal/aml'       },
+    { label: t('legal.nav.corporate'),       href: '/legal/corporate' },
+  ];
 
-export const LegalLayout: React.FC<LegalLayoutProps> = ({ title, subtitle, lastUpdated, sections }) => (
+  return (
   <div className="min-h-dvh bg-[#0a0a0b] text-slate-300 font-sans">
     {/* Fixed glow */}
     <div className="fixed top-0 left-1/4 w-96 h-96 bg-yellow-500/5 blur-[180px] rounded-full pointer-events-none" />
@@ -33,7 +37,7 @@ export const LegalLayout: React.FC<LegalLayoutProps> = ({ title, subtitle, lastU
       <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
         <Link to="/trade/dashboard" className="flex items-center gap-2 text-xs text-slate-500 hover:text-accent-primary transition-colors group">
           <ArrowLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" />
-          Back to Platform
+          {t('legal.backToPlatform')}
         </Link>
 
         <div className="flex items-center gap-2">
@@ -56,11 +60,11 @@ export const LegalLayout: React.FC<LegalLayoutProps> = ({ title, subtitle, lastU
     <div className="max-w-5xl mx-auto px-6 pt-16 pb-10">
       <div className="flex items-center gap-2 mb-4">
         <Shield size={14} className="text-accent-primary" />
-        <span className="text-[10px] uppercase tracking-[0.2em] text-accent-primary font-bold">Legal Documentation</span>
+        <span className="text-[10px] uppercase tracking-[0.2em] text-accent-primary font-bold">{t('legal.documentation')}</span>
       </div>
       <h1 className="text-4xl md:text-5xl font-serif font-bold text-white mb-4">{title}</h1>
       <p className="text-slate-400 text-base max-w-2xl leading-relaxed">{subtitle}</p>
-      <p className="mt-4 text-[10px] text-slate-600 uppercase tracking-widest font-bold">Last Updated: {lastUpdated}</p>
+      <p className="mt-4 text-[10px] text-slate-600 uppercase tracking-widest font-bold">{t('legal.lastUpdated')}: {lastUpdated}</p>
     </div>
 
     {/* Content */}
@@ -91,8 +95,9 @@ export const LegalLayout: React.FC<LegalLayoutProps> = ({ title, subtitle, lastU
         ))}
       </div>
       <p className="text-center text-[10px] text-slate-600 mt-4">
-        &copy; {new Date().getFullYear()} Bullenhaus. All rights reserved.
+        &copy; {new Date().getFullYear()} Bullenhaus. {t('legal.allRightsReserved')}
       </p>
     </footer>
   </div>
 );
+};

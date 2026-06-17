@@ -3,8 +3,10 @@ import { motion } from 'motion/react';
 import { Mail, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { useTranslation } from 'react-i18next';
 
 export const ForgotPassword: React.FC = () => {
+  const { t } = useTranslation('common');
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,11 +26,11 @@ export const ForgotPassword: React.FC = () => {
     } catch (err: any) {
       const msg = err.message || '';
       if (msg.includes('For security purposes')) {
-        setError('Too many requests. Please wait a minute and try again.');
+        setError(t('auth.forgotPassword.errors.tooManyRequests'));
       } else if (msg.includes('Unable to validate')) {
-        setError('Please enter a valid email address.');
+        setError(t('auth.forgotPassword.errors.invalidEmail'));
       } else {
-        setError(msg || 'Failed to send reset link. Please check your email and try again.');
+        setError(msg || t('auth.forgotPassword.errors.default'));
       }
     } finally {
       setLoading(false);
@@ -41,14 +43,14 @@ export const ForgotPassword: React.FC = () => {
         <div className="w-14 h-14 mx-auto bg-success/10 rounded-full flex items-center justify-center mb-5">
           <ShieldCheck size={28} className="text-success" />
         </div>
-        <h2 className="font-serif text-2xl font-semibold text-text mb-2">Email sent</h2>
+        <h2 className="font-serif text-2xl font-semibold text-text mb-2">{t('auth.forgotPassword.successTitle')}</h2>
         <p className="text-sm text-text-muted mb-2">
-          If an account with that email exists, a reset link is on its way.
+          {t('auth.forgotPassword.successSubtitle1')}
         </p>
         <p className="text-xs text-text-dim mb-6">
-          Check your spam folder if the email doesn't arrive within 2–3 minutes.
+          {t('auth.forgotPassword.successSubtitle2')}
         </p>
-        <Link to="/login" className="btn-gold inline-flex">Back to login</Link>
+        <Link to="/login" className="btn-gold inline-flex">{t('auth.forgotPassword.backToLogin')}</Link>
       </div>
     );
   }
@@ -56,8 +58,8 @@ export const ForgotPassword: React.FC = () => {
   return (
     <div className="p-8">
       <div className="mb-7">
-        <h2 className="font-serif text-2xl font-semibold text-text tracking-tight">Reset password</h2>
-        <p className="text-sm text-text-muted mt-1.5">Enter your email — we'll send you a reset link.</p>
+        <h2 className="font-serif text-2xl font-semibold text-text tracking-tight">{t('auth.forgotPassword.title')}</h2>
+        <p className="text-sm text-text-muted mt-1.5">{t('auth.forgotPassword.subtitle')}</p>
       </div>
 
       {error && (
@@ -73,7 +75,7 @@ export const ForgotPassword: React.FC = () => {
 
       <form onSubmit={handleReset} className="space-y-4">
         <div>
-          <label className="label-eyebrow block mb-2">Account email</label>
+          <label className="label-eyebrow block mb-2">{t('auth.forgotPassword.emailLabel')}</label>
           <div className="relative">
             <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" />
             <input
@@ -81,7 +83,7 @@ export const ForgotPassword: React.FC = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="input-dark pl-11"
-              placeholder="operator@bullenhaus.com"
+              placeholder={t('auth.forgotPassword.emailPlaceholder')}
               required
             />
           </div>
@@ -91,14 +93,14 @@ export const ForgotPassword: React.FC = () => {
           {loading ? (
             <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
           ) : (
-            <>Send reset link <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" /></>
+            <>{t('auth.forgotPassword.sendLinkBtn')} <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" /></>
           )}
         </button>
       </form>
 
       <div className="mt-7 pt-6 border-t border-border text-center">
         <Link to="/login" className="text-sm text-text-muted hover:text-gold transition-colors">
-          ← Back to login
+          ← {t('auth.forgotPassword.backToLogin')}
         </Link>
       </div>
     </div>

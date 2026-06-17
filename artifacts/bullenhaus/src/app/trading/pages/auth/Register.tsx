@@ -6,8 +6,10 @@ import { supabase } from '../../lib/supabase';
 import { crmService } from '../../services/crmService';
 import { getAttribution } from '../../hooks/useAttribution';
 import { COUNTRIES, type Country } from '../../../crm/data/countries';
+import { useTranslation } from 'react-i18next';
 
 export const Register: React.FC = () => {
+  const { t } = useTranslation('common');
   const navigate = useNavigate();
 
   const [firstName, setFirstName] = useState('');
@@ -31,10 +33,10 @@ export const Register: React.FC = () => {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!firstName.trim()) { setError('First name is required.'); return; }
-    if (!lastName.trim())  { setError('Last name is required.'); return; }
-    if (!country)          { setError('Please select your country.'); return; }
-    if (!localPhone.trim()) { setError('Phone number is required.'); return; }
+    if (!firstName.trim()) { setError(t('auth.register.errors.firstNameRequired')); return; }
+    if (!lastName.trim())  { setError(t('auth.register.errors.lastNameRequired')); return; }
+    if (!country)          { setError(t('auth.register.errors.countryRequired')); return; }
+    if (!localPhone.trim()) { setError(t('auth.register.errors.phoneRequired')); return; }
 
     setLoading(true);
     setError(null);
@@ -120,7 +122,7 @@ export const Register: React.FC = () => {
       }
       setSuccess(true);
     } catch (err: any) {
-      setError(err.message || 'An error occurred during registration.');
+      setError(err.message || t('auth.register.errors.registerFailed'));
     } finally {
       setLoading(false);
     }
@@ -132,11 +134,11 @@ export const Register: React.FC = () => {
         <div className="w-14 h-14 mx-auto bg-gold-soft rounded-full flex items-center justify-center mb-5">
           <CheckCircle2 size={28} className="text-gold" />
         </div>
-        <h2 className="font-serif text-2xl font-semibold text-text mb-2">Application submitted</h2>
+        <h2 className="font-serif text-2xl font-semibold text-text mb-2">{t('auth.register.successTitle')}</h2>
         <p className="text-sm text-text-muted mb-6">
-          Your account is being prepared. You can sign in shortly.
+          {t('auth.register.successSubtitle')}
         </p>
-        <Link to="/login" className="btn-gold inline-flex">Return to login</Link>
+        <Link to="/login" className="btn-gold inline-flex">{t('auth.register.returnToLogin')}</Link>
       </div>
     );
   }
@@ -144,8 +146,8 @@ export const Register: React.FC = () => {
   return (
     <div className="p-8">
       <div className="mb-7">
-        <h2 className="font-serif text-2xl font-semibold text-text tracking-tight">Create account</h2>
-        <p className="text-sm text-text-muted mt-1.5">Apply for access to the Bullenhaus terminal.</p>
+        <h2 className="font-serif text-2xl font-semibold text-text tracking-tight">{t('auth.register.title')}</h2>
+        <p className="text-sm text-text-muted mt-1.5">{t('auth.register.subtitle')}</p>
       </div>
 
       {error && (
@@ -164,26 +166,26 @@ export const Register: React.FC = () => {
         {/* Name row */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="label-eyebrow block mb-2">First name</label>
+            <label className="label-eyebrow block mb-2">{t('auth.register.firstNameLabel')}</label>
             <div className="relative">
               <User size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" />
               <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)}
-                className="input-dark pl-10 text-sm" placeholder="John" required />
+                className="input-dark pl-10 text-sm" placeholder={t('auth.register.firstNamePlaceholder')} required />
             </div>
           </div>
           <div>
-            <label className="label-eyebrow block mb-2">Last name</label>
+            <label className="label-eyebrow block mb-2">{t('auth.register.lastNameLabel')}</label>
             <div className="relative">
               <User size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" />
               <input type="text" value={lastName} onChange={e => setLastName(e.target.value)}
-                className="input-dark pl-10 text-sm" placeholder="Smith" required />
+                className="input-dark pl-10 text-sm" placeholder={t('auth.register.lastNamePlaceholder')} required />
             </div>
           </div>
         </div>
 
         {/* Country */}
         <div>
-          <label className="label-eyebrow block mb-2">Country</label>
+          <label className="label-eyebrow block mb-2">{t('auth.register.countryLabel')}</label>
           <div className="relative">
             <Globe size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none z-10" />
             <select
@@ -192,7 +194,7 @@ export const Register: React.FC = () => {
               className="input-dark pl-10 pr-9 appearance-none w-full cursor-pointer"
               required
             >
-              <option value="" disabled>Select country…</option>
+              <option value="" disabled>{t('auth.register.countryPlaceholder')}</option>
               {COUNTRIES.map(c => (
                 <option key={c.code} value={c.code}>{c.flag} {c.name}</option>
               ))}
@@ -203,7 +205,7 @@ export const Register: React.FC = () => {
 
         {/* Phone */}
         <div>
-          <label className="label-eyebrow block mb-2">Phone number</label>
+          <label className="label-eyebrow block mb-2">{t('auth.register.phoneLabel')}</label>
           <div className="flex gap-2">
             {/* Dial code badge */}
             <div className="flex items-center gap-1.5 px-3 rounded-xl bg-black/40 border border-border text-text-muted text-sm font-mono shrink-0 min-w-[72px] justify-center select-none">
@@ -220,34 +222,34 @@ export const Register: React.FC = () => {
                 value={localPhone}
                 onChange={e => setLocalPhone(e.target.value.replace(/[^\d\s\-()]/g, ''))}
                 className="input-dark pl-10 w-full"
-                placeholder={country ? 'Enter number…' : 'Select country first'}
+                placeholder={country ? t('auth.register.phonePlaceholder') : t('auth.register.phoneDisabledPlaceholder')}
                 disabled={!country}
                 required
               />
             </div>
           </div>
           {fullPhone && (
-            <p className="text-[10px] text-text-dim mt-1.5 font-mono">Will be stored as: {fullPhone}</p>
+            <p className="text-[10px] text-text-dim mt-1.5 font-mono">{t('auth.register.phoneStoredAs')} {fullPhone}</p>
           )}
         </div>
 
         {/* Email */}
         <div>
-          <label className="label-eyebrow block mb-2">Secure email</label>
+          <label className="label-eyebrow block mb-2">{t('auth.register.emailLabel')}</label>
           <div className="relative">
             <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" />
             <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-              className="input-dark pl-11" placeholder="you@example.com" required />
+              className="input-dark pl-11" placeholder={t('auth.register.emailPlaceholder')} required />
           </div>
         </div>
 
         {/* Password */}
         <div>
-          <label className="label-eyebrow block mb-2">Passphrase</label>
+          <label className="label-eyebrow block mb-2">{t('auth.register.passwordLabel')}</label>
           <div className="relative">
             <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" />
             <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-              className="input-dark pl-11" placeholder="Minimum 8 characters" required minLength={8} />
+              className="input-dark pl-11" placeholder={t('auth.register.passwordPlaceholder')} required minLength={8} />
           </div>
         </div>
 
@@ -255,14 +257,14 @@ export const Register: React.FC = () => {
           {loading ? (
             <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
           ) : (
-            <><UserPlus size={16} /> Submit application</>
+            <><UserPlus size={16} /> {t('auth.register.submitBtn')}</>
           )}
         </button>
       </form>
 
       <div className="mt-7 pt-6 border-t border-border text-center text-sm text-text-muted">
-        Already have an account?{' '}
-        <Link to="/login" className="font-bold text-gold hover:text-gold-light transition-colors ml-1">Sign in</Link>
+        {t('auth.register.hasAccount')}{' '}
+        <Link to="/login" className="font-bold text-gold hover:text-gold-light transition-colors ml-1">{t('auth.register.loginBtn')}</Link>
       </div>
     </div>
   );

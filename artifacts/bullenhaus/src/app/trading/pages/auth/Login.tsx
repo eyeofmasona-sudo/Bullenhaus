@@ -3,8 +3,10 @@ import { motion } from 'motion/react';
 import { Mail, Lock, LogIn, AlertCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { useTranslation } from 'react-i18next';
 
 export const Login: React.FC = () => {
+  const { t } = useTranslation('common');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -34,7 +36,7 @@ export const Login: React.FC = () => {
       }
       navigate(target, { replace: true });
     } catch (err: any) {
-      setError(err.message || 'An error occurred during sign in.');
+      setError(err.message || t('auth.errors.signInFailed'));
     } finally {
       setLoading(false);
     }
@@ -45,8 +47,8 @@ export const Login: React.FC = () => {
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-accent-primary to-transparent opacity-50" />
       
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-white tracking-tight">Access Terminal</h2>
-        <p className="text-sm text-slate-400 mt-1">Authenticate to enter the elite trading ecosystem.</p>
+        <h2 className="text-2xl font-bold text-white tracking-tight">{t('auth.login.title')}</h2>
+        <p className="text-sm text-slate-400 mt-1">{t('auth.login.subtitle')}</p>
       </div>
 
       {error && (
@@ -62,7 +64,7 @@ export const Login: React.FC = () => {
 
       <form onSubmit={handleLogin} className="space-y-5">
         <div>
-          <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Email Identity</label>
+          <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">{t('auth.login.emailLabel')}</label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
               <Mail size={16} className="text-accent-primary/50" />
@@ -72,7 +74,7 @@ export const Login: React.FC = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-[#111] border border-white/5 rounded-xl py-3 pl-11 pr-4 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-accent-primary/50 focus:ring-1 focus:ring-accent-primary/50 transition-all"
-              placeholder="Username or Operator Email"
+              placeholder={t('auth.login.emailPlaceholder')}
               required
             />
           </div>
@@ -80,8 +82,8 @@ export const Login: React.FC = () => {
 
         <div>
            <div className="flex items-center justify-between mb-2">
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider">Passphrase</label>
-            <Link to="/auth/forgot-password" className="text-xs font-bold text-accent-primary hover:text-white transition-colors">Forgot?</Link>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider">{t('auth.login.passwordLabel')}</label>
+            <Link to="/auth/forgot-password" className="text-xs font-bold text-accent-primary hover:text-white transition-colors">{t('auth.login.forgotPassword')}</Link>
           </div>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -107,7 +109,7 @@ export const Login: React.FC = () => {
             <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
           ) : (
             <>
-              Connect Protocol <LogIn size={18} className="group-hover:translate-x-1 transition-transform" />
+              {t('auth.login.loginBtn')} <LogIn size={18} className="group-hover:translate-x-1 transition-transform" />
             </>
           )}
         </button>
@@ -115,7 +117,7 @@ export const Login: React.FC = () => {
 
       <div className="mt-8 text-center border-t border-white/5 pt-6">
         <p className="text-xs text-slate-400">
-          Unregistered operator? <Link to="/auth/register" className="font-bold text-accent-primary hover:text-white transition-colors ml-1 uppercase tracking-wider">Apply Here</Link>
+          {t('auth.login.noAccount')} <Link to="/auth/register" className="font-bold text-accent-primary hover:text-white transition-colors ml-1 uppercase tracking-wider">{t('auth.login.registerBtn')}</Link>
         </p>
       </div>
     </div>

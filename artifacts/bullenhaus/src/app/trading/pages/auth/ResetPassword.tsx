@@ -3,8 +3,10 @@ import { motion } from 'motion/react';
 import { Lock, RefreshCw, CheckCircle, AlertCircle, ShieldAlert } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { useTranslation } from 'react-i18next';
 
 export const ResetPassword: React.FC = () => {
+  const { t } = useTranslation('common');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -38,11 +40,11 @@ export const ResetPassword: React.FC = () => {
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError(t('auth.resetPassword.errors.passwordsDoNotMatch'));
       return;
     }
     if (password.length < 8) {
-      setError('Password must be at least 8 characters.');
+      setError(t('auth.resetPassword.errors.passwordTooShort'));
       return;
     }
     setLoading(true);
@@ -55,11 +57,11 @@ export const ResetPassword: React.FC = () => {
     } catch (err: any) {
       const msg = err.message || '';
       if (msg.includes('Auth session missing') || msg.includes('session_not_found')) {
-        setError('Reset link has expired or was already used. Please request a new one.');
+        setError(t('auth.resetPassword.errors.linkExpired'));
       } else if (msg.includes('Password should be')) {
-        setError('Password is too weak. Use at least 8 characters.');
+        setError(t('auth.resetPassword.errors.passwordTooWeak'));
       } else {
-        setError(msg || 'Failed to update password.');
+        setError(msg || t('auth.resetPassword.errors.default'));
       }
     } finally {
       setLoading(false);
@@ -72,8 +74,8 @@ export const ResetPassword: React.FC = () => {
         <div className="w-14 h-14 mx-auto bg-success/10 rounded-full flex items-center justify-center mb-5">
           <CheckCircle size={28} className="text-success" />
         </div>
-        <h2 className="font-serif text-2xl font-semibold text-text mb-2">Password updated</h2>
-        <p className="text-sm text-text-muted">Redirecting to login...</p>
+        <h2 className="font-serif text-2xl font-semibold text-text mb-2">{t('auth.resetPassword.successTitle')}</h2>
+        <p className="text-sm text-text-muted">{t('auth.resetPassword.successSubtitle')}</p>
       </div>
     );
   }
@@ -82,7 +84,7 @@ export const ResetPassword: React.FC = () => {
     return (
       <div className="p-8 text-center">
         <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-sm text-text-muted">Verifying reset link...</p>
+        <p className="text-sm text-text-muted">{t('auth.resetPassword.verifyingLink')}</p>
       </div>
     );
   }
@@ -93,11 +95,11 @@ export const ResetPassword: React.FC = () => {
         <div className="w-14 h-14 mx-auto bg-danger/10 rounded-full flex items-center justify-center mb-5">
           <ShieldAlert size={28} className="text-danger" />
         </div>
-        <h2 className="font-serif text-2xl font-semibold text-text mb-2">Link invalid</h2>
+        <h2 className="font-serif text-2xl font-semibold text-text mb-2">{t('auth.resetPassword.invalidLinkTitle')}</h2>
         <p className="text-sm text-text-muted mb-6">
-          This link has expired or was already used. Please request a new one.
+          {t('auth.resetPassword.invalidLinkSubtitle')}
         </p>
-        <Link to="/forgot-password" className="btn-gold inline-flex">Request new link</Link>
+        <Link to="/auth/forgot-password" className="btn-gold inline-flex">{t('auth.resetPassword.requestNewLink')}</Link>
       </div>
     );
   }
@@ -105,8 +107,8 @@ export const ResetPassword: React.FC = () => {
   return (
     <div className="p-8">
       <div className="mb-7">
-        <h2 className="font-serif text-2xl font-semibold text-text tracking-tight">New password</h2>
-        <p className="text-sm text-text-muted mt-1.5">Enter a new password for your account.</p>
+        <h2 className="font-serif text-2xl font-semibold text-text tracking-tight">{t('auth.resetPassword.title')}</h2>
+        <p className="text-sm text-text-muted mt-1.5">{t('auth.resetPassword.subtitle')}</p>
       </div>
 
       {error && (
@@ -122,7 +124,7 @@ export const ResetPassword: React.FC = () => {
 
       <form onSubmit={handleReset} className="space-y-4">
         <div>
-          <label className="label-eyebrow block mb-2">New password</label>
+          <label className="label-eyebrow block mb-2">{t('auth.resetPassword.newPasswordLabel')}</label>
           <div className="relative">
             <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" />
             <input
@@ -130,7 +132,7 @@ export const ResetPassword: React.FC = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="input-dark pl-11"
-              placeholder="Minimum 8 characters"
+              placeholder={t('auth.resetPassword.newPasswordPlaceholder')}
               required
               minLength={8}
             />
@@ -138,7 +140,7 @@ export const ResetPassword: React.FC = () => {
         </div>
 
         <div>
-          <label className="label-eyebrow block mb-2">Confirm password</label>
+          <label className="label-eyebrow block mb-2">{t('auth.resetPassword.confirmPasswordLabel')}</label>
           <div className="relative">
             <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" />
             <input
@@ -146,7 +148,7 @@ export const ResetPassword: React.FC = () => {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               className="input-dark pl-11"
-              placeholder="Repeat password"
+              placeholder={t('auth.resetPassword.confirmPasswordPlaceholder')}
               required
             />
           </div>
@@ -156,7 +158,7 @@ export const ResetPassword: React.FC = () => {
           {loading ? (
             <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
           ) : (
-            <>Save password <RefreshCw size={16} className="group-hover:rotate-180 transition-transform duration-500" /></>
+            <>{t('auth.resetPassword.savePasswordBtn')} <RefreshCw size={16} className="group-hover:rotate-180 transition-transform duration-500" /></>
           )}
         </button>
       </form>
