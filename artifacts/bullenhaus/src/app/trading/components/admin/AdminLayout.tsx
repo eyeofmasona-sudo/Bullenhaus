@@ -85,7 +85,7 @@ const AdminSidebarItem = ({
     <motion.div
       whileHover={{ x: 4 }}
       className={cn(
-        "flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-200",
+        "flex items-center gap-3 px-4 py-2 rounded-xl cursor-pointer transition-all duration-200",
         active ? "bg-rose-500/10 text-rose-500" : "text-slate-400 hover:text-white hover:bg-white/5"
       )}
     >
@@ -116,7 +116,7 @@ const AdminSignOutButton = () => {
   return (
     <button
       onClick={async () => { await signOut(); navigate('/login'); }}
-      className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:text-white w-full transition-all hover:bg-white/5"
+      className="flex items-center gap-3 px-4 py-2 rounded-xl text-slate-500 hover:text-white w-full transition-all hover:bg-white/5"
     >
       <LogOut size={18} />
       <span className="text-xs font-bold uppercase tracking-widest">{t('adminLayout.sidebar.signOut')}</span>
@@ -191,7 +191,7 @@ const AdminSidebar = ({ onClose }: { onClose?: () => void }) => {
             <Link to="/trade/dashboard">
               <motion.div
                 whileHover={{ x: 4 }}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-200 text-sky-400/70 hover:text-sky-400 hover:bg-sky-400/10 border border-sky-400/0 hover:border-sky-400/20"
+                className="flex items-center gap-3 px-4 py-2 rounded-xl cursor-pointer transition-all duration-200 text-sky-400/70 hover:text-sky-400 hover:bg-sky-400/10 border border-sky-400/0 hover:border-sky-400/20"
               >
                 <BarChart2 size={18} />
                 <span className="font-bold text-xs tracking-wider uppercase">{t('adminLayout.sidebar.tradePlatform')}</span>
@@ -201,7 +201,7 @@ const AdminSidebar = ({ onClose }: { onClose?: () => void }) => {
               <Link to="/crm/admin">
                 <motion.div
                   whileHover={{ x: 4 }}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-200 text-aura-gold/70 hover:text-aura-gold hover:bg-aura-gold/10 border border-aura-gold/0 hover:border-aura-gold/20"
+                  className="flex items-center gap-3 px-4 py-2 rounded-xl cursor-pointer transition-all duration-200 text-aura-gold/70 hover:text-aura-gold hover:bg-aura-gold/10 border border-aura-gold/0 hover:border-aura-gold/20"
                 >
                   <Briefcase size={18} />
                   <span className="font-bold text-xs tracking-wider uppercase">{t('adminLayout.sidebar.crmAdmin')}</span>
