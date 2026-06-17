@@ -174,9 +174,9 @@ export const AdminPreMarket = () => {
 
       <div className="glass-card overflow-hidden">
         {loading ? (
-          <div className="py-4 px-6 text-center text-slate-400 text-sm">{t('adminPremarket.loadingAssets')}</div>
+          <div className="py-2 px-4 text-center text-slate-400 text-xs">{t('adminPremarket.loadingAssets')}</div>
         ) : assets.length === 0 ? (
-          <div className="py-4 px-6 text-center text-slate-400 text-sm">{t('adminPremarket.noAssetsFound')}</div>
+          <div className="py-2 px-4 text-center text-slate-400 text-xs">{t('adminPremarket.noAssetsFound')}</div>
         ) : (
           <table className="w-full">
             <thead>
