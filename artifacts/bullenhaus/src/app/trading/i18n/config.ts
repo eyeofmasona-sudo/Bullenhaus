@@ -354,11 +354,6 @@ i18n
         adminMarket: {
           title: "Market Control",
           desc: "Override market trends, volatility, and spreads for simulation pairs.",
-          globalTitle: "Global Market Overrides",
-          adminTool: "Admin Manipulation Tool",
-          symbolLabel: "Asset Symbol (e.g. BTCUSDT, XAUUSD, EURUSD)",
-          fixedPriceLabel: "Fixed Price (leave empty to remove override)",
-          fixPriceBtn: "Fix Price",
           toast: {
             symbolReq: "Symbol required",
             removed: "Removed override for {{symbol}}",
@@ -368,11 +363,23 @@ i18n
             unpinFailed: "Failed to unpin {{symbol}}",
             trendFailed: "Failed to update trend",
             volFailed: "Failed to update volatility",
-            spreadFailed: "Failed to update spread"
+            spreadFailed: "Failed to update spread",
+            confirmReset: "Reset market feed to default?",
+            resetOk: "Market reset for {{sym}}",
+            resetFail: "Failed to reset market",
+            pauseFail: "Failed to pause feed",
+            invalidPrice: "Invalid price"
           },
           engine: {
             title: "Crypto, Forex & Metals Simulation Engine",
-            pinnedHint: "Pinned pairs are frozen — simulation + API won't override",
+            freezeNotice: "Simulation frozen while pinned",
+            global: {
+              title: "Global Market Overrides",
+              adminTool: "Admin Manipulation Tool",
+              symbolLabel: "Asset Symbol",
+              priceLabel: "Fixed Price",
+              fixBtn: "Fix Price"
+            },
             tabs: {
               crypto: "Crypto",
               forex: "Forex",
@@ -391,7 +398,22 @@ i18n
               trendBull: "Bullish (+{{val}}%)",
               trendBear: "Bearish ({{val}}%)",
               volatility: "Volatility ({{val}}%)",
-              spread: "Spread Markup ({{val}}%)"
+              spread: "Spread Markup ({{val}}%)",
+              unfix: "Unpin Rate",
+              fixedBadge: "FIXED",
+              reset: "Reset Market Feed",
+              resetBtn: "Reset",
+              fixPriceLabel: "Fixed Price",
+              pricePlaceholder: "e.g. {{price}}",
+              fix: "Fix",
+              scenarios: "Market Scenarios"
+            },
+            scenarios: {
+              bull: "BULL RUN",
+              bear: "BEAR MARKET",
+              sideways: "SIDEWAYS",
+              crash: "FLASH CRASH",
+              news: "NEWS EVENT"
             }
           }
         },
@@ -535,6 +557,7 @@ i18n
             title: "System Diagnostics",
             desc: "Infrastructure metrics require a server-side monitoring agent.<br />Connect a telemetry source to enable this view."
           }
+        }
         }
       },
       crm: crmDictionaries.en
@@ -875,11 +898,6 @@ i18n
         adminMarket: {
           title: "Marktkontrolle",
           desc: "Überschreiben Sie Markttrends, Volatilität und Spreads für Simulationspaare.",
-          globalTitle: "Globale Markt-Überschreibungen",
-          adminTool: "Admin-Manipulationswerkzeug",
-          symbolLabel: "Asset-Symbol (z.B. BTCUSDT, XAUUSD, EURUSD)",
-          fixedPriceLabel: "Fester Preis (leer lassen, um Überschreibung zu entfernen)",
-          fixPriceBtn: "Preis festlegen",
           toast: {
             symbolReq: "Symbol erforderlich",
             removed: "Überschreibung für {{symbol}} entfernt",
@@ -889,11 +907,23 @@ i18n
             unpinFailed: "Fehler beim Lösen von {{symbol}}",
             trendFailed: "Fehler beim Aktualisieren des Trends",
             volFailed: "Fehler beim Aktualisieren der Volatilität",
-            spreadFailed: "Fehler beim Aktualisieren des Spreads"
+            spreadFailed: "Fehler beim Aktualisieren des Spreads",
+            confirmReset: "Markt-Feed auf Standard zurücksetzen?",
+            resetOk: "Markt für {{sym}} zurückgesetzt",
+            resetFail: "Fehler beim Zurücksetzen des Marktes",
+            pauseFail: "Fehler beim Pausieren des Feeds",
+            invalidPrice: "Ungültiger Preis"
           },
           engine: {
             title: "Krypto-, Forex- & Metall-Simulations-Engine",
-            pinnedHint: "Angeheftete Paare sind eingefroren — Simulation + API überschreiben nicht",
+            freezeNotice: "Simulation während der Fixierung eingefroren",
+            global: {
+              title: "Globale Markt-Überschreibungen",
+              adminTool: "Admin-Manipulationswerkzeug",
+              symbolLabel: "Asset-Symbol",
+              priceLabel: "Fester Preis",
+              fixBtn: "Preis festlegen"
+            },
             tabs: {
               crypto: "Krypto",
               forex: "Forex",
@@ -912,7 +942,22 @@ i18n
               trendBull: "Bullisch (+{{val}}%)",
               trendBear: "Bärisch ({{val}}%)",
               volatility: "Volatilität ({{val}}%)",
-              spread: "Spread-Aufschlag ({{val}}%)"
+              spread: "Spread-Aufschlag ({{val}}%)",
+              unfix: "Kurs lösen",
+              fixedBadge: "FIXIERT",
+              reset: "Markt-Feed zurücksetzen",
+              resetBtn: "Zurücksetzen",
+              fixPriceLabel: "Fester Preis",
+              pricePlaceholder: "z.B. {{price}}",
+              fix: "Festlegen",
+              scenarios: "Marktszenarien"
+            },
+            scenarios: {
+              bull: "BULLENMARKT",
+              bear: "BÄRENMARKT",
+              sideways: "SEITWÄRTS",
+              crash: "FLASH CRASH",
+              news: "NACHRICHTENEREIGNIS"
             }
           }
         },
@@ -1058,7 +1103,6 @@ i18n
         }
       },
       crm: crmDictionaries.de
-      }
     }
   });
 
