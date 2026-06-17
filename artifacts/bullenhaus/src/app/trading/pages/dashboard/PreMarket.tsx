@@ -30,18 +30,17 @@ const AssetCard = ({ asset, wallet, buyAsset, isBuyingItem, setIsBuyingItem }: a
 
   return (
     <div className="glass-card border-accent-primary/20 relative overflow-hidden group flex flex-col">
-      <div className="w-full h-[350px] relative overflow-hidden shrink-0 bg-[#0A0E17] flex items-center justify-center p-4">
+      <div className="w-full h-[300px] relative overflow-hidden shrink-0 bg-[#0A0E17]">
         <img 
           src={asset.image_url || '/neuralink-poster.png'} 
           alt={asset.name} 
-          className="w-full h-full object-contain object-center opacity-100 transition-transform duration-700 group-hover:scale-105"
+          className="w-full h-full object-cover object-center opacity-100 transition-transform duration-700 group-hover:scale-105"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0A0E17] via-[#0A0E17]/60 to-transparent" />
       </div>
       
       <div className="absolute top-0 right-0 w-64 h-64 bg-accent-primary/10 rounded-full blur-3xl pointer-events-none" />
       
-      <div className="p-8 relative z-10 flex flex-col flex-1 -mt-32">
+      <div className="p-8 relative z-10 flex flex-col flex-1">
         <div className="flex justify-between items-start mb-6">
           <div>
             <div className="flex items-center gap-3 mb-2">
