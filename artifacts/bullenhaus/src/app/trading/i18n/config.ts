@@ -20,6 +20,22 @@ i18n
     resources: {
       en: {
         common: {
+          auth: {
+            register: {
+              title: "Create Account",
+              subtitle: "Start your trading journey with Bullenhaus",
+              firstNameLabel: "First Name",
+              lastNameLabel: "Last Name",
+              countryLabel: "Country",
+              countryPlaceholder: "Select Country",
+              phoneLabel: "Phone Number",
+              emailLabel: "Email Address",
+              passwordLabel: "Password",
+              submitBtn: "Create Account",
+              hasAccount: "Already have an account?",
+              loginBtn: "Log In"
+            }
+          },
           dashboard: 'Dashboard',
           markets: 'Markets',
           trade: 'Trade',
@@ -564,6 +580,22 @@ i18n
       },
       de: {
         common: {
+          auth: {
+            register: {
+              title: "Konto erstellen",
+              subtitle: "Beginnen Sie Ihre Handelsreise mit Bullenhaus",
+              firstNameLabel: "Vorname",
+              lastNameLabel: "Nachname",
+              countryLabel: "Land",
+              countryPlaceholder: "Land auswählen",
+              phoneLabel: "Telefonnummer",
+              emailLabel: "E-Mail-Adresse",
+              passwordLabel: "Passwort",
+              submitBtn: "Konto erstellen",
+              hasAccount: "Haben Sie bereits ein Konto?",
+              loginBtn: "Anmelden"
+            }
+          },
           dashboard: 'Dashboard',
           markets: 'Märkte',
           trade: 'Handel',
