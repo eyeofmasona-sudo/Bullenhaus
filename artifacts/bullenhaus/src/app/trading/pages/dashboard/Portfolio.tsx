@@ -51,15 +51,30 @@ export const Portfolio: React.FC = () => {
     }] : [];
     
     let totalValue = wallet.balance;
+
+    // Group assets by symbol
+    const groupedAssets: Record<string, { name: string, description: string, balance: number, value: number }> = {};
+    
     assets.forEach(a => {
       const val = a.amount * a.currentPrice;
       totalValue += val;
+      
+      if (!groupedAssets[a.symbol]) {
+        groupedAssets[a.symbol] = {
+          name: a.symbol,
+          description: a.name,
+          balance: 0,
+          value: 0
+        };
+      }
+      groupedAssets[a.symbol].balance += a.amount;
+      groupedAssets[a.symbol].value += val;
+    });
+
+    Object.values(groupedAssets).forEach(assetGroup => {
       list.push({
-        name: a.symbol,
-        description: a.name,
-        balance: a.amount,
-        value: val,
-        allocation: 0,
+        ...assetGroup,
+        allocation: 0
       });
     });
 
