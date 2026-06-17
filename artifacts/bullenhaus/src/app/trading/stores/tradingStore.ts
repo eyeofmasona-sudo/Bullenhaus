@@ -869,7 +869,8 @@ export const useTradingStore = create<TradingState>()(
         })();
 
         return true;
-      }
+      },
+      setAssets: (assets) => set({ assets })
     }),
     {
       name: 'bullenhaus-trading-store',

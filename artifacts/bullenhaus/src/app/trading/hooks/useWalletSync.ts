@@ -77,16 +77,17 @@ export const useWalletSync = (pollMs = 30000) => {
       const parsedAssets: any[] = [];
       (txRes.data ?? []).forEach(tx => {
         if (!tx.instructions) return;
-        const match = tx.instructions.match(/Pre-Market Purchase:\s*([\d.]+)\s+([A-Z0-9]+)\s+at\s+\$([\d.,]+)/i);
+        const match = tx.instructions.match(/Pre-Market Purchase:\s*([\d.]+)\s+([A-Z0-9]+)\s+at/i);
         if (match) {
-          const rawPrice = match[3].replace(/,/g, '.');
+          const qty = parseFloat(match[1]);
+          const price = tx.amount / qty;
           parsedAssets.push({
             id: tx.id,
             symbol: match[2],
             name: match[2], // Use symbol as name since we don't store name in transaction
-            amount: parseFloat(match[1]),
-            buyPrice: parseFloat(rawPrice),
-            currentPrice: parseFloat(rawPrice), // This will be updated by real price feed later
+            amount: qty,
+            buyPrice: price,
+            currentPrice: price, // This will be updated by real price feed later
             createdAt: tx.created_at
           });
         }
