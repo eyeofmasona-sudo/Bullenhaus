@@ -16,13 +16,13 @@ const AssetCard = ({ asset, wallet, buyAsset, isBuyingItem, setIsBuyingItem, con
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleBuy = async () => {
-    if (!canAfford || isNaN(parsedAmount) || parsedAmount <= 0) return;
-    
     if (!contractSigned) {
       setIsModalOpen(true);
       return;
     }
 
+    if (!canAfford || isNaN(parsedAmount) || parsedAmount <= 0) return;
+    
     executeBuy();
   };
 
@@ -33,6 +33,8 @@ const AssetCard = ({ asset, wallet, buyAsset, isBuyingItem, setIsBuyingItem, con
     if (success) {
       toast.success(t('premarket.successBuy', { amount: parsedAmount, symbol: asset.symbol }));
       setAmount('1');
+    } else {
+      toast.error(t('premarket.insufficientFundsToast'));
     }
   };
 
@@ -112,9 +114,9 @@ const AssetCard = ({ asset, wallet, buyAsset, isBuyingItem, setIsBuyingItem, con
 
         <button
           onClick={handleBuy}
-          disabled={!canAfford || isBuyingItem || totalCost <= 0}
+          disabled={(contractSigned && !canAfford) || isBuyingItem || totalCost <= 0}
           className={`w-full py-4 rounded-xl font-bold uppercase tracking-widest text-sm flex items-center justify-center gap-2 transition-all ${
-            canAfford && !isBuyingItem 
+            (!contractSigned || canAfford) && !isBuyingItem 
               ? 'bg-accent-primary text-black hover:bg-accent-primary/90 shadow-[0_0_20px_rgba(212,175,55,0.3)]' 
               : 'bg-white/5 text-slate-500 cursor-not-allowed border border-white/10'
           }`}
