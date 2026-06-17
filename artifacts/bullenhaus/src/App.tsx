@@ -46,6 +46,7 @@ const TradeGamification = React.lazy(() => import('./app/trading/pages/dashboard
 const TradeAdminLayout = React.lazy(() => import('./app/trading/components/admin/AdminLayout').then(m => ({ default: m.AdminLayout })));
 const TradeAdminOverview = React.lazy(() => import('./app/trading/pages/admin/AdminOverview').then(m => ({ default: m.AdminOverview })));
 const TradeAdminUsers = React.lazy(() => import('./app/trading/pages/admin/AdminUsers').then(m => ({ default: m.AdminUsers })));
+const TradeAdminPreMarket = React.lazy(() => import('./app/trading/pages/admin/AdminPreMarket').then(m => ({ default: m.AdminPreMarket })));
 const TradeAdminMarketControl = React.lazy(() => import('./app/trading/pages/admin/AdminMarketControl').then(m => ({ default: m.AdminMarketControl })));
 const TradeAdminKYC = React.lazy(() => import('./app/trading/pages/admin/AdminKYC').then(m => ({ default: m.AdminKYC })));
 const TradeAdminTransactions = React.lazy(() => import('./app/trading/pages/admin/AdminTransactions').then(m => ({ default: m.AdminTransactions })));
@@ -214,6 +215,7 @@ const AppContent = () => {
                 <Route path="kyc" element={<TradeAdminKYC />} />
                 <Route path="deposits" element={<TradeAdminDeposits />} />
                 <Route path="withdrawals" element={<TradeAdminWithdrawals />} />
+                <Route path="premarket" element={<TradeAdminPreMarket />} />
                 <Route path="market-control" element={<TradeAdminMarketControl />} />
                 <Route path="transactions" element={<TradeAdminTransactions />} />
                 <Route path="crm-sync" element={<div className="p-8"><TradeCRMSyncPanel /></div>} />
