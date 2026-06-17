@@ -64,8 +64,10 @@ interface TradingState {
   prices: Record<string, number>;
   priceChanges: Record<string, number>;
   priceOverrides: Record<string, number>;
+  contractSigned: boolean;
 
   // Actions
+  checkContractSignature: () => Promise<void>;
   initPriceOverrideSync: () => Promise<() => void>;
   setPositions: (positions: Position[]) => void;
   setOrders: (orders: Order[]) => void;
@@ -80,7 +82,7 @@ interface TradingState {
   checkOrders: () => void; // checks limit/stop orders against current prices
   addBalance: (amount: number) => void;
   setWalletBalance: (amount: number) => void;
-  buyAsset: (symbol: string, name: string, price: number, amount: number) => boolean;
+  buyAsset: (symbol: string, name: string, price: number, amount: number) => Promise<boolean>;
 }
 
 export const useTradingStore = create<TradingState>()(
@@ -97,6 +99,18 @@ export const useTradingStore = create<TradingState>()(
       prices: {},
       priceChanges: {},
       priceOverrides: {},
+      contractSigned: false,
+
+      checkContractSignature: async () => {
+        try {
+          const { data, error } = await supabase.rpc('check_premarket_contract_signed', { p_version: 'v1.0' });
+          if (!error && data) {
+            set({ contractSigned: true });
+          }
+        } catch (err) {
+          console.error('Failed to check contract signature', err);
+        }
+      },
 
       initPriceOverrideSync: async () => {
         // Fetch all existing admin price overrides and apply them locally
@@ -785,10 +799,21 @@ export const useTradingStore = create<TradingState>()(
         }));
       },
       
-      buyAsset: (symbol, name, price, amount) => {
+      buyAsset: async (symbol, name, price, amount) => {
         const state = get();
         const cost = price * amount;
         if (state.wallet.balance - state.wallet.marginUsed < cost) {
+          return false;
+        }
+
+        // Backend validation
+        try {
+          const { data: isSigned, error } = await supabase.rpc('check_premarket_contract_signed', { p_version: 'v1.0' });
+          if (error || !isSigned) {
+            toast.error('You must sign the contract before purchasing.');
+            return false;
+          }
+        } catch (err) {
           return false;
         }
 

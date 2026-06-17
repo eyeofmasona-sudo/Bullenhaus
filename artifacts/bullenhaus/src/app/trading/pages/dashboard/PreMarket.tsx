@@ -4,32 +4,49 @@ import { supabase } from '../../lib/supabase';
 import { useTradingStore } from '../../stores/tradingStore';
 import { toast } from 'sonner';
 import { Rocket, ShieldCheck, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { ContractModal } from '../../components/dashboard/ContractModal';
 
-const AssetCard = ({ asset, wallet, buyAsset, isBuyingItem, setIsBuyingItem }: any) => {
+const AssetCard = ({ asset, wallet, buyAsset, isBuyingItem, setIsBuyingItem, contractSigned, checkContractSignature }: any) => {
   const { t } = useTranslation('common');
   const [amount, setAmount] = useState('1');
   const parsedAmount = parseFloat(amount);
   const totalCost = isNaN(parsedAmount) ? 0 : parsedAmount * asset.price;
   const availableBalance = Math.max(0, wallet.balance - wallet.marginUsed);
   const canAfford = availableBalance >= totalCost && totalCost > 0;
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handleBuy = () => {
+  const handleBuy = async () => {
     if (!canAfford || isNaN(parsedAmount) || parsedAmount <= 0) return;
+    
+    if (!contractSigned) {
+      setIsModalOpen(true);
+      return;
+    }
+
+    executeBuy();
+  };
+
+  const executeBuy = async () => {
     setIsBuyingItem(true);
-    setTimeout(() => {
-      const success = buyAsset(asset.symbol, asset.name, asset.price, parsedAmount);
-      setIsBuyingItem(false);
-      if (success) {
-        toast.success(t('premarket.successBuy', { amount: parsedAmount, symbol: asset.symbol }));
-        setAmount('1');
-      } else {
-        toast.error(t('premarket.insufficientFundsToast'));
-      }
-    }, 800);
+    const success = await buyAsset(asset.symbol, asset.name, asset.price, parsedAmount);
+    setIsBuyingItem(false);
+    if (success) {
+      toast.success(t('premarket.successBuy', { amount: parsedAmount, symbol: asset.symbol }));
+      setAmount('1');
+    }
   };
 
   return (
-    <div className="glass-card border-accent-primary/20 relative overflow-hidden group flex flex-col">
+    <>
+      <ContractModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        onSign={() => {
+          checkContractSignature();
+          executeBuy();
+        }} 
+      />
+      <div className="glass-card border-accent-primary/20 relative overflow-hidden group flex flex-col">
       <div className="w-full relative overflow-hidden shrink-0 bg-[#0A0E17]">
         <img 
           src={asset.image_url || '/neuralink-poster.png'} 
@@ -114,6 +131,7 @@ const AssetCard = ({ asset, wallet, buyAsset, isBuyingItem, setIsBuyingItem }: a
       </div>
       </div>
     </div>
+    </>
   );
 };
 
@@ -121,6 +139,8 @@ export const PreMarket: React.FC = () => {
   const { t } = useTranslation('common');
   const wallet = useTradingStore(s => s.wallet);
   const buyAsset = useTradingStore(s => s.buyAsset);
+  const contractSigned = useTradingStore(s => s.contractSigned);
+  const checkContractSignature = useTradingStore(s => s.checkContractSignature);
   const [isBuyingItem, setIsBuyingItem] = useState(false);
   
   const [assets, setAssets] = useState<any[]>([{
@@ -134,6 +154,7 @@ export const PreMarket: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    checkContractSignature();
     const fetchAssets = async () => {
       try {
         const { data, error } = await supabase.from('premarket_assets').select('*').eq('is_active', true).order('created_at', { ascending: true });
@@ -177,6 +198,8 @@ export const PreMarket: React.FC = () => {
                 buyAsset={buyAsset} 
                 isBuyingItem={isBuyingItem} 
                 setIsBuyingItem={setIsBuyingItem} 
+                contractSigned={contractSigned}
+                checkContractSignature={checkContractSignature}
               />
             ))
           )}
