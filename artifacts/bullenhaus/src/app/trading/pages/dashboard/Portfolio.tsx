@@ -110,17 +110,17 @@ export const Portfolio: React.FC = () => {
 
   const requestSource = serverRequests.length > 0 ? serverRequests : requests;
   const transactions = [...requestSource]
-    .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .sort((a,b) => new Date(b.date || b.created_at).getTime() - new Date(a.date || a.created_at).getTime())
     .slice(0, 5)
     .map(r => ({
       id: r.id,
       type: r.type,
       method: r.method,
       instructions: r.instructions,
-      asset: r.currency,
-      amount: r.type === 'Deposit' ? `+${r.amount.toLocaleString()}` : `-${r.amount.toLocaleString()}`,
+      asset: r.currency || r.asset,
+      amount: r.type === 'Deposit' ? `+${Number(r.amount).toLocaleString()}` : `-${Number(r.amount).toLocaleString()}`,
       status: r.status,
-      time: new Date(r.date).toLocaleDateString()
+      time: new Date(r.date || r.created_at).toLocaleDateString()
     }));
 
   const openTransferModal = (type: 'deposit' | 'withdraw') => {

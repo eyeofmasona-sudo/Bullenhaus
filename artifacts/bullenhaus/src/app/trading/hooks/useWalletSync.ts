@@ -64,7 +64,7 @@ export const useWalletSync = (pollMs = 30000) => {
         supabase.from('users').select('balance, realized_pnl').eq('id', uid).maybeSingle(),
         supabase.from('positions').select('*').eq('user_id', uid).order('created_at', { ascending: false }).limit(150),
         supabase.from('orders').select('*').eq('user_id', uid).order('created_at', { ascending: false }).limit(150),
-        supabase.from('transactions').select('*').eq('user_id', uid).eq('type', 'Trade').ilike('instructions', 'Pre-Market Purchase%').order('created_at', { ascending: true })
+        supabase.from('transactions').select('*').eq('user_id', uid).eq('type', 'Trade').order('created_at', { ascending: true })
       ]);
 
       if (profileRes.error) throw profileRes.error;
@@ -76,15 +76,17 @@ export const useWalletSync = (pollMs = 30000) => {
       // Reconstruct assets from transactions
       const parsedAssets: any[] = [];
       (txRes.data ?? []).forEach(tx => {
-        const match = tx.instructions?.match(/Pre-Market Purchase: ([\d.]+) ([A-Z0-9]+) at \$([\d.,]+)/);
+        if (!tx.instructions) return;
+        const match = tx.instructions.match(/Pre-Market Purchase:\s*([\d.]+)\s+([A-Z0-9]+)\s+at\s+\$([\d.,]+)/i);
         if (match) {
+          const rawPrice = match[3].replace(/,/g, '.');
           parsedAssets.push({
             id: tx.id,
             symbol: match[2],
             name: match[2], // Use symbol as name since we don't store name in transaction
             amount: parseFloat(match[1]),
-            buyPrice: parseFloat(match[3].replace(/,/g, '')),
-            currentPrice: parseFloat(match[3].replace(/,/g, '')), // This will be updated by real price feed later
+            buyPrice: parseFloat(rawPrice),
+            currentPrice: parseFloat(rawPrice), // This will be updated by real price feed later
             createdAt: tx.created_at
           });
         }
