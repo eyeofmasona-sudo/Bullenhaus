@@ -2,6 +2,7 @@ import './app/trading/i18n/config';
 import React, { Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet, Link } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
+import { Toaster } from 'sonner';
 
 // Legal Pages
 import { ContactCompliance } from './app/trading/pages/legal/ContactCompliance';
@@ -246,6 +247,7 @@ export default function App() {
     <ErrorBoundary>
       <AuthProvider>
         <AppContent />
+        <Toaster theme="dark" position="top-right" richColors />
       </AuthProvider>
     </ErrorBoundary>
   );
