@@ -591,11 +591,10 @@ i18n
             desc: "Infrastructure metrics require a server-side monitoring agent.<br />Connect a telemetry source to enable this view."
           }
         }
-        }
       },
       crm: crmDictionaries.en
-      },
-      de: {
+    },
+    de: {
         common: {
           auth: {
             register: {
@@ -1170,7 +1169,8 @@ i18n
       },
       crm: crmDictionaries.de
     }
-  });
+  }
+});
 
 i18n.on('languageChanged', (lng) => {
   try { localStorage.setItem('i18n-lang', lng); } catch {}

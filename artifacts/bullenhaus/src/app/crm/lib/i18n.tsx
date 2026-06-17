@@ -484,11 +484,20 @@ export const crmDictionaries: Record<string, any> = {
 
 // Proxy hook to adapt existing CRM components to react-i18next
 export function useI18n() {
-  const { t, i18n } = useTranslation('crm');
+  const { i18n } = useTranslation('crm');
   return {
     t: (key: string) => {
-      const val = t(key);
-      return val;
+      const lang = i18n.language && crmDictionaries[i18n.language] ? i18n.language : 'en';
+      if (crmDictionaries[lang] && crmDictionaries[lang][key]) {
+        return crmDictionaries[lang][key];
+      }
+      if (crmDictionaries['en'] && crmDictionaries['en'][key]) {
+        return crmDictionaries['en'][key];
+      }
+      if (key.startsWith('nav')) {
+        return key.replace(/^nav/, '').replace(/([A-Z])/g, ' $1').trim();
+      }
+      return key;
     },
     locale: i18n.language,
     setLocale: (l: string) => i18n.changeLanguage(l),
