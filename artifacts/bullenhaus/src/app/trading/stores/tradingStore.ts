@@ -103,8 +103,8 @@ export const useTradingStore = create<TradingState>()(
 
       checkContractSignature: async () => {
         try {
-          const { data, error } = await supabase.rpc('check_premarket_contract_signed', { p_version: 'v1.0' });
-          if (!error && data) {
+          const { data, error } = await supabase.from('premarket_contract_signatures').select('id').eq('contract_version', 'v1.0');
+          if (!error && data && data.length > 0) {
             set({ contractSigned: true });
           }
         } catch (err) {
@@ -808,8 +808,8 @@ export const useTradingStore = create<TradingState>()(
 
         // Backend validation
         try {
-          const { data: isSigned, error } = await supabase.rpc('check_premarket_contract_signed', { p_version: 'v1.0' });
-          if (error || !isSigned) {
+          const { data, error } = await supabase.from('premarket_contract_signatures').select('id').eq('contract_version', 'v1.0');
+          if (error || !data || data.length === 0) {
             toast.error('You must sign the contract before purchasing.');
             return false;
           }
