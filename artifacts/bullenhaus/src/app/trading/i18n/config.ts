@@ -141,8 +141,7 @@ i18n
           twoFactor: 'Two-Factor Authentication',
           entryHistory: 'Entry History',
           cycleAvatar: 'Cycle Avatar',
-          requestProcessing: 'Your request is being processed.'
-        },
+          requestProcessing: 'Your request is being processed.',
         adminPremarket: {
           title: "Pre-Market Assets",
           addAsset: "Add Asset",
@@ -535,8 +534,9 @@ i18n
             title: "System Diagnostics",
             desc: "Infrastructure metrics require a server-side monitoring agent.<br />Connect a telemetry source to enable this view."
           }
-        },
-        crm: crmDictionaries.en
+        }
+      },
+      crm: crmDictionaries.en
       },
       de: {
         common: {
@@ -661,8 +661,7 @@ i18n
           twoFactor: 'Zwei-Faktor-Authentifizierung',
           entryHistory: 'Verlauf',
           cycleAvatar: 'Avatar wechseln',
-          requestProcessing: 'Ihre Anfrage wird bearbeitet.'
-        },
+          requestProcessing: 'Ihre Anfrage wird bearbeitet.',
         adminPremarket: {
           title: "Pre-Market-Anlagen",
           addAsset: "Anlage hinzufügen",
@@ -1055,8 +1054,9 @@ i18n
             title: "Systemdiagnose",
             desc: "Infrastrukturmetriken erfordern einen serverseitigen Überwachungsagenten.<br />Verbinden Sie eine Telemetriequelle, um diese Ansicht zu aktivieren."
           }
-        },
-        crm: crmDictionaries.de
+        }
+      },
+      crm: crmDictionaries.de
       }
     }
   });

@@ -1,10 +1,9 @@
 const fs = require('fs');
-const path = require('path');
 
-const configPath = path.join(__dirname, 'src/app/trading/i18n/config.ts');
-let code = fs.readFileSync(configPath, 'utf8').replace(/\r\n/g, '\n');
+const configPath = './src/app/trading/i18n/config.ts';
+let config = fs.readFileSync(configPath, 'utf8');
 
-const adminLayoutEN = `
+const enAdminLayout = `
         adminLayout: {
           sidebar: {
             admin: "ADMIN",
@@ -17,18 +16,14 @@ const adminLayoutEN = `
             marketControl: "Market Control",
             transactions: "Transactions",
             systemConfig: "System Config",
-            switchZone: "Switch Zone",
+            switchZone: "SWITCH ZONE",
             tradePlatform: "Trade Platform",
             crmAdmin: "CRM Admin",
             signOut: "Sign Out"
-          },
-          header: {
-            systemStatus: "System Status: ",
-            operational: "Operational"
           }
         },`;
 
-const adminLayoutDE = `
+const deAdminLayout = `
         adminLayout: {
           sidebar: {
             admin: "ADMIN",
@@ -41,27 +36,24 @@ const adminLayoutDE = `
             marketControl: "Marktkontrolle",
             transactions: "Transaktionen",
             systemConfig: "Systemkonfiguration",
-            switchZone: "Zonenwechsel",
+            switchZone: "BEREICH WECHSELN",
             tradePlatform: "Handelsplattform",
             crmAdmin: "CRM-Admin",
             signOut: "Abmelden"
-          },
-          header: {
-            systemStatus: "Systemstatus: ",
-            operational: "Betriebsbereit"
           }
         },`;
 
-if (!code.includes('adminLayout: {')) {
-  // Inject into EN
-  code = code.replace(/(\n\s*)adminTx: \{/, adminLayoutEN + "$1adminTx: {");
-  
-  // Inject into DE
-  let deIndex = code.indexOf("de: {");
-  let deBlock = code.substring(deIndex);
-  deBlock = deBlock.replace(/(\n\s*)adminTx: \{/, adminLayoutDE + "$1adminTx: {");
-  
-  code = code.substring(0, deIndex) + deBlock;
-  fs.writeFileSync(configPath, code);
+if (!config.includes('adminLayout: {')) {
+  config = config.replace(
+    /(common: {[\s\S]*?\n        },)/,
+    `$1${enAdminLayout}`
+  );
+  config = config.replace(
+    /(de: {\s*common: {[\s\S]*?\n        },)/,
+    `$1${deAdminLayout}`
+  );
+  fs.writeFileSync(configPath, config);
   console.log("Injected adminLayout into config.ts");
+} else {
+  console.log("adminLayout already exists in config.ts");
 }
