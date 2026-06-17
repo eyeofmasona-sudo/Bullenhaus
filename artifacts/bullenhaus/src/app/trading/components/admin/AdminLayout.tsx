@@ -10,7 +10,8 @@ import {
   Menu, 
   LayoutDashboard,
   BarChart2,
-  Briefcase
+  Briefcase,
+  Rocket
 } from 'lucide-react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -170,6 +171,10 @@ const AdminSidebar = ({ onClose }: { onClose?: () => void }) => {
         <AdminSidebarItem
           icon={BarChart2} label={t('adminLayout.sidebar.marketControl')}
           to="/admin/market-control" active={currentPath === '/admin/market-control'}
+        />
+        <AdminSidebarItem
+          icon={Rocket} label={t('adminLayout.sidebar.preMarketControl')}
+          to="/admin/premarket" active={currentPath === '/admin/premarket'}
         />
         <AdminSidebarItem
           icon={History} label={t('adminLayout.sidebar.transactions')}

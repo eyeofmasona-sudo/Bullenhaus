@@ -452,6 +452,7 @@ i18n
             deposits: "Deposits",
             withdrawals: "Withdrawals",
             marketControl: "Market Control",
+            preMarketControl: "Pre-Market Control",
             transactions: "Transactions",
             systemConfig: "System Config",
             switchZone: "Switch Zone",
