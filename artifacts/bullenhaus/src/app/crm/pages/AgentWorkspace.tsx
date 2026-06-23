@@ -63,11 +63,11 @@ function LeadPipeline({ leads, meta, loading, error, onCall, onStageChange, onOp
          <Button variant="outline" size="sm" className="h-8 text-[10px]">View Analytics <ChevronRight className="w-3 h-3 ml-1" /></Button>
        </div>
        
-       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 overflow-x-auto pb-4 custom-scrollbar">
+       <div className="space-y-8">
           {Object.entries(stages).map(([stage, stageLeads]) => {
             const leadsList = stageLeads as any[];
             return (
-              <div key={stage} className="min-w-[280px]">
+              <div key={stage}>
                  <div className="flex items-center justify-between mb-4 px-1">
                    <div className="flex items-center gap-2">
                      <div className={`w-2 h-2 rounded-full ${
@@ -91,7 +91,7 @@ function LeadPipeline({ leads, meta, loading, error, onCall, onStageChange, onOp
                    </div>
                  </div>
                  
-                 <div className="space-y-3">
+                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
                    {leadsList.slice(0, VISIBLE_PER_STAGE).map((lead: any) => (
                      <div 
                        key={lead.id} 
@@ -170,12 +170,12 @@ function LeadPipeline({ leads, meta, loading, error, onCall, onStageChange, onOp
                      </div>
                    ))}
                    {leadsList.length === 0 && (
-                     <div className="p-4 rounded-xl border border-dashed border-glass-border bg-transparent flex items-center justify-center h-24">
+                     <div className="col-span-full p-4 rounded-xl border border-dashed border-glass-border bg-transparent flex items-center justify-center h-24">
                        <span className="text-[10px] uppercase tracking-widest text-aura-platinum/30">Empty</span>
                      </div>
                    )}
                    {leadsList.length > VISIBLE_PER_STAGE && (
-                     <div className="p-2 text-center text-[9px] uppercase tracking-widest text-aura-platinum/40">
+                     <div className="col-span-full p-2 text-center text-[9px] uppercase tracking-widest text-aura-platinum/40">
                        +{leadsList.length - VISIBLE_PER_STAGE} {t('leadMore')}
                      </div>
                    )}
@@ -251,7 +251,14 @@ function LeadUploadButton({ onDone, role }: { onDone: () => void; role?: string 
     setBusy(true);
     setResult(null);
     try {
-      const text = await file.text();
+      let text = await file.text();
+      // Guard against Excel / binary files: they corrupt into garbage when read as text.
+      if (/^PK\x03\x04/.test(text) || /\.xlsx?$/i.test(file.name) || text.includes("\u0000")) {
+        setResult({ parsed: 0, inserted: 0, skipped: 0, error: "Please upload a CSV file (UTF-8). In Excel: Save As \u2192 CSV UTF-8." });
+        setBusy(false);
+        return;
+      }
+      if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1); // strip UTF-8 BOM
       const rows = parseCsv(text);
       const mapped = rows.map(r => {
         const fn = pick(r, ['firstName', 'first_name', 'First Name', 'firstname']);
