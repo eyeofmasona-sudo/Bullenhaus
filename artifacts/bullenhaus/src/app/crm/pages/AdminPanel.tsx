@@ -123,27 +123,50 @@ export function AdminPanel() {
   const [newPwConfirm, setNewPwConfirm] = useState("");
 
   const [aiOnline,  setAiOnline]  = useState<boolean | null>(null);
-  const [aiModel,   setAiModel]   = useState(localStorage.getItem("bullenhaus_crm_ai_model") || "deepseek/deepseek-v4-flash:free");
+  const [aiModel,   setAiModel]   = useState("openai/gpt-4o-mini");
+  const [aiKey,     setAiKey]     = useState("");
   const [aiSaving,  setAiSaving]  = useState(false);
   const [aiSaved,   setAiSaved]   = useState(false);
 
+  // Cheap-but-quality OpenRouter models.
   const CRM_FREE_MODELS = [
-    { value: "deepseek/deepseek-v4-flash:free", label: "DeepSeek V4 Flash — Free (recommended)" },
-    { value: "openai/gpt-oss-20b:free",         label: "OpenAI GPT-OSS 20B — Free" },
-    { value: "openai/gpt-oss-120b:free",        label: "OpenAI GPT-OSS 120B — Free (slowest)" },
+    { value: "openai/gpt-4o-mini",                        label: "OpenAI GPT-4o mini — cheap & strong (recommended)" },
+    { value: "deepseek/deepseek-chat",                    label: "DeepSeek Chat — very cheap" },
+    { value: "meta-llama/llama-3.3-70b-instruct",         label: "Llama 3.3 70B — cheap, open" },
+    { value: "mistralai/mistral-small-24b-instruct-2501", label: "Mistral Small 24B — cheapest" },
   ];
 
-  useEffect(() => {
-    aiStatus().then(d => setAiOnline(d.configured)).catch(() => setAiOnline(false));
+  const refreshAiStatus = useCallback(async () => {
+    try {
+      const { data } = await supabase.rpc("ai_settings_status");
+      if (data && typeof data === "object") {
+        setAiOnline(!!(data as any).configured);
+        if ((data as any).model) setAiModel((data as any).model);
+        return;
+      }
+    } catch { /* fall through */ }
+    try { const d = await aiStatus(); setAiOnline(d.configured); } catch { setAiOnline(false); }
   }, []);
+
+  useEffect(() => { refreshAiStatus(); }, [refreshAiStatus]);
 
   const saveAiModel = async () => {
     setAiSaving(true);
-    await new Promise(r => setTimeout(r, 350));
-    localStorage.setItem("bullenhaus_crm_ai_model", aiModel);
-    setAiSaving(false); setAiSaved(true);
-    showToast("AI model preference saved");
-    setTimeout(() => setAiSaved(false), 2500);
+    try {
+      const payload: Record<string, unknown> = { id: 1, model: aiModel };
+      if (aiKey.trim()) payload.openrouter_api_key = aiKey.trim();
+      const { error } = await supabase.from("ai_settings").upsert(payload, { onConflict: "id" });
+      if (error) throw new Error(error.message);
+      setAiKey("");
+      setAiSaved(true);
+      showToast("AI provider settings saved");
+      await refreshAiStatus();
+      setTimeout(() => setAiSaved(false), 2500);
+    } catch (e: any) {
+      showToast(e?.message || "Failed to save AI settings", "error");
+    } finally {
+      setAiSaving(false);
+    }
   };
 
   const showToast = (msg: string, type: ToastType = "success") => {
@@ -457,17 +480,29 @@ export function AdminPanel() {
           <div className={`ml-auto w-2 h-2 rounded-full transition-colors ${aiOnline === null ? "bg-aura-platinum/20 animate-pulse" : aiOnline ? "bg-aura-emerald" : "bg-rose-500/60"}`} />
         </div>
         <p className="text-[11px] text-aura-platinum/40 mb-5 leading-relaxed pl-11">
-          Powers AI Core Insights (Client Summary, Lead Scoring, Next Best Action, Communication Analysis).
-          API key secured server-side via OpenRouter — never exposed to the browser.
+          Powers all AI features (Client Summary, Lead Scoring, Next Best Action, Communication Analysis) via OpenRouter.
+          Paste your OpenRouter API key below — it is stored server-side and never shown back to the browser.
         </p>
         <div className="space-y-4">
           {/* Status */}
           <div className="flex items-center gap-3 p-3 rounded-lg bg-black/30 border border-glass-border">
             <div className={`w-2 h-2 rounded-full flex-shrink-0 ${aiOnline === null ? "bg-aura-platinum/30 animate-pulse" : aiOnline ? "bg-aura-emerald" : "bg-rose-500/60"}`} />
             <span className="text-[11px] text-aura-platinum/70">
-              {aiOnline === null ? "Checking server…" : aiOnline ? "OpenRouter — Server key active · Free tier" : "AI service not configured on server"}
+              {aiOnline === null ? "Checking…" : aiOnline ? `OpenRouter active · ${aiModel}` : "No OpenRouter key set — paste one below"}
             </span>
             {aiOnline && <CheckCircle2 className="w-3.5 h-3.5 text-aura-emerald ml-auto flex-shrink-0" />}
+          </div>
+          <div>
+            <label className="block text-[10px] uppercase tracking-widest text-aura-platinum/50 mb-1.5">OpenRouter API Key</label>
+            <input
+              type="password"
+              value={aiKey}
+              onChange={e => setAiKey(e.target.value)}
+              placeholder={aiOnline ? "•••••••• (leave blank to keep current key)" : "sk-or-v1-..."}
+              autoComplete="off"
+              className="w-full bg-black/40 border border-glass-border rounded-lg px-4 py-2.5 text-sm text-aura-platinum outline-none focus:border-aura-gold/50 transition-colors"
+            />
+            <p className="text-[10px] text-aura-platinum/30 mt-1">Used by every AI feature. Stored server-side, never returned to the browser.</p>
           </div>
           <div>
             <label className="block text-[10px] uppercase tracking-widest text-aura-platinum/50 mb-1.5">Model</label>
@@ -487,7 +522,7 @@ export function AdminPanel() {
               ? <><CheckCircle2 className="w-3.5 h-3.5" /> Saved!</>
               : aiSaving
               ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…</>
-              : <><KeyRound className="w-3.5 h-3.5" /> Save Model Preference</>
+              : <><KeyRound className="w-3.5 h-3.5" /> Save AI Settings</>
             }
           </button>
         </div>
