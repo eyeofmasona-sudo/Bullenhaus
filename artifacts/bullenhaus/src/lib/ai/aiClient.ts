@@ -10,6 +10,7 @@
  */
 
 import { supabase } from '../supabase/browserClient';
+import type { AiProfile } from './aiConfig';
 
 const SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL as string || '';
 const ANON_KEY =
@@ -20,14 +21,30 @@ const ANON_KEY =
 const AI_BASE = SUPABASE_URL ? `${SUPABASE_URL}/functions/v1` : '';
 
 export interface AiChatBody {
-  model: string;
+  profile?: AiProfile;
+  model?: string;
   messages: { role: string; content: string }[];
   max_tokens?: number;
   temperature?: number;
 }
 
 /** Returns { configured: boolean } — false if the backend is unreachable. */
-export async function aiStatus(): Promise<{ configured: boolean }> {
+export interface AiStatus {
+  configured: boolean;
+  enabled?: boolean;
+  provider?: string;
+  primaryModel?: string;
+  fallbackModel?: string;
+  routing?: {
+    allowFallbacks: boolean;
+    sort: string;
+    dataCollection: string;
+    zdr: boolean;
+  };
+  profiles?: Record<string, unknown>;
+}
+
+export async function aiStatus(): Promise<AiStatus> {
   if (!AI_BASE) return { configured: false };
   try {
     const res = await fetch(`${AI_BASE}/ai-status`, {

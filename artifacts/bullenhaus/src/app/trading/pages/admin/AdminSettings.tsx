@@ -2,23 +2,16 @@ import React, { useEffect, useState } from 'react';
 import { Save, Server, Shield, Bot, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { aiStatus } from '../../../../lib/ai/aiClient';
+import { AI_MODEL_OPTIONS, AI_PRIMARY_MODEL } from '../../../../lib/ai/aiConfig';
 import { useTranslation } from 'react-i18next';
-
-const AI_MODEL_STORAGE = 'bullenhaus_ai_model';
 
 export const AdminSettings = () => {
   const { t } = useTranslation(['common']);
-  
-  const FREE_MODELS = [
-    { value: 'deepseek/deepseek-v4-flash:free', label: t('adminSettings.ai.models.deepseek', 'DeepSeek V4 Flash — Free (recommended)') },
-    { value: 'openai/gpt-oss-20b:free',         label: t('adminSettings.ai.models.gpt20', 'OpenAI GPT-OSS 20B — Free') },
-    { value: 'openai/gpt-oss-120b:free',        label: t('adminSettings.ai.models.gpt120', 'OpenAI GPT-OSS 120B — Free (slowest)') },
-  ];
 
   const [mfa,       setMfa]       = useState(true);
   const [autoBan,   setAutoBan]   = useState(true);
   const [aiOnline,  setAiOnline]  = useState<boolean | null>(null);
-  const [aiModel,   setAiModel]   = useState(localStorage.getItem(AI_MODEL_STORAGE) || 'deepseek/deepseek-v4-flash:free');
+  const [aiModel,   setAiModel]   = useState(AI_PRIMARY_MODEL);
   const [aiSaving,  setAiSaving]  = useState(false);
 
   useEffect(() => {
@@ -28,9 +21,8 @@ export const AdminSettings = () => {
   const saveAiModel = async () => {
     setAiSaving(true);
     await new Promise(r => setTimeout(r, 300));
-    localStorage.setItem(AI_MODEL_STORAGE, aiModel);
     setAiSaving(false);
-    toast.success(t('adminSettings.ai.savedToast', 'AI model preference saved'));
+    toast.success(t('adminSettings.ai.savedToast', 'AI server model policy reviewed'));
   };
 
   return (
@@ -91,7 +83,7 @@ export const AdminSettings = () => {
                   {aiOnline && (
                     <div className="flex items-center gap-1 mt-0.5">
                       <CheckCircle2 size={10} className="text-emerald-500" />
-                      <span className="text-[10px] text-slate-500">{t('adminSettings.ai.freeTier', 'Free tier · No per-request cost')}</span>
+                      <span className="text-[10px] text-slate-500">{t('adminSettings.ai.policy', 'Primary model with automatic fallback')}</span>
                     </div>
                   )}
                 </div>
@@ -99,11 +91,11 @@ export const AdminSettings = () => {
 
               {/* Model selector */}
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase mb-2">{t('adminSettings.ai.modelTitle', 'Model (Free tier)')}</label>
+                <label className="block text-xs font-bold text-slate-400 uppercase mb-2">{t('adminSettings.ai.modelTitle', 'Server model policy')}</label>
                 <select value={aiModel} onChange={e => setAiModel(e.target.value)}
                   className="w-full bg-[#111] border border-white/5 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-accent-primary/30 transition-all appearance-none cursor-pointer"
                 >
-                  {FREE_MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                  {AI_MODEL_OPTIONS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
                 </select>
               </div>
 
@@ -112,7 +104,7 @@ export const AdminSettings = () => {
               >
                 {aiSaving
                   ? <><span className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin" /> {t('adminSettings.ai.saving', 'Saving…')}</>
-                  : <><Save size={16} /> {t('adminSettings.ai.savePref', 'Save Model Preference')}</>
+                  : <><Save size={16} /> {t('adminSettings.ai.savePref', 'Review Model Policy')}</>
                 }
               </button>
             </div>

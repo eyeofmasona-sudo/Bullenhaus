@@ -12,6 +12,7 @@ import { Badge } from "../components/ui/Badge";
 import { useI18n } from "../lib/i18n";
 import { supabase } from "../../trading/lib/supabase";
 import { aiStatus } from "../../../lib/ai/aiClient";
+import { AI_MODEL_OPTIONS, AI_PRIMARY_MODEL } from "../../../lib/ai/aiConfig";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -123,15 +124,15 @@ export function AdminPanel() {
   const [newPwConfirm, setNewPwConfirm] = useState("");
 
   const [aiOnline,  setAiOnline]  = useState<boolean | null>(null);
-  const [aiModel,   setAiModel]   = useState("openai/gpt-4o-mini");
+  const [aiModel,   setAiModel]   = useState("deepseek/deepseek-chat");
   const [aiKey,     setAiKey]     = useState("");
   const [aiSaving,  setAiSaving]  = useState(false);
   const [aiSaved,   setAiSaved]   = useState(false);
 
   // Cheap-but-quality OpenRouter models.
   const CRM_FREE_MODELS = [
-    { value: "openai/gpt-4o-mini",                        label: "OpenAI GPT-4o mini — cheap & strong (recommended)" },
-    { value: "deepseek/deepseek-chat",                    label: "DeepSeek Chat — very cheap" },
+    { value: "deepseek/deepseek-chat",                    label: "DeepSeek Chat — very cheap & strong (recommended)" },
+    { value: "openai/gpt-4o-mini",                        label: "OpenAI GPT-4o mini — cheap & strong" },
     { value: "meta-llama/llama-3.3-70b-instruct",         label: "Llama 3.3 70B — cheap, open" },
     { value: "mistralai/mistral-small-24b-instruct-2501", label: "Mistral Small 24B — cheapest" },
   ];
@@ -508,7 +509,7 @@ export function AdminPanel() {
             <label className="block text-[10px] uppercase tracking-widest text-aura-platinum/50 mb-1.5">Model</label>
             <div className="relative">
               <select value={aiModel} onChange={e => setAiModel(e.target.value)} className="w-full bg-black/40 border border-glass-border rounded-lg px-4 py-2.5 text-sm text-aura-platinum outline-none focus:border-aura-gold/50 transition-colors appearance-none pr-8 cursor-pointer">
-                {CRM_FREE_MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                {AI_MODEL_OPTIONS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
               </select>
               <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-aura-platinum/40 pointer-events-none" />
             </div>

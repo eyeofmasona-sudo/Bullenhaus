@@ -18,9 +18,9 @@ Deno.serve(async (req) => {
     );
     const { data } = await admin.from("ai_settings").select("openrouter_api_key, model").eq("id", 1).single();
     const configured = !!(data?.openrouter_api_key) || !!Deno.env.get("OPENROUTER_API_KEY");
-    return new Response(JSON.stringify({ configured, model: data?.model ?? "openai/gpt-4o-mini" }), { headers: JSON_HEADERS });
+    return new Response(JSON.stringify({ configured, model: data?.model ?? "deepseek/deepseek-chat" }), { headers: JSON_HEADERS });
   } catch (_e) {
     const configured = !!Deno.env.get("OPENROUTER_API_KEY");
-    return new Response(JSON.stringify({ configured, model: "openai/gpt-4o-mini" }), { headers: JSON_HEADERS });
+    return new Response(JSON.stringify({ configured, model: "deepseek/deepseek-chat" }), { headers: JSON_HEADERS });
   }
 });

@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { completeWithOpenRouter } from "../_shared/openrouter-client.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": Deno.env.get("ALLOWED_ORIGIN") ?? "*",
@@ -6,7 +7,7 @@ const CORS = {
 };
 const JSON_HEADERS = { ...CORS, "Content-Type": "application/json" };
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-const DEFAULT_MODEL = "openai/gpt-4o-mini";
+const DEFAULT_MODEL = "deepseek/deepseek-chat";
 
 function jsonError(msg: string, status: number): Response {
   return new Response(JSON.stringify({ error: msg }), { status, headers: JSON_HEADERS });
@@ -19,7 +20,6 @@ Deno.serve(async (req) => {
   const url = Deno.env.get("SUPABASE_URL")!;
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
   // Require a logged-in user — blocks anonymous abuse of the OpenRouter key.
   const authHeader = req.headers.get("Authorization") ?? "";
   if (!authHeader.startsWith("Bearer ")) return jsonError("Unauthorized", 401);
@@ -66,7 +66,9 @@ Deno.serve(async (req) => {
     const reply = data?.choices?.[0]?.message?.content ?? "";
     return new Response(JSON.stringify({ reply, model }), { headers: JSON_HEADERS });
   } catch (err) {
-    console.error("[ai-chat] proxy failure:", err);
-    return jsonError("Failed to reach AI provider", 502);
+    const msg = err instanceof Error ? err.message : "AI service error";
+    const status = msg.includes("not configured") ? 503 : msg.includes("messages") ? 400 : 502;
+    console.error("[ai-chat] proxy failure", { status, reason: msg });
+    return jsonError("AI service is temporarily unavailable. Please try again or contact support.", status);
   }
 });
