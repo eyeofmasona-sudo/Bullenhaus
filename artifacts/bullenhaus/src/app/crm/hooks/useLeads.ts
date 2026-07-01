@@ -54,10 +54,13 @@ export function useLeads(page = 1, limit = 50, search = '') {
 
       const rows = all.map(mapLead);
       const grouped = {
-        'New Inquiries': rows.filter((l: any) => l.stage === 'NEW_INQUIRY'),
-        'In Discussion': rows.filter((l: any) => l.stage === 'IN_DISCUSSION'),
-        'Pending KYC':   rows.filter((l: any) => l.stage === 'PENDING_KYC'),
-        'Funded (FTD)':  rows.filter((l: any) => l.stage === 'FUNDED'),
+        'New':              rows.filter((l: any) => l.stage === 'NEW'),
+        'No Answer':        rows.filter((l: any) => l.stage === 'NO_ANSWER'),
+        'In Progress':      rows.filter((l: any) => l.stage === 'IN_PROGRESS'),
+        'Awaiting Deposit': rows.filter((l: any) => l.stage === 'AWAITING_DEPOSIT'),
+        'Deposited':        rows.filter((l: any) => l.stage === 'DEPOSITED'),
+        'Closed':           rows.filter((l: any) => l.stage === 'CLOSED'),
+        'Lost':             rows.filter((l: any) => l.stage === 'LOST'),
       };
 
       setData(rows);
@@ -77,10 +80,13 @@ export function useLeads(page = 1, limit = 50, search = '') {
 }
 
 export const LEAD_STAGES = [
-  { value: 'NEW_INQUIRY',  label: 'New Inquiry'  },
-  { value: 'IN_DISCUSSION', label: 'In Discussion' },
-  { value: 'PENDING_KYC',  label: 'Pending KYC'  },
-  { value: 'FUNDED',       label: 'Funded (FTD)'  },
+  { value: 'NEW',              label: 'New'              },
+  { value: 'NO_ANSWER',        label: 'No Answer'        },
+  { value: 'IN_PROGRESS',      label: 'In Progress'      },
+  { value: 'AWAITING_DEPOSIT', label: 'Awaiting Deposit' },
+  { value: 'DEPOSITED',        label: 'Deposited'        },
+  { value: 'CLOSED',           label: 'Closed'           },
+  { value: 'LOST',             label: 'Lost'             },
 ] as const;
 
 export type LeadStage = typeof LEAD_STAGES[number]['value'];
