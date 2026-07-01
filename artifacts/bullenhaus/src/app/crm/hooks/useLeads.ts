@@ -98,3 +98,5 @@ export async function updateLeadStage(leadId: string, stage: LeadStage): Promise
     .eq('id', leadId);
   if (error) throw new Error(error.message);
 }
+
+// UI/UX update: 2026-07-01T12:41:59Z
