@@ -22,9 +22,7 @@ ON storage.objects FOR INSERT
 TO authenticated
 WITH CHECK (
     bucket_id = 'premarket_contracts' 
-    AND (
-        auth.uid() IN (SELECT id FROM public.users WHERE role = 'admin' OR role = 'superadmin')
-    )
+    AND public.get_my_role() IN ('admin', 'superadmin', 'trade_admin')
 );
 
 CREATE POLICY "Admin update access for premarket contracts"
@@ -32,9 +30,7 @@ ON storage.objects FOR UPDATE
 TO authenticated
 USING (
     bucket_id = 'premarket_contracts' 
-    AND (
-        auth.uid() IN (SELECT id FROM public.users WHERE role = 'admin' OR role = 'superadmin')
-    )
+    AND public.get_my_role() IN ('admin', 'superadmin', 'trade_admin')
 );
 
 CREATE POLICY "Admin delete access for premarket contracts"
@@ -42,7 +38,5 @@ ON storage.objects FOR DELETE
 TO authenticated
 USING (
     bucket_id = 'premarket_contracts' 
-    AND (
-        auth.uid() IN (SELECT id FROM public.users WHERE role = 'admin' OR role = 'superadmin')
-    )
+    AND public.get_my_role() IN ('admin', 'superadmin', 'trade_admin')
 );

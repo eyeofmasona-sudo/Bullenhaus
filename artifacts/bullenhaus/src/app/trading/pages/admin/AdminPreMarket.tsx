@@ -104,9 +104,18 @@ export const AdminPreMarket = () => {
 
   const handleContractUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    // Reset input so selecting the same file again re-triggers onChange
+    e.target.value = '';
     if (!file) return;
 
-    if (file.type !== 'application/pdf') {
+    // Accept PDF even when the browser doesn't populate file.type (some Windows setups)
+    const lowerName = file.name.toLowerCase();
+    const isPdfByExt = lowerName.endsWith('.pdf');
+    if (file.type && file.type !== 'application/pdf') {
+      toast.error(t('adminPremarket.onlyPdf', 'Only PDF files are allowed for contracts'));
+      return;
+    }
+    if (!file.type && !isPdfByExt) {
       toast.error(t('adminPremarket.onlyPdf', 'Only PDF files are allowed for contracts'));
       return;
     }
@@ -118,12 +127,26 @@ export const AdminPreMarket = () => {
 
     setUploadingContract(true);
     try {
-      const fileExt = file.name.split('.').pop();
+      const fileExt = isPdfByExt ? 'pdf' : (file.name.split('.').pop() || 'pdf');
+
+      // Check that the bucket exists — if not, guide the user to run the migration
+      const { error: listError } = await supabase.storage.from('premarket_contracts').list();
+      if (listError) {
+        throw new Error(
+          `Storage bucket "premarket_contracts" is not reachable. ` +
+          `Run supabase migration 28_premarket_contracts_bucket.sql first. (${listError.message})`
+        );
+      }
+
       const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('premarket_contracts')
-        .upload(fileName, file);
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          contentType: 'application/pdf',
+          upsert: false,
+        });
 
       if (uploadError) throw uploadError;
 
@@ -131,10 +154,15 @@ export const AdminPreMarket = () => {
         .from('premarket_contracts')
         .getPublicUrl(fileName);
 
+      if (!data?.publicUrl) {
+        throw new Error('Upload succeeded but public URL is empty.');
+      }
+
       setFormData(prev => ({ ...prev, contract_url: data.publicUrl }));
       toast.success(t('adminPremarket.contractUploaded', 'Contract uploaded successfully'));
     } catch (err: any) {
-      toast.error(t('adminPremarket.errorUploadingContract', 'Error uploading contract: ') + err.message);
+      console.error('[AdminPreMarket] contract upload failed:', err);
+      toast.error(t('adminPremarket.errorUploadingContract', 'Error uploading contract: ') + (err?.message || String(err)));
     } finally {
       setUploadingContract(false);
     }
