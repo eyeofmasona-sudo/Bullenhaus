@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Trash2, Save, Image as ImageIcon, CheckCircle2, AlertCircle, RefreshCw, X, Pencil } from 'lucide-react';
+import { Plus, Trash2, Save, Image as ImageIcon, FileText, CheckCircle2, AlertCircle, RefreshCw, X, Pencil, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from 'react-i18next';
@@ -25,6 +25,7 @@ export const AdminPreMarket = () => {
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadingContract, setUploadingContract] = useState(false);
   const [formData, setFormData] = useState<Partial<PreMarketAsset>>({
     name: '',
     symbol: '',
@@ -101,6 +102,44 @@ export const AdminPreMarket = () => {
     reader.readAsDataURL(file);
   };
 
+  const handleContractUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf') {
+      toast.error(t('adminPremarket.onlyPdf', 'Only PDF files are allowed for contracts'));
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error(t('adminPremarket.contractTooLarge', 'Contract must be less than 5MB'));
+      return;
+    }
+
+    setUploadingContract(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('premarket_contracts')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from('premarket_contracts')
+        .getPublicUrl(fileName);
+
+      setFormData(prev => ({ ...prev, contract_url: data.publicUrl }));
+      toast.success(t('adminPremarket.contractUploaded', 'Contract uploaded successfully'));
+    } catch (err: any) {
+      toast.error(t('adminPremarket.errorUploadingContract', 'Error uploading contract: ') + err.message);
+    } finally {
+      setUploadingContract(false);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!canEdit) return;
     if (!window.confirm(t('adminPremarket.confirmDelete'))) return;
@@ -161,7 +200,13 @@ export const AdminPreMarket = () => {
             </div>
             <div className="md:col-span-2">
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{t('adminPremarket.contractUrl', 'Contract URL (PDF)')}</label>
-              <input type="text" value={formData.contract_url || ''} onChange={e => setFormData({ ...formData, contract_url: e.target.value })} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-accent-primary/50 transition-colors" placeholder="e.g. /premarket_contract_v1.pdf or https://..." />
+              <div className="flex gap-2">
+                <input type="text" value={formData.contract_url || ''} onChange={e => setFormData({ ...formData, contract_url: e.target.value })} className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-accent-primary/50 transition-colors" placeholder="e.g. /premarket_contract_v1.pdf or https://..." />
+                <label className="bg-white/5 hover:bg-white/10 text-white cursor-pointer flex items-center justify-center px-4 rounded-xl border border-white/10 transition-colors" title="Upload PDF">
+                  {uploadingContract ? <RefreshCw className="animate-spin text-accent-primary" size={18} /> : <FileText size={18} />}
+                  <input type="file" accept="application/pdf" className="hidden" onChange={handleContractUpload} disabled={uploadingContract} />
+                </label>
+              </div>
             </div>
             <div className="md:col-span-2">
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{t('adminPremarket.description')}</label>
