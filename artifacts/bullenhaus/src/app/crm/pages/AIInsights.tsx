@@ -1255,14 +1255,17 @@ export function AIInsights() {
         .limit(300);
       if (error) throw error;
       setClients((data ?? []).map(mapSlim));
-    } catch (e: any) { setClientsError(e.message); }
+    } catch (e) {
+      console.error('[AIInsights] Failed to load clients', e);
+      setClientsError('Unable to load AI insight clients');
+    }
     finally { setClientsLoading(false); }
   }, []);
 
   useEffect(() => { loadClients(); }, [loadClients]);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6">
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-4">
@@ -1322,6 +1325,15 @@ export function AIInsights() {
         <div className="flex items-start gap-3 p-4 rounded-xl bg-aura-ruby/5 border border-aura-ruby/15">
           <AlertTriangle className="w-4 h-4 text-aura-ruby shrink-0 mt-0.5" />
           <p className="text-xs text-aura-ruby">{clientsError}</p>
+        </div>
+      )}
+
+      {!clientsLoading && !clientsError && clients.length === 0 && (
+        <div className="rounded-xl border border-glass-border bg-black/20 p-5">
+          <p className="text-sm font-bold text-aura-platinum">No AI insights yet</p>
+          <p className="mt-1 text-xs text-aura-platinum/50">
+            Insights will appear after client activity, calls, tasks, or lead updates.
+          </p>
         </div>
       )}
 

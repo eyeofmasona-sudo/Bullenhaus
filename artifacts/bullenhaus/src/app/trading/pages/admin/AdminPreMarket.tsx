@@ -13,6 +13,7 @@ export interface PreMarketAsset {
   price: number;
   description: string;
   image_url: string;
+  contract_url?: string;
   is_active: boolean;
   created_at: string;
 }
@@ -30,6 +31,7 @@ export const AdminPreMarket = () => {
     price: 0,
     description: '',
     image_url: '',
+    contract_url: '',
     is_active: true
   });
 
@@ -117,7 +119,7 @@ export const AdminPreMarket = () => {
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-bold text-white">{t('adminPremarket.title')}</h2>
         {canEdit && (
-          <button onClick={() => { setFormData({ name: '', symbol: '', price: 0, description: '', image_url: '', is_active: true }); setShowForm(true); }} className="btn-primary flex items-center gap-2">
+          <button onClick={() => { setFormData({ name: '', symbol: '', price: 0, description: '', image_url: '', contract_url: '', is_active: true }); setShowForm(true); }} className="btn-primary flex items-center gap-2">
             <Plus size={18} /> {t('adminPremarket.addAsset')}
           </button>
         )}
@@ -156,6 +158,10 @@ export const AdminPreMarket = () => {
                    <img src={formData.image_url} alt="Preview" className="h-16 w-16 object-cover rounded-lg border border-white/10" />
                  </div>
               )}
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{t('adminPremarket.contractUrl', 'Contract URL (PDF)')}</label>
+              <input type="text" value={formData.contract_url || ''} onChange={e => setFormData({ ...formData, contract_url: e.target.value })} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-accent-primary/50 transition-colors" placeholder="e.g. /premarket_contract_v1.pdf or https://..." />
             </div>
             <div className="md:col-span-2">
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{t('adminPremarket.description')}</label>

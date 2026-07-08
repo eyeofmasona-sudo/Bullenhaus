@@ -55,7 +55,7 @@ export const GamificationWidget = () => {
 
       <div className="flex items-center justify-between relative z-10">
         <button 
-          onClick={() => navigate('/gamification')}
+          onClick={() => navigate('/trade/gamification')}
           className="px-5 py-2.5 rounded-xl bg-accent-primary/10 border border-accent-primary/30 text-xs font-bold text-accent-primary hover:bg-accent-primary hover:text-black hover:shadow-neon-gold transition-all duration-300 flex items-center gap-2"
         >
           {t('viewRewards', { defaultValue: 'View Rewards' })}

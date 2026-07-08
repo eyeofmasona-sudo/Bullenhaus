@@ -1,42 +1,101 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Bell, Check, Trash2 } from 'lucide-react';
+import { Bell, Check } from 'lucide-react';
 import { motion } from 'motion/react';
-import { fetchTable } from '../../../../lib/supabase/frontendData';
+import { toast } from 'sonner';
+import { getSupabaseBrowserClient } from '../../../../lib/supabase/browserClient';
+
+type NotificationRow = {
+  id: string;
+  title?: string | null;
+  message?: string | null;
+  read?: boolean | null;
+  read_at?: string | null;
+  created_at?: string | null;
+};
+
+type NotificationItem = {
+  id: string;
+  title: string;
+  message: string;
+  read: boolean;
+  time: string;
+  icon: typeof Bell;
+};
 
 export const Notifications = () => {
   const { t } = useTranslation('common');
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const loadNotifications = async () => {
     setLoading(true);
     setError(null);
-    const { data, error: dbError } = await fetchTable<any>('notifications', (q) =>
-      q.select('*').order('created_at', { ascending: false }).limit(50)
-    );
-    if (dbError) setError(dbError);
-    setNotifications(data.map((n: any) => ({
-      id: n.id,
-      title: n.title || 'Notification',
-      message: n.message || 'No details yet.',
-      read: !!n.read,
-      time: n.created_at ? new Date(n.created_at).toLocaleString() : 'Now',
-      icon: Bell,
-    })));
-    setLoading(false);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data, error: dbError } = await supabase
+        .from('notifications')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (dbError) {
+        console.error('[Notifications] load failed', dbError);
+        setError('Unable to load notifications right now.');
+        setNotifications([]);
+        return;
+      }
+
+      setNotifications(((data as NotificationRow[]) ?? []).map((n) => ({
+        id: n.id,
+        title: n.title || 'Notification',
+        message: n.message || 'No details yet.',
+        read: Boolean(n.read_at ?? n.read),
+        time: n.created_at ? new Date(n.created_at).toLocaleString() : 'Now',
+        icon: Bell,
+      })));
+    } catch (err) {
+      console.error('[Notifications] load failed', err);
+      setError('Unable to load notifications right now.');
+      setNotifications([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { loadNotifications(); }, []);
 
-  const markAllRead = () => {
+  const markAllRead = async () => {
+    const unreadIds = notifications.filter(n => !n.read).map(n => n.id);
+    if (unreadIds.length === 0) return;
+
+    const previous = notifications;
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { error: updateError } = await supabase
+        .from('notifications')
+        .update({ read_at: new Date().toISOString() })
+        .in('id', unreadIds);
+
+      if (updateError) {
+        console.error('[Notifications] mark all read failed', updateError);
+        setNotifications(previous);
+        toast.error('Could not mark notifications as read.');
+        return;
+      }
+
+      toast.success('Notifications marked as read.');
+    } catch (err) {
+      console.error('[Notifications] mark all read failed', err);
+      setNotifications(previous);
+      toast.error('Could not mark notifications as read.');
+    }
   };
 
-  const deleteNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-  };
+  const hasUnread = notifications.some(n => !n.read);
 
   return (
     <div className="p-4 lg:p-8 animate-in fade-in duration-500 panel-shell">
@@ -48,7 +107,8 @@ export const Notifications = () => {
            </div>
            <button 
             onClick={markAllRead}
-            className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-xs font-bold text-slate-300 hover:text-white transition-all"
+            disabled={!hasUnread}
+            className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-xs font-bold text-slate-300 hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
            >
              <Check size={14} />
              Mark all as read
@@ -90,12 +150,6 @@ export const Notifications = () => {
                    </div>
                    <p className="text-sm text-slate-500 leading-relaxed">{n.message}</p>
                 </div>
-                <button 
-                  onClick={() => deleteNotification(n.id)}
-                  className="opacity-0 group-hover:opacity-100 p-2 text-slate-600 hover:text-red-500 transition-all absolute right-4 top-1/2 -translate-y-1/2"
-                >
-                  <Trash2 size={18} />
-                </button>
               </motion.div>
             ))
           )}

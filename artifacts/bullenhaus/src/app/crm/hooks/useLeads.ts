@@ -1,16 +1,26 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../../../lib/supabase/browserClient';
+import { getLeadCounts, getLeadsPage, getUsersLeadPage, searchLeads, updateLeadStatus, LEAD_PAGE_SIZE } from '../../trading/services/leadsService';
 
-const LEADS_SELECT = 'id, first_name, last_name, email, phone, country, stage, capacity, acquisition_source, notes, created_at';
+const LEAD_STAGE_DEFS = [
+  ['New Inquiries', 'NEW_INQUIRY'],
+  ['In Discussion', 'IN_DISCUSSION'],
+  ['Pending KYC', 'PENDING_KYC'],
+  ['Funded (FTD)', 'FUNDED'],
+] as const;
 
-function mapLead(row: any) {
-  return {
-    ...row,
-    firstName: row.first_name ?? '',
-    lastName: row.last_name ?? '',
-    country: row.country ?? row.acquisition_source?.country ?? null,
-    acquisitionSource: row.acquisition_source ?? {},
-  };
+const USER_STAGE_DEFS = [
+  ['New Inquiries', 'NEW_INQUIRY'],
+  ['Pending KYC', 'PENDING_KYC'],
+  ['Approved', 'APPROVED'],
+  ['Rejected', 'REJECTED'],
+] as const;
+
+function groupRows(rows: any[], defs: readonly (readonly [string, string])[]) {
+  return Object.fromEntries(defs.map(([label, stage]) => [label, rows.filter((l: any) => l.stage === stage)]));
+}
+
+function countsFromGroups(grouped: Record<string, any[]>) {
+  return Object.fromEntries(Object.entries(grouped).map(([label, rows]) => [label, rows.length]));
 }
 
 export function useLeads(page = 1, limit = 50, search = '') {
@@ -18,62 +28,135 @@ export function useLeads(page = 1, limit = 50, search = '') {
   const [meta, setMeta]       = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
+  const [stagePages, setStagePages] = useState<Record<string, number>>({});
 
   const fetchLeads = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      // Supabase/PostgREST caps a single request to a page window, so the
-      // board previously showed only the first slice. Page through ALL
-      // matching leads in chunks so the full base is visible.
-      const CHUNK = 1000;
-      const SAFETY_MAX = 100_000;
-      let from = 0;
-      let all: any[] = [];
-
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        let q = supabase
-          .from('leads')
-          .select(LEADS_SELECT)
-          .order('created_at', { ascending: false })
-          .range(from, from + CHUNK - 1);
-
-        if (search) {
-          q = q.or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%`);
-        }
-
-        const { data: chunk, error: dbError } = await q;
-        if (dbError) throw new Error(dbError.message);
-
-        const batch = chunk ?? [];
-        all = all.concat(batch);
-        if (batch.length < CHUNK || from + CHUNK >= SAFETY_MAX) break;
-        from += CHUNK;
+      if (search.trim().length >= 2) {
+        const rows = await searchLeads(search);
+        const derivedMode = rows.some((row: any) => row.pipelineSource === 'users');
+        const grouped = groupRows(rows, derivedMode ? USER_STAGE_DEFS : LEAD_STAGE_DEFS);
+        setData(rows);
+        setStagePages({});
+        setMeta({
+          page,
+          limit: Math.min(limit, 50),
+          total: rows.length,
+          grouped,
+          stageCounts: countsFromGroups(grouped),
+          searchMode: true,
+          derivedMode,
+          stageWritable: !derivedMode,
+          hasMore: false,
+        });
+        return;
       }
 
-      const rows = all.map(mapLead);
-      const grouped = {
-        'New Inquiries': rows.filter((l: any) => l.stage === 'NEW_INQUIRY'),
-        'In Discussion': rows.filter((l: any) => l.stage === 'IN_DISCUSSION'),
-        'Pending KYC':   rows.filter((l: any) => l.stage === 'PENDING_KYC'),
-        'Funded (FTD)':  rows.filter((l: any) => l.stage === 'FUNDED'),
-      };
+      const [pageResults, countResults] = await Promise.all([
+        Promise.allSettled(LEAD_STAGE_DEFS.map(([, stage]) => getLeadsPage({ stage, page: 0, pageSize: LEAD_PAGE_SIZE }))),
+        Promise.allSettled(LEAD_STAGE_DEFS.map(([, stage]) => getLeadCounts({ stage }))),
+      ]);
+
+      const pages = pageResults.map((result) => result.status === 'fulfilled' ? result.value : null);
+      const allLeadQueriesFailed = pages.every(pageResult => !pageResult);
+      const leadRows = pages.flatMap(pageResult => pageResult?.rows ?? []);
+
+      if (allLeadQueriesFailed || leadRows.length === 0) {
+        const fallback = await getUsersLeadPage({ page: 0, pageSize: 100 });
+        const grouped = groupRows(fallback.rows, USER_STAGE_DEFS);
+        setData(fallback.rows);
+        setStagePages({ users: 0 });
+        setMeta({
+          page: 1,
+          limit: 100,
+          total: fallback.count,
+          grouped,
+          stageCounts: countsFromGroups(grouped),
+          searchMode: false,
+          derivedMode: true,
+          stageWritable: false,
+          hasMore: fallback.hasMore,
+        });
+        return;
+      }
+
+      const grouped = Object.fromEntries(LEAD_STAGE_DEFS.map(([label], i) => [label, pages[i]?.rows ?? []]));
+      const stageCounts = Object.fromEntries(LEAD_STAGE_DEFS.map(([label], i) => [
+        label,
+        countResults[i].status === 'fulfilled' ? countResults[i].value : (grouped[label]?.length ?? 0),
+      ]));
+      const rows = Object.values(grouped).flat();
 
       setData(rows);
-      setMeta({ page: 1, limit: rows.length, total: rows.length, grouped });
+      setStagePages(Object.fromEntries(LEAD_STAGE_DEFS.map(([label]) => [label, 0])));
+      setMeta({
+        page: 1,
+        limit: LEAD_PAGE_SIZE,
+        total: Object.values(stageCounts).reduce((s: number, n: any) => s + Number(n || 0), 0),
+        grouped,
+        stageCounts,
+        searchMode: false,
+        derivedMode: false,
+        stageWritable: true,
+        hasMore: false,
+      });
     } catch (err: any) {
-      setError(err.message || 'Failed to load leads');
+      console.error('[useLeads] Failed to load leads', err);
+      setError('Unable to load leads');
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, [page, limit, search]);
+
+  const loadMoreStage = useCallback(async (stageLabel: string) => {
+    if (!meta || meta.searchMode) return;
+    if (meta.derivedMode) {
+      const nextPage = (stagePages.users ?? 0) + 1;
+      const res = await getUsersLeadPage({ page: nextPage, pageSize: 100 });
+      const nextGrouped = groupRows(res.rows, USER_STAGE_DEFS);
+      setMeta((prev: any) => {
+        const grouped = { ...(prev?.grouped ?? {}) };
+        Object.entries(nextGrouped).forEach(([label, rows]) => {
+          grouped[label] = [...(grouped[label] ?? []), ...(rows as any[])];
+        });
+        return {
+          ...prev,
+          grouped,
+          stageCounts: countsFromGroups(grouped),
+          hasMore: res.hasMore,
+        };
+      });
+      setData((prev) => [...prev, ...res.rows]);
+      setStagePages(prev => ({ ...prev, users: nextPage }));
+      return;
+    }
+
+    const stageMap: Record<string, string> = {
+      'New Inquiries': 'NEW_INQUIRY',
+      'In Discussion': 'IN_DISCUSSION',
+      'Pending KYC': 'PENDING_KYC',
+      'Funded (FTD)': 'FUNDED',
+    };
+    const stage = stageMap[stageLabel];
+    if (!stage) return;
+    const nextPage = (stagePages[stageLabel] ?? 0) + 1;
+    const res = await getLeadsPage({ stage, page: nextPage, pageSize: LEAD_PAGE_SIZE });
+    setMeta((prev: any) => {
+      const grouped = { ...(prev?.grouped ?? {}) };
+      grouped[stageLabel] = [...(grouped[stageLabel] ?? []), ...res.rows];
+      return { ...prev, grouped };
+    });
+    setData((prev) => [...prev, ...res.rows]);
+    setStagePages(prev => ({ ...prev, [stageLabel]: nextPage }));
+  }, [meta, stagePages]);
 
   useEffect(() => {
     fetchLeads().catch(() => {});
   }, [fetchLeads]);
 
-  return { leads: data, meta, loading, error, refetch: fetchLeads };
+  return { leads: data, meta, loading, error, refetch: fetchLeads, loadMoreStage };
 }
 
 export const LEAD_STAGES = [
@@ -86,9 +169,5 @@ export const LEAD_STAGES = [
 export type LeadStage = typeof LEAD_STAGES[number]['value'];
 
 export async function updateLeadStage(leadId: string, stage: LeadStage): Promise<void> {
-  const { error } = await supabase
-    .from('leads')
-    .update({ stage })
-    .eq('id', leadId);
-  if (error) throw new Error(error.message);
+  await updateLeadStatus(leadId, stage);
 }

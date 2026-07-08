@@ -193,9 +193,11 @@ export const AdminKYC = () => {
   const [users, setUsers]     = useState<KycUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter]   = useState<'PENDING' | 'ALL'>('PENDING');
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchUsers = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       let q = supabase
         .from('users')
@@ -205,8 +207,10 @@ export const AdminKYC = () => {
       const { data, error } = await q;
       if (error) throw error;
       setUsers(data || []);
-    } catch {
+    } catch (e) {
+      console.error('[AdminKYC] Failed to load KYC users', e);
       setUsers([]);
+      setLoadError('KYC reviews are temporarily unavailable.');
     } finally {
       setLoading(false);
     }
@@ -301,7 +305,7 @@ export const AdminKYC = () => {
                       <UserX size={20} className="text-text-dim" />
                     </div>
                     <p className="text-sm font-medium text-text-muted">
-                      {loading ? t('adminKyc.empty.loading') : filter === 'PENDING' ? t('adminKyc.empty.noPending') : t('adminKyc.empty.noUsers')}
+                      {loading ? t('adminKyc.empty.loading') : loadError || (filter === 'PENDING' ? t('adminKyc.empty.noPending') : t('adminKyc.empty.noUsers'))}
                     </p>
                   </div>
                 </td>

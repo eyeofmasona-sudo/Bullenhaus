@@ -73,6 +73,9 @@ const CRMCallHistory = React.lazy(() => import('./app/crm/pages/CallHistory').th
 const CRMAgentClients = React.lazy(() => import('./app/crm/pages/AgentClients').then(m => ({ default: m.AgentClients })));
 const CRMTelephonySettings = React.lazy(() => import('./app/crm/pages/TelephonySettings').then(m => ({ default: m.TelephonySettings })));
 const CRMAIInsights = React.lazy(() => import('./app/crm/pages/AIInsights').then(m => ({ default: m.AIInsights })));
+const CRMKYCReview = React.lazy(() => import('./app/crm/pages/KYCReview').then(m => ({ default: m.KYCReview })));
+const CRMWorkflowRules = React.lazy(() => import('./app/crm/pages/WorkflowRules').then(m => ({ default: m.WorkflowRules })));
+const CRMSalesScripts = React.lazy(() => import('./app/crm/pages/SalesScripts').then(m => ({ default: m.SalesScripts })));
 
 const Fallback = () => (
   <div className="flex h-dvh w-full items-center justify-center bg-bg">
@@ -163,6 +166,7 @@ const AppContent = () => {
              ========================================== */}
           <Route element={<AuthGuard />}>
             <Route element={<RoleGuard allowedRoles={['client', 'admin', 'trade_admin']} />}>
+              <Route path="/gamification" element={<Navigate to="/trade/gamification" replace />} />
               <Route path="/trade" element={<ErrorBoundary><TradeAppWrapper /></ErrorBoundary>}>
                 <Route index element={<Navigate to="dashboard" replace />} />
                 <Route path="dashboard" element={<TradeDashboard />} />
@@ -191,14 +195,19 @@ const AppContent = () => {
                 <Route path="dashboard" element={<CRMDashboard />} />
                 <Route path="manager" element={<CRMManagerDashboard />} />
                 <Route path="workspace" element={<CRMAgentWorkspace />} />
+                <Route path="leads" element={<CRMAgentWorkspace />} />
+                <Route path="kanban" element={<CRMAgentWorkspace />} />
                 <Route path="clients" element={<CRMVIPClients />} />
                 <Route path="vip" element={<CRMVIPOnly />} />
                 <Route path="calls" element={<CRMCallHistory />} />
                 <Route path="my-clients" element={<CRMAgentClients />} />
                 <Route path="telephony" element={<CRMTelephonySettings />} />
                 <Route path="ai-insights" element={<CRMAIInsights />} />
+                <Route path="sales-scripts" element={<CRMSalesScripts />} />
                 <Route element={<RoleGuard allowedRoles={['admin', 'crm_admin']} fallbackUrl="/unauthorized" />}>
                   <Route path="admin" element={<CRMAdminPanel />} />
+                  <Route path="kyc-review" element={<CRMKYCReview />} />
+                  <Route path="workflows" element={<CRMWorkflowRules />} />
                 </Route>
               </Route>
             </Route>

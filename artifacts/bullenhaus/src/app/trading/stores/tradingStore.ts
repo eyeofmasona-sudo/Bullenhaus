@@ -64,7 +64,7 @@ interface TradingState {
   prices: Record<string, number>;
   priceChanges: Record<string, number>;
   priceOverrides: Record<string, number>;
-  contractSigned: boolean;
+  signedContracts: Record<string, boolean>;
 
   // Actions
   checkContractSignature: () => Promise<void>;
@@ -100,14 +100,27 @@ export const useTradingStore = create<TradingState>()(
       prices: {},
       priceChanges: {},
       priceOverrides: {},
-      contractSigned: false,
+      signedContracts: {},
 
       checkContractSignature: async () => {
         try {
-          const { data, error } = await supabase.from('premarket_contract_signatures').select('id').eq('contract_version', 'v1.0');
-          if (!error && data && data.length > 0) {
-            set({ contractSigned: true });
+          // Fetch old v1.0 signatures for legacy support
+          const { data: v1Data, error: v1Error } = await supabase.from('premarket_contract_signatures').select('id').eq('contract_version', 'v1.0');
+          const hasV1 = !v1Error && v1Data && v1Data.length > 0;
+
+          // Fetch new per-asset signatures
+          const { data: assetData, error: assetError } = await supabase.from('premarket_asset_signatures').select('asset_id');
+
+          const signedMap: Record<string, boolean> = {};
+          if (hasV1) {
+            signedMap['hardcoded-nrlk'] = true; // Legacy support
           }
+          if (!assetError && assetData) {
+            assetData.forEach((row: { asset_id: string }) => {
+              signedMap[row.asset_id] = true;
+            });
+          }
+          set({ signedContracts: signedMap });
         } catch (err) {
           console.error('Failed to check contract signature', err);
         }

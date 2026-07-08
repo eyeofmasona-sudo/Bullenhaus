@@ -6,20 +6,28 @@ interface ContractModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSign: () => void;
+  assetId?: string;
+  contractUrl?: string;
 }
 
-export const ContractModal: React.FC<ContractModalProps> = ({ isOpen, onClose, onSign }) => {
+export const ContractModal: React.FC<ContractModalProps> = ({ isOpen, onClose, onSign, assetId, contractUrl }) => {
   const [agreed, setAgreed] = useState(false);
   const [signing, setSigning] = useState(false);
 
   const handleSign = async () => {
     setSigning(true);
     try {
-      const { error } = await supabase.rpc('sign_premarket_contract', { 
-        version: 'v1.0' 
-      });
-      
-      if (error) throw error;
+      if (!assetId || assetId === 'hardcoded-nrlk') {
+        const { error } = await supabase.rpc('sign_premarket_contract', { 
+          version: 'v1.0' 
+        });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.rpc('sign_premarket_asset_contract', { 
+          p_asset_id: assetId 
+        });
+        if (error) throw error;
+      }
       
       toast.success('Contract signed successfully. You may now proceed with your purchase.');
       onSign();
@@ -34,6 +42,8 @@ export const ContractModal: React.FC<ContractModalProps> = ({ isOpen, onClose, o
 
   if (!isOpen) return null;
 
+  const actualContractUrl = contractUrl || '/premarket_contract_v1.pdf';
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <div className="bg-[#121214] border border-white/10 rounded-xl w-full max-w-4xl flex flex-col h-[85vh] shadow-2xl">
@@ -46,10 +56,10 @@ export const ContractModal: React.FC<ContractModalProps> = ({ isOpen, onClose, o
         
         <div className="flex-1 overflow-hidden p-6 bg-slate-900/50">
            {/* Simulate PDF using object or iframe, fallback to a message if missing */}
-           <object data="/premarket_contract_v1.pdf" type="application/pdf" className="w-full h-full rounded-lg bg-white border border-white/5">
+           <object data={actualContractUrl} type="application/pdf" className="w-full h-full rounded-lg bg-white border border-white/5">
              <div className="flex items-center justify-center h-full text-slate-400 p-8 text-center flex-col gap-4">
                 <p>PDF viewer not available. Please ensure you have read the contract.</p>
-                <a href="/premarket_contract_v1.pdf" target="_blank" className="text-accent-primary underline">Download Contract</a>
+                <a href={actualContractUrl} target="_blank" className="text-accent-primary underline">Download Contract</a>
              </div>
            </object>
         </div>

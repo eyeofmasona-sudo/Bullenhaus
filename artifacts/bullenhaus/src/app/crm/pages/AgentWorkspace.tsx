@@ -7,8 +7,16 @@ import { useI18n } from "../lib/i18n";
 import { usePhoneDialer } from "../contexts/PhoneDialerContext";
 import { useAuth } from "../../trading/contexts/AuthContext";
 import { supabase } from "../../../lib/supabase/browserClient";
+import { toast } from "sonner";
 
-const VISIBLE_PER_STAGE = 100;
+const VISIBLE_PER_STAGE = 25;
+
+const DERIVED_STAGE_OPTIONS = [
+  { value: 'NEW_INQUIRY', label: 'New Inquiry' },
+  { value: 'PENDING_KYC', label: 'Pending KYC' },
+  { value: 'APPROVED', label: 'Approved' },
+  { value: 'REJECTED', label: 'Rejected' },
+] as const;
 
 interface LocalTask {
   name: string;
@@ -17,11 +25,12 @@ interface LocalTask {
   urgent: boolean;
 }
 
-function LeadPipeline({ leads, meta, loading, error, onCall, onStageChange, onOpen, selectable, selectedIds, onToggleSelect, onSelectMany }: {
+function LeadPipeline({ leads, meta, loading, error, onRetry, onCall, onStageChange, onOpen, selectable, selectedIds, onToggleSelect, onSelectMany, onLoadMoreStage }: {
   leads: any[];
   meta: any;
   loading: boolean;
   error: string | null;
+  onRetry: () => void;
   onCall: (phone: string, name: string) => void;
   onStageChange: (leadId: string, stage: LeadStage) => void;
   onOpen: (lead: any) => void;
@@ -29,6 +38,7 @@ function LeadPipeline({ leads, meta, loading, error, onCall, onStageChange, onOp
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
   onSelectMany: (ids: string[], selected: boolean) => void;
+  onLoadMoreStage: (stage: string) => void;
 }) {
   const { t } = useI18n();
   const stages = meta?.grouped || {
@@ -52,9 +62,12 @@ function LeadPipeline({ leads, meta, loading, error, onCall, onStageChange, onOp
       <div className="mt-12 flex flex-col items-center justify-center p-12 border border-aura-ruby/30 rounded-xl bg-aura-ruby/5">
         <AlertCircle className="w-8 h-8 text-aura-ruby" />
         <p className="text-sm font-mono tracking-widest uppercase mt-4 text-aura-ruby">{error}</p>
+        <Button variant="outline" size="sm" className="mt-4" onClick={onRetry}>Retry</Button>
       </div>
     );
   }
+
+  const stageNames = Object.keys(stages);
 
   return (
     <div className="mt-12">
@@ -66,6 +79,10 @@ function LeadPipeline({ leads, meta, loading, error, onCall, onStageChange, onOp
        <div className="space-y-8">
           {Object.entries(stages).map(([stage, stageLeads]) => {
             const leadsList = stageLeads as any[];
+            const totalCount = meta?.stageCounts?.[stage] ?? leadsList.length;
+            const isFirstStage = stage === stageNames[0];
+            const showLoadMore = totalCount > leadsList.length || (meta?.derivedMode && meta?.hasMore && isFirstStage);
+            const stageOptions = meta?.derivedMode ? DERIVED_STAGE_OPTIONS : LEAD_STAGES;
             return (
               <div key={stage}>
                  <div className="flex items-center justify-between mb-4 px-1">
@@ -87,13 +104,13 @@ function LeadPipeline({ leads, meta, loading, error, onCall, onStageChange, onOp
                          {leadsList.every((l: any) => selectedIds.has(l.id)) ? t('leadDeselectAll') : t('leadSelectAll')}
                        </button>
                      )}
-                     <span className="text-[10px] font-mono text-aura-platinum/40 bg-white/5 px-2 py-0.5 rounded">{leadsList.length}</span>
+                     <span className="text-[10px] font-mono text-aura-platinum/40 bg-white/5 px-2 py-0.5 rounded">{totalCount}</span>
                    </div>
                  </div>
                  
                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
-                   {leadsList.slice(0, VISIBLE_PER_STAGE).map((lead: any) => (
-                     <div 
+                   {leadsList.map((lead: any) => (
+                     <div
                        key={lead.id} 
                        onClick={() => selectable ? onToggleSelect(lead.id) : onOpen(lead)}
                        className={`p-4 rounded-xl border bg-[#121214] hover:-translate-y-1 transition-transform cursor-pointer group shadow-sm hover:shadow-md ${selectedIds.has(lead.id) ? 'ring-2 ring-aura-gold border-aura-gold/60' : ''}
@@ -133,20 +150,29 @@ function LeadPipeline({ leads, meta, loading, error, onCall, onStageChange, onOp
                        {/* Stage selector */}
                        <div className="mb-3" onClick={e => e.stopPropagation()}>
                          <div className="relative">
+                           {(() => {
+                             const canMoveStage = Boolean(meta?.stageWritable) && lead.pipelineSource !== 'users';
+                             return (
                            <select
                              value={lead.stage}
+                             disabled={!canMoveStage}
+                             title={canMoveStage ? "Move stage" : "Pipeline stage storage is not configured yet"}
                              onChange={e => onStageChange(lead.id, e.target.value as LeadStage)}
                              className={`w-full appearance-none rounded-lg px-3 py-1.5 pr-7 text-[10px] font-bold uppercase tracking-widest border outline-none cursor-pointer transition-colors ${
                                lead.stage === 'FUNDED'       ? 'bg-aura-emerald/10 border-aura-emerald/30 text-aura-emerald' :
+                               lead.stage === 'APPROVED'     ? 'bg-aura-emerald/10 border-aura-emerald/30 text-aura-emerald' :
+                               lead.stage === 'REJECTED'     ? 'bg-aura-ruby/10 border-aura-ruby/30 text-aura-ruby' :
                                lead.stage === 'PENDING_KYC' ? 'bg-aura-warning/10 border-aura-warning/30 text-aura-warning' :
                                lead.stage === 'IN_DISCUSSION'? 'bg-aura-gold/10 border-aura-gold/30 text-aura-gold' :
                                'bg-white/5 border-glass-border text-aura-platinum/60'
-                             }`}
+                             } ${!canMoveStage ? 'cursor-not-allowed opacity-60' : ''}`}
                            >
-                             {LEAD_STAGES.map(s => (
+                             {stageOptions.map(s => (
                                <option key={s.value} value={s.value} className="bg-[#121214] text-aura-platinum">{s.label}</option>
                              ))}
                            </select>
+                             );
+                           })()}
                            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none opacity-50" />
                          </div>
                        </div>
@@ -159,9 +185,15 @@ function LeadPipeline({ leads, meta, loading, error, onCall, onStageChange, onOp
                             </button>
                             <button
                               title={lead.phone ? `Call ${lead.firstName}` : "No phone number"}
-                              disabled={!lead.phone}
-                              onClick={e => { e.stopPropagation(); lead.phone && onCall(lead.phone, `${lead.firstName} ${lead.lastName}`.trim()); }}
-                              className="w-6 h-6 rounded bg-black/40 border border-white/5 flex items-center justify-center hover:bg-aura-emerald/20 hover:border-aura-emerald/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                              onClick={e => {
+                                e.stopPropagation();
+                                if (!lead.phone) {
+                                  toast.error('No phone number available');
+                                  return;
+                                }
+                                onCall(lead.phone, `${lead.firstName} ${lead.lastName}`.trim());
+                              }}
+                              className="w-6 h-6 rounded bg-black/40 border border-white/5 flex items-center justify-center hover:bg-aura-emerald/20 hover:border-aura-emerald/30 transition-colors"
                             >
                               <Phone className={`w-3 h-3 ${lead.phone ? 'text-aura-emerald' : 'text-aura-platinum/30'}`} />
                             </button>
@@ -174,9 +206,14 @@ function LeadPipeline({ leads, meta, loading, error, onCall, onStageChange, onOp
                        <span className="text-[10px] uppercase tracking-widest text-aura-platinum/30">Empty</span>
                      </div>
                    )}
-                   {leadsList.length > VISIBLE_PER_STAGE && (
-                     <div className="col-span-full p-2 text-center text-[9px] uppercase tracking-widest text-aura-platinum/40">
-                       +{leadsList.length - VISIBLE_PER_STAGE} {t('leadMore')}
+                   {showLoadMore && (
+                     <div className="col-span-full flex justify-center p-2">
+                       <button
+                         onClick={() => onLoadMoreStage(stage)}
+                         className="rounded-lg border border-glass-border bg-black/30 px-4 py-2 text-[9px] font-bold uppercase tracking-widest text-aura-gold hover:border-aura-gold/30 hover:bg-aura-gold/10"
+                       >
+                         {totalCount > leadsList.length ? `Load more (${totalCount - leadsList.length})` : 'Load more'}
+                       </button>
                      </div>
                    )}
                  </div>
@@ -283,14 +320,13 @@ function LeadUploadButton({ onDone, role }: { onDone: () => void; role?: string 
       const seen = new Set<string>();
       const unique = mapped.filter(r => { if (seen.has(r.email)) return false; seen.add(r.email); return true; });
 
-      // de-duplicate against existing leads
+      // de-duplicate against existing leads without scanning the full table
       const existing = new Set<string>();
-      for (let from = 0; from < 500000; from += 1000) {
-        const { data, error } = await supabase.from('leads').select('email').range(from, from + 999);
+      const emails = unique.map(r => r.email);
+      for (let i = 0; i < emails.length; i += 500) {
+        const { data, error } = await supabase.from('leads').select('email').in('email', emails.slice(i, i + 500));
         if (error) throw new Error(error.message);
-        const batch = data ?? [];
-        batch.forEach((x: any) => { if (x.email) existing.add(String(x.email).toLowerCase()); });
-        if (batch.length < 1000) break;
+        (data ?? []).forEach((x: any) => { if (x.email) existing.add(String(x.email).toLowerCase()); });
       }
       const toInsert = unique.filter(r => !existing.has(r.email));
 
@@ -334,6 +370,8 @@ function LeadUploadButton({ onDone, role }: { onDone: () => void; role?: string 
 }
 
 function leadStageLabel(stage: string): string {
+  const derived = DERIVED_STAGE_OPTIONS.find(s => s.value === stage);
+  if (derived) return derived.label;
   const found = LEAD_STAGES.find(s => s.value === stage);
   return found ? found.label : (stage || '\u2014');
 }
@@ -470,13 +508,20 @@ export function AgentWorkspace() {
   const [taskType, setTaskType] = useState('Call');
   const [taskTime, setTaskTime] = useState('Next 1 Hour');
 
-  const { leads, meta, loading, error, refetch } = useLeads(1, 100);
+  const { leads, meta, loading, error, refetch, loadMoreStage } = useLeads(1, VISIBLE_PER_STAGE);
 
   const handleStageChange = async (leadId: string, stage: LeadStage) => {
+    if (!meta?.stageWritable) {
+      toast.error('Pipeline stage storage is not configured yet');
+      return;
+    }
     try {
       await updateLeadStage(leadId, stage);
       await refetch();
-    } catch (_) { /* silent — stale UI acceptable */ }
+    } catch (e) {
+      console.error('[AgentWorkspace] Stage update failed', e);
+      toast.error('Unable to update lead stage');
+    }
   };
 
   // Stats derived from leads
@@ -595,16 +640,29 @@ export function AgentWorkspace() {
                          {featuredLead.stage === 'NEW_INQUIRY' ? 'New Inquiry' :
                           featuredLead.stage === 'IN_DISCUSSION' ? 'In Discussion' :
                           featuredLead.stage === 'PENDING_KYC' ? 'Pending KYC' :
+                          featuredLead.stage === 'APPROVED' ? 'Approved' :
+                          featuredLead.stage === 'REJECTED' ? 'Rejected' :
                           featuredLead.stage === 'FUNDED' ? 'Funded — FTD' :
                           featuredLead.stage}
                        </div>
                      </div>
                   </div>
                   <div className="flex gap-2 w-full sm:w-auto">
-                     <Button variant="secondary" className="flex-1 sm:flex-auto">
+                     <Button variant="secondary" className="flex-1 sm:flex-auto" onClick={() => setSelectedLead(featuredLead)}>
                        <FileText className="w-3.5 h-3.5" /> Notes
                      </Button>
-                     <Button variant="primary" className="flex-1 sm:flex-auto">
+                     <Button
+                       variant="primary"
+                       className="flex-1 sm:flex-auto"
+                       onClick={() => {
+                         if (!featuredLead.phone) {
+                           toast.error('No phone number available');
+                           return;
+                         }
+                         openDialer({ phone: featuredLead.phone, name: featuredName ?? 'Lead' });
+                         toast.success('Call started');
+                       }}
+                     >
                        <Phone className="w-3.5 h-3.5 fill-black" /> Call Now
                      </Button>
                   </div>
@@ -643,6 +701,10 @@ export function AgentWorkspace() {
                         ? `${featuredName} is engaged. Focus on objection handling and present the platform's risk management tools.`
                         : featuredLead.stage === 'PENDING_KYC'
                         ? `${featuredName} is awaiting KYC. Remind them to upload their ID and proof of address.`
+                        : featuredLead.stage === 'APPROVED'
+                        ? `${featuredName} is approved. Review their account and choose the next compliant follow-up.`
+                        : featuredLead.stage === 'REJECTED'
+                        ? `${featuredName} was rejected in KYC. Review the compliance notes before any outreach.`
                         : `${featuredName} has funded. Congratulate them and introduce them to their dedicated account manager.`
                       }
                     </p>
@@ -699,13 +761,15 @@ export function AgentWorkspace() {
         meta={meta}
         loading={loading}
         error={error}
+        onRetry={refetch}
         onCall={(phone, name) => openDialer({ phone, name })}
         onStageChange={handleStageChange}
         onOpen={setSelectedLead}
-        selectable={canAssignLeads(role)}
+        selectable={canAssignLeads(role) && Boolean(meta?.stageWritable)}
         selectedIds={selectedIds}
         onToggleSelect={toggleSelect}
         onSelectMany={selectMany}
+        onLoadMoreStage={loadMoreStage}
       />
 
       {/* Bulk selection action bar */}

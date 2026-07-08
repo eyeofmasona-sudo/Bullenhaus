@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { Rocket, ShieldCheck, AlertCircle, CheckCircle2, Download } from 'lucide-react';
 import { ContractModal } from '../../components/dashboard/ContractModal';
 
-const AssetCard = ({ asset, wallet, buyAsset, isBuyingItem, setIsBuyingItem, contractSigned, checkContractSignature }: any) => {
+const AssetCard = ({ asset, wallet, buyAsset, isBuyingItem, setIsBuyingItem, isSigned, checkContractSignature }: any) => {
   const { t } = useTranslation('common');
   const [amount, setAmount] = useState('1');
   const parsedAmount = parseFloat(amount);
@@ -16,7 +16,7 @@ const AssetCard = ({ asset, wallet, buyAsset, isBuyingItem, setIsBuyingItem, con
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleBuy = async () => {
-    if (!contractSigned) {
+    if (!isSigned) {
       setIsModalOpen(true);
       return;
     }
@@ -47,6 +47,8 @@ const AssetCard = ({ asset, wallet, buyAsset, isBuyingItem, setIsBuyingItem, con
           checkContractSignature();
           executeBuy();
         }} 
+        assetId={asset.id}
+        contractUrl={asset.contract_url}
       />
       <div className="glass-card border-accent-primary/20 relative overflow-hidden group flex flex-col">
       <div className="w-full relative overflow-hidden shrink-0 bg-[#0A0E17]">
@@ -114,9 +116,9 @@ const AssetCard = ({ asset, wallet, buyAsset, isBuyingItem, setIsBuyingItem, con
 
         <button
           onClick={handleBuy}
-          disabled={(contractSigned && !canAfford) || isBuyingItem || totalCost <= 0}
+          disabled={(isSigned && !canAfford) || isBuyingItem || totalCost <= 0}
           className={`w-full py-4 rounded-xl font-bold uppercase tracking-widest text-sm flex items-center justify-center gap-2 transition-all ${
-            (!contractSigned || canAfford) && !isBuyingItem 
+            (!isSigned || canAfford) && !isBuyingItem 
               ? 'bg-accent-primary text-black hover:bg-accent-primary/90 shadow-[0_0_20px_rgba(212,175,55,0.3)]' 
               : 'bg-white/5 text-slate-500 cursor-not-allowed border border-white/10'
           }`}
@@ -130,6 +132,18 @@ const AssetCard = ({ asset, wallet, buyAsset, isBuyingItem, setIsBuyingItem, con
             </>
           )}
         </button>
+
+        {isSigned && (
+          <a
+            href={asset.contract_url || '/premarket_contract_v1.pdf'}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-3 rounded-xl border border-white/10 text-center text-sm font-bold text-slate-400 hover:text-white hover:bg-white/5 transition-colors flex items-center justify-center gap-2"
+          >
+            <Download size={16} />
+            {t('premarket.downloadContract', 'Download Contract')}
+          </a>
+        )}
       </div>
       </div>
     </div>
@@ -141,7 +155,7 @@ export const PreMarket: React.FC = () => {
   const { t } = useTranslation('common');
   const wallet = useTradingStore(s => s.wallet);
   const buyAsset = useTradingStore(s => s.buyAsset);
-  const contractSigned = useTradingStore(s => s.contractSigned);
+  const signedContracts = useTradingStore(s => s.signedContracts);
   const checkContractSignature = useTradingStore(s => s.checkContractSignature);
   const [isBuyingItem, setIsBuyingItem] = useState(false);
   
@@ -185,21 +199,6 @@ export const PreMarket: React.FC = () => {
             {t('premarket.subtitle')}
           </p>
         </div>
-        
-        {contractSigned && (
-          <div>
-            <a 
-              href="/premarket_contract_v1.pdf" 
-              download 
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-colors border border-white/10 text-sm font-medium"
-            >
-              <Download size={16} />
-              {t('premarket.downloadContract', 'Download Contract')}
-            </a>
-          </div>
-        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -215,7 +214,7 @@ export const PreMarket: React.FC = () => {
                 buyAsset={buyAsset} 
                 isBuyingItem={isBuyingItem} 
                 setIsBuyingItem={setIsBuyingItem} 
-                contractSigned={contractSigned}
+                isSigned={!!signedContracts[asset.id]}
                 checkContractSignature={checkContractSignature}
               />
             ))
