@@ -23,31 +23,6 @@ export const GamificationWidget = () => {
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-import React from 'react';
-import { motion } from 'motion/react';
-import { Trophy, ChevronRight, X, Star } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { useUserStore } from '../../stores/userStore';
-
-export const GamificationWidget = () => {
-  const navigate = useNavigate();
-  const { t } = useTranslation('common');
-  const { profile } = useUserStore();
-
-  const userLevel = profile?.role || 'LITE';
-  const roleColors: Record<string, string> = {
-    'ADMIN': 'text-purple-500 shadow-neon-purple',
-    'PRO': 'text-accent-secondary shadow-neon-emerald',
-    'STUDENT': 'text-blue-500 shadow-neon-blue',
-    'LITE': 'text-slate-400 shadow-none'
-  };
-  const roleColorClasses = roleColors[userLevel] || 'text-accent-primary shadow-neon-gold';
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
       className="glass-card p-6 border-accent-primary/20 relative overflow-hidden holo-border group"
     >
       {/* Abstract Background Decoration */}
