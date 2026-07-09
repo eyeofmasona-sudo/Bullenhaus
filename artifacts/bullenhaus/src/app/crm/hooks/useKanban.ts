@@ -44,37 +44,27 @@ export function useKanban(filters: KanbanFilters = {}) {
     setError(null);
     try {
       const allLeads: any[] = [];
-      await Promise.all(KANBAN_STAGES.map(async (stage) => {
-        let q = supabase
-          .from('leads')
-          .select(LEADS_SELECT)
-          .order('created_at', { ascending: false })
-          .limit(100);
+      let q = supabase
+        .from('leads')
+        .select(LEADS_SELECT)
+        .order('created_at', { ascending: false })
+        .limit(100);
 
-        // Map NEW to also include null stages if possible, or just strict match.
-        // Usually default in DB is 'NEW'.
-        if (stage.value === 'NEW') {
-          q = q.or(`stage.eq.NEW,stage.is.null`);
-        } else {
-          q = q.eq('stage', stage.value);
-        }
+      if (filters.search) {
+        q = q.or(`first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%`);
+      }
+      if (filters.agentId) {
+        q = q.eq('assigned_agent_id', filters.agentId);
+      }
+      if (filters.source) {
+        q = q.eq('acquisition_source->>channel', filters.source);
+      }
 
-        if (filters.search) {
-          q = q.or(`first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%`);
-        }
-        if (filters.agentId) {
-          q = q.eq('assigned_agent_id', filters.agentId);
-        }
-        if (filters.source) {
-          q = q.eq('acquisition_source->>channel', filters.source);
-        }
-
-        const { data, error: dbError } = await q;
-        if (dbError) throw new Error(dbError.message);
-        if (data) {
-          allLeads.push(...data);
-        }
-      }));
+      const { data, error: dbError } = await q;
+      if (dbError) throw new Error(dbError.message);
+      if (data) {
+        allLeads.push(...data);
+      }
 
       setLeads(allLeads.map(mapLead));
     } catch (err: any) {
