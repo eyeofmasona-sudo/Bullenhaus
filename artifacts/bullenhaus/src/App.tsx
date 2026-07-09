@@ -212,7 +212,9 @@ const AppContent = () => {
                 <Route path="tickets" element={<CRMTickets />} />
                 <Route path="messages" element={<CRMMessages />} />
                 <Route path="scripts" element={<CRMSalesScripts />} />
-                <Route path="kyc-review" element={<CRMKycReview />} />
+                <Route element={<RoleGuard allowedRoles={['manager', 'director', 'admin', 'crm_admin']} fallbackUrl="/unauthorized" />}>
+                  <Route path="kyc-review" element={<CRMKycReview />} />
+                </Route>
                 <Route path="workflows" element={<CRMWorkflowRules />} />
                 <Route element={<RoleGuard allowedRoles={['admin', 'crm_admin']} fallbackUrl="/unauthorized" />}>
                   <Route path="admin" element={<CRMAdminPanel />} />

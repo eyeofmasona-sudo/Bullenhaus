@@ -277,10 +277,16 @@ const KycRow: React.FC<{
         throw new Error('Could not load any documents');
       }
 
-      // 2. Send to the Next.js KYC bot API (stateless analysis)
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('Session expired');
+
+      // 2. Send to the KYC bot API (stateless advisory analysis)
       const res = await fetch('/api/kyc/analyze-external?XTransformPort=3001', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({
           clientName: item.full_name || item.email,
           clientEmail: item.email,

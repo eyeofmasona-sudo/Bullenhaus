@@ -46,7 +46,6 @@ const getNavForRole = (role: string, t: (key: string) => string) => {
         { name: 'Support Tickets',         href: '/crm/tickets',     icon: LifeBuoy },
         { name: 'Messages',                href: '/crm/messages',    icon: MessageSquare },
         { name: 'Sales Scripts',           href: '/crm/scripts',     icon: BookOpen },
-        { name: 'KYC Review',              href: '/crm/kyc-review',  icon: ShieldCheckIcon },
         { name: 'Workflow Rules',          href: '/crm/workflows',   icon: Zap },
         { name: t('navManagerDashboard'),  href: '/crm/manager',     icon: TrendingUp },
         { name: 'Call History',            href: '/crm/calls',       icon: PhoneCall },
