@@ -44,19 +44,26 @@ interface SidebarItemProps {
 const SidebarItem = ({ icon: Icon, label, active, alert, to, onClick }: SidebarItemProps) => {
   const content = (
     <motion.div
-      whileHover={{ y: -2, scale: 1.01 }}
-      whileTap={{ y: 1, scale: 0.99 }}
+      whileHover={{ 
+        y: -4, 
+        scale: 1.02, 
+        rotateX: 5,
+        rotateY: -5,
+        boxShadow: "0 15px 30px rgba(212, 175, 55, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.4), inset 0 -3px 6px rgba(0, 0, 0, 0.9)"
+      }}
+      whileTap={{ y: 2, scale: 0.98 }}
       onClick={onClick}
+      style={{ perspective: 1000, transformStyle: "preserve-3d" }}
       className={cn(
-        "group flex items-center justify-between px-4 py-3.5 mb-2 rounded-xl cursor-pointer transition-all duration-300 relative overflow-hidden",
-        "bg-gradient-to-b from-[#1E1E24] via-[#141418] to-[#0A0A0E] shadow-[0_6px_12px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.1),inset_0_-2px_4px_rgba(0,0,0,0.8)]",
+        "group flex items-center justify-between px-4 py-3.5 mb-3 rounded-xl cursor-pointer transition-all duration-300 relative overflow-hidden",
+        "bg-gradient-to-b from-[#24242A] via-[#1A1A20] to-[#0D0D12] shadow-[0_8px_16px_rgba(0,0,0,0.8),inset_0_1px_2px_rgba(255,255,255,0.15),inset_0_-3px_6px_rgba(0,0,0,0.9)]",
         active
-          ? "border border-gold/40 text-gold shadow-[0_8px_20px_rgba(212,175,55,0.15),inset_0_1px_2px_rgba(255,255,255,0.2),inset_0_-2px_4px_rgba(0,0,0,0.8)]"
-          : "border border-white/5 text-text-muted hover:text-white hover:border-gold/20 hover:shadow-[0_8px_16px_rgba(212,175,55,0.1),inset_0_1px_2px_rgba(255,255,255,0.15),inset_0_-2px_4px_rgba(0,0,0,0.8)]"
+          ? "border border-gold/60 text-gold shadow-[0_10px_30px_rgba(212,175,55,0.3),inset_0_1px_3px_rgba(255,255,255,0.3),inset_0_-2px_4px_rgba(0,0,0,0.8)]"
+          : "border border-white/5 text-text-muted hover:text-white hover:border-gold/40"
       )}
     >
       {active && (
-        <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-gold via-yellow-400 to-gold shadow-[0_0_10px_rgba(212,175,55,0.8)]" />
+        <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-yellow-300 via-gold to-yellow-600 shadow-[0_0_15px_rgba(212,175,55,1)]" />
       )}
       
       <div className="flex items-center gap-3 relative z-10">

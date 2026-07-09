@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { TrendingUp, TrendingDown, Clock, Search, Filter } from 'lucide-react';
+import { TrendingUp, TrendingDown, Clock, Search, Filter, ShieldCheck, ArrowUpRight, Activity } from 'lucide-react';
 import { useTradingStore } from '../../stores/tradingStore';
 import { useTradingContext } from '../../contexts/TradingContext';
 
@@ -161,103 +161,103 @@ export const RecentActivity = () => {
 };
 
 export const MarketSentimentWidget = () => {
-  const [sentiment, setSentiment] = React.useState(39); // 39% Bearish from the screenshot
+  const [sentiment, setSentiment] = React.useState(39); // 0 = Bearish, 100 = Bullish
 
   // Simulate a live feel by slightly fluctuating sentiment every few seconds
   React.useEffect(() => {
     const interval = setInterval(() => {
       setSentiment(prev => {
-        const fluctuate = Math.floor(Math.random() * 5) - 2; // -2 to +2
-        let next = prev + fluctuate;
-        if (next < 0) next = 0;
-        if (next > 100) next = 100;
+        // Random walk
+        let next = prev + (Math.random() * 10 - 5);
+        if (next < 5) next = 5;
+        if (next > 95) next = 95;
         return next;
       });
-    }, 4000);
+    }, 2000);
     return () => clearInterval(interval);
   }, []);
 
   const isBearish = sentiment < 50;
-  const radius = 60;
-  const circumference = Math.PI * radius; // half circle
-  const strokeDashoffset = circumference - (sentiment / 100) * circumference;
+  // Map sentiment (0-100) to rotation (-90 to 90 degrees) for the needle
+  const needleRotation = (sentiment / 100) * 180 - 90;
 
   return (
-    <div className="glass-card p-6 border-accent-primary/20 relative overflow-hidden holo-border">
+    <motion.div 
+      whileHover={{ scale: 1.02 }}
+      className={`glass-card p-6 border-accent-primary/20 relative overflow-hidden transition-colors duration-1000 holo-border`}
+    >
+      <div className={`absolute -top-10 -right-10 w-32 h-32 rounded-full blur-3xl pointer-events-none transition-colors duration-1000 ${isBearish ? 'bg-accent-quaternary/20' : 'bg-accent-secondary/20'}`} />
+
       <div className="flex items-center justify-between mb-4 relative z-10">
-         <h3 className="text-[10px] font-bold text-accent-primary/70 uppercase tracking-[0.2em]">Market Sentiment</h3>
-         <div className="w-2 h-2 rounded-full bg-accent-quaternary animate-pulse shadow-neon-rose" />
+         <h3 className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.2em]">Market Sentiment</h3>
+         <div className={`w-2 h-2 rounded-full animate-pulse transition-colors duration-1000 ${isBearish ? 'bg-accent-quaternary shadow-neon-rose' : 'bg-accent-secondary shadow-neon-emerald'}`} />
       </div>
 
-      <div className="relative flex flex-col items-center justify-center pt-4 pb-2 z-10">
-        <svg width="180" height="100" viewBox="0 0 160 80" className="overflow-visible">
-          {/* Background Arc */}
-          <path 
-            d="M 20 80 A 60 60 0 0 1 140 80" 
-            fill="none" 
-            stroke="rgba(255,255,255,0.05)" 
-            strokeWidth="16" 
-            strokeLinecap="round" 
-          />
-          {/* Foreground Arc */}
-          <motion.path 
-            d="M 20 80 A 60 60 0 0 1 140 80" 
-            fill="none" 
-            stroke={isBearish ? "#f43f5e" : "#10b981"} // rose-500 or emerald-500
-            strokeWidth="16" 
-            strokeLinecap="round" 
-            initial={{ strokeDasharray: circumference, strokeDashoffset: circumference }}
-            animate={{ strokeDashoffset }}
-            transition={{ duration: 1.5, ease: "easeOut" }}
-            style={{ filter: `drop-shadow(0 0 8px ${isBearish ? "rgba(244,63,94,0.6)" : "rgba(16,185,129,0.6)"})` }}
-          />
-        </svg>
-
-        <div className="absolute bottom-4 flex flex-col items-center">
-          <motion.h2 
-             key={sentiment}
-             initial={{ scale: 1.2, opacity: 0 }}
-             animate={{ scale: 1, opacity: 1 }}
-             className="text-4xl font-bold text-white tracking-tighter"
+      <div className="relative flex flex-col items-center justify-center pt-8 pb-4 z-10">
+        {/* Gauge Background */}
+        <div className="relative w-48 h-24 overflow-hidden">
+          <div className="absolute top-0 left-0 w-48 h-48 rounded-full border-[12px] border-slate-800" />
+          <div className="absolute top-0 left-0 w-48 h-48 rounded-full border-[12px] border-transparent border-t-accent-quaternary border-l-accent-quaternary opacity-80" style={{ transform: 'rotate(-45deg)' }} />
+          <div className="absolute top-0 left-0 w-48 h-48 rounded-full border-[12px] border-transparent border-t-accent-secondary border-r-accent-secondary opacity-80" style={{ transform: 'rotate(45deg)' }} />
+          
+          {/* Animated Needle */}
+          <motion.div 
+            className="absolute bottom-0 left-1/2 w-1 h-24 origin-bottom bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)] z-20"
+            animate={{ rotate: needleRotation }}
+            transition={{ type: "spring", stiffness: 40, damping: 15 }}
+            style={{ x: "-50%" }}
           >
-             {sentiment}%
+             {/* Needle base */}
+             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-4 h-4 rounded-full bg-white shadow-[0_0_15px_rgba(255,255,255,1)]" />
+          </motion.div>
+        </div>
+
+        <div className="absolute bottom-0 flex flex-col items-center w-full">
+          <motion.h2 
+             key={Math.round(sentiment)}
+             initial={{ scale: 1.1, opacity: 0.8 }}
+             animate={{ scale: 1, opacity: 1 }}
+             className={`text-3xl font-bold tracking-tighter drop-shadow-md transition-colors duration-1000 ${isBearish ? 'text-accent-quaternary' : 'text-accent-secondary'}`}
+          >
+             {Math.round(sentiment)}%
           </motion.h2>
           <div className="flex items-center gap-1.5 mt-1">
              <TrendingDown size={14} className={isBearish ? "text-accent-quaternary" : "text-accent-secondary rotate-180"} />
-             <span className={`text-xs font-bold ${isBearish ? "text-accent-quaternary shadow-neon-rose" : "text-accent-secondary shadow-neon-emerald"}`}>
+             <span className={`text-[10px] font-bold uppercase tracking-widest transition-colors duration-1000 ${isBearish ? "text-accent-quaternary shadow-neon-rose" : "text-accent-secondary shadow-neon-emerald"}`}>
                {isBearish ? 'Bearish' : 'Bullish'}
              </span>
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
 export const EliteTraderWidget = () => {
   return (
     <motion.div 
-      whileHover={{ scale: 1.02 }}
-      className="glass-card p-6 border-accent-primary/30 relative overflow-hidden holo-border cursor-pointer group"
+      whileHover={{ scale: 1.02, rotateX: 2, rotateY: -2 }}
+      style={{ perspective: 1000 }}
+      className="glass-card p-0 border-accent-primary/30 relative overflow-hidden holo-border cursor-pointer group h-64"
     >
-      <div className="absolute top-0 right-0 w-32 h-32 bg-accent-primary/10 rounded-full blur-3xl group-hover:bg-accent-primary/20 transition-all duration-500" />
-      <div className="absolute -bottom-4 -right-4 opacity-10 group-hover:opacity-20 transition-opacity">
-        <svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-        </svg>
-      </div>
-
-      <div className="relative z-10 flex flex-col gap-3">
-        <div className="flex items-center justify-between mb-1">
-           <h3 className="text-[14px] font-bold text-accent-primary uppercase tracking-[0.1em] glow-text">Elite Trader</h3>
-           <div className="px-2 py-0.5 rounded text-[10px] font-bold bg-accent-primary/20 text-accent-primary border border-accent-primary/30 shadow-neon-gold">VIP</div>
+      <div className="absolute inset-0 bg-gradient-to-t from-[#000000] via-[#000000aa] to-transparent z-10 pointer-events-none" />
+      <img 
+        src="/elite-trade-ad.png" 
+        alt="BullenHaus Elite Trade" 
+        className="w-full h-full object-cover transform group-hover:scale-110 group-hover:rotate-1 transition-transform duration-700 absolute inset-0" 
+      />
+      
+      <div className="relative z-20 flex flex-col justify-end h-full p-6 pb-4">
+        <div className="flex items-center gap-2 mb-1">
+           <h3 className="text-xl font-bold text-white uppercase tracking-[0.1em] drop-shadow-lg">Elite Trade</h3>
+           <div className="px-2 py-0.5 rounded text-[10px] font-bold bg-accent-primary text-black shadow-[0_0_15px_rgba(212,175,55,0.8)]">VIP</div>
         </div>
         
-        <p className="text-[11px] text-slate-300 leading-relaxed font-medium mb-1">
-          Unlock institutional tools, deep liquidity and exclusive rewards. Elevate your trading with <span className="text-white font-bold">0% maker fees</span> and dedicated 24/7 concierge support.
+        <p className="text-xs text-slate-200 leading-relaxed font-medium mb-3 drop-shadow-md">
+          Institutional intelligence. Exclusive vaults. <span className="text-gold font-bold">0% maker fees.</span>
         </p>
 
-        <button className="w-full py-2.5 mt-2 rounded-xl bg-gradient-to-r from-accent-primary to-yellow-600 text-[11px] font-bold text-black uppercase tracking-widest hover:shadow-neon-gold transition-all duration-300">
+        <button className="w-full py-2 rounded-xl bg-gradient-to-r from-accent-primary via-yellow-400 to-yellow-600 text-[11px] font-bold text-black uppercase tracking-widest hover:shadow-[0_0_20px_rgba(212,175,55,0.8)] transition-all duration-300">
           Upgrade Now
         </button>
       </div>
