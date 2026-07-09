@@ -26,34 +26,6 @@ import {
   ChevronRight,
   Rocket
 } from 'lucide-react';
-import React from 'react';
-import { motion } from 'motion/react';
-import {
-  LayoutDashboard,
-  BarChart3,
-  TrendingUp,
-  TrendingDown,
-  Repeat,
-  Briefcase,
-  Wallet,
-  History,
-  Trophy,
-  Users,
-  Users2,
-  Bell,
-  ShieldCheck,
-  UserCircle,
-  Settings,
-  LifeBuoy,
-  LogOut,
-  Globe,
-  Moon,
-  GraduationCap,
-  Terminal,
-  X,
-  ChevronRight,
-  Rocket
-} from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useTranslation } from 'react-i18next';
 import { ProTraderCard, SentimentGauge } from './SidebarWidgets';
