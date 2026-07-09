@@ -43,7 +43,7 @@ export default async function middleware(request: Request) {
           if (envPass.trim() === '') {
             errorMessage = 'System configuration error: SITE_PASSWORD environment variable is not set in Vercel.';
           } else {
-            errorMessage = `Incorrect password. Please try again. (Debug: expected length ${envPass.length}, received length ${password.length})`;
+            errorMessage = 'Incorrect password. Please try again.';
           }
         }
       } catch (e) {

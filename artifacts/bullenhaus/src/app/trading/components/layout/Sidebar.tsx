@@ -26,6 +26,34 @@ import {
   ChevronRight,
   Rocket
 } from 'lucide-react';
+import React from 'react';
+import { motion } from 'motion/react';
+import {
+  LayoutDashboard,
+  BarChart3,
+  TrendingUp,
+  TrendingDown,
+  Repeat,
+  Briefcase,
+  Wallet,
+  History,
+  Trophy,
+  Users,
+  Users2,
+  Bell,
+  ShieldCheck,
+  UserCircle,
+  Settings,
+  LifeBuoy,
+  LogOut,
+  Globe,
+  Moon,
+  GraduationCap,
+  Terminal,
+  X,
+  ChevronRight,
+  Rocket
+} from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useTranslation } from 'react-i18next';
 import { ProTraderCard, SentimentGauge } from './SidebarWidgets';
@@ -44,21 +72,45 @@ interface SidebarItemProps {
 const SidebarItem = ({ icon: Icon, label, active, alert, to, onClick }: SidebarItemProps) => {
   const content = (
     <motion.div
-      whileHover={{ x: 4 }}
+      whileHover={{ y: -2, scale: 1.01 }}
+      whileTap={{ y: 1, scale: 0.99 }}
       onClick={onClick}
       className={cn(
-        "group flex items-center justify-between px-4 py-3 rounded-xl cursor-pointer transition-all duration-200",
+        "group flex items-center justify-between px-4 py-3.5 mb-2 rounded-xl cursor-pointer transition-all duration-300 relative overflow-hidden",
+        "bg-gradient-to-b from-[#1E1E24] via-[#141418] to-[#0A0A0E] shadow-[0_6px_12px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.1),inset_0_-2px_4px_rgba(0,0,0,0.8)]",
         active
-          ? "bg-gold/10 text-gold border border-gold/20 shadow-[inset_0_0_12px_rgba(212,175,55,0.06)]"
-          : "text-text-muted hover:text-text hover:bg-white/5 border border-transparent"
+          ? "border border-gold/40 text-gold shadow-[0_8px_20px_rgba(212,175,55,0.15),inset_0_1px_2px_rgba(255,255,255,0.2),inset_0_-2px_4px_rgba(0,0,0,0.8)]"
+          : "border border-white/5 text-text-muted hover:text-white hover:border-gold/20 hover:shadow-[0_8px_16px_rgba(212,175,55,0.1),inset_0_1px_2px_rgba(255,255,255,0.15),inset_0_-2px_4px_rgba(0,0,0,0.8)]"
       )}
     >
-      <div className="flex items-center gap-3">
-        <Icon size={18} className={cn("transition-colors shrink-0", active ? "text-gold" : "group-hover:text-text")} />
-        <span className="font-medium text-sm tracking-wide capitalize">{label}</span>
+      {active && (
+        <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-gold via-yellow-400 to-gold shadow-[0_0_10px_rgba(212,175,55,0.8)]" />
+      )}
+      
+      <div className="flex items-center gap-3 relative z-10">
+        <div className={cn(
+          "p-1.5 rounded-lg bg-[#00000080] shadow-[inset_0_1px_2px_rgba(255,255,255,0.1)] border",
+          active ? "border-gold/30" : "border-white/5 group-hover:border-gold/20 transition-colors"
+        )}>
+           <Icon 
+             size={16} 
+             className={cn(
+               "transition-all duration-300 shrink-0", 
+               active 
+                 ? "text-[#FFD700] drop-shadow-[0_0_8px_rgba(255,215,0,0.8)]" 
+                 : "text-[#D4AF37] opacity-80 group-hover:opacity-100 group-hover:text-[#FFD700] group-hover:drop-shadow-[0_0_6px_rgba(255,215,0,0.5)]"
+             )} 
+           />
+        </div>
+        <span className={cn(
+           "font-bold text-xs tracking-wider uppercase",
+           active ? "glow-text" : "group-hover:text-white transition-colors"
+        )}>
+           {label}
+        </span>
       </div>
       {alert && (
-        <span className="bg-gold text-[10px] text-black px-1.5 py-0.5 rounded-full font-bold min-w-[20px] text-center">
+        <span className="bg-gradient-to-r from-gold to-yellow-600 text-[10px] text-black px-2 py-0.5 rounded shadow-[0_0_8px_rgba(212,175,55,0.6)] font-bold min-w-[22px] text-center relative z-10">
           {alert}
         </span>
       )}
