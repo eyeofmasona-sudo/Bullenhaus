@@ -66,9 +66,9 @@ export const AdminOverview = () => {
       if ((pendingKycRes.count ?? 0) > 0)
         newAlerts.push({ label: t('adminDashboard.alerts.kycAlert'),   count: pendingKycRes.count! });
       if (pendingDeposits > 0)
-        newAlerts.push({ label: t('common.pending') + ' ' + t('common.deposits'),    count: pendingDeposits });
+        newAlerts.push({ label: t('pending') + ' ' + t('deposits'),    count: pendingDeposits });
       if (pendingWithdrawals > 0)
-        newAlerts.push({ label: t('common.pending') + ' ' + t('common.withdrawals'), count: pendingWithdrawals });
+        newAlerts.push({ label: t('pending') + ' ' + t('withdrawals'), count: pendingWithdrawals });
       setAlerts(newAlerts);
     } catch {
       // keep previous state on error
@@ -86,8 +86,8 @@ export const AdminOverview = () => {
   const metricCards = [
     { label: t('adminDashboard.cards.totalUsers'),         value: metrics?.totalUsers?.toLocaleString() ?? '…', sub: t('adminDashboard.cards.registeredAccounts'), icon: Users,      color: 'text-blue-400' },
     { label: t('adminDashboard.cards.volumeToday'),        value: metrics ? `$${metrics.volumeToday.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : '…', sub: t('adminDashboard.cards.completedTx'), icon: Activity, color: 'text-accent-primary' },
-    { label: t('common.pending') + ' ' + t('common.deposits'),    value: metrics?.pendingDeposits?.toString()    ?? '…', sub: t('adminDashboard.cards.awaitingReview'), icon: ShieldAlert, color: metrics?.pendingDeposits    ? 'text-orange-400' : 'text-emerald-500' },
-    { label: t('common.pending') + ' ' + t('common.withdrawals'), value: metrics?.pendingWithdrawals?.toString() ?? '…', sub: t('adminDashboard.cards.awaitingReview'), icon: Server,      color: metrics?.pendingWithdrawals ? 'text-rose-400'   : 'text-emerald-500' },
+    { label: t('pending') + ' ' + t('deposits'),    value: metrics?.pendingDeposits?.toString()    ?? '…', sub: t('adminDashboard.cards.awaitingReview'), icon: ShieldAlert, color: metrics?.pendingDeposits    ? 'text-orange-400' : 'text-emerald-500' },
+    { label: t('pending') + ' ' + t('withdrawals'), value: metrics?.pendingWithdrawals?.toString() ?? '…', sub: t('adminDashboard.cards.awaitingReview'), icon: Server,      color: metrics?.pendingWithdrawals ? 'text-rose-400'   : 'text-emerald-500' },
   ];
 
   return (
@@ -118,7 +118,7 @@ export const AdminOverview = () => {
         {metricCards.map((m, i) => (
           <div
             key={i}
-            className="relative group p-6 pl-7 rounded-2xl bg-gradient-to-br from-[#15151A] to-[#0E0E12] border border-white/[0.08] hover:border-gold/30 transition-all duration-300 hover:-translate-y-1 overflow-hidden"
+            className="relative group p-6 pl-7 rounded-2xl glass-card border-white/[0.08] hover:border-gold/30 transition-all duration-300 hover:-translate-y-1 overflow-hidden"
             style={{ boxShadow: '0 1px 0 0 rgba(255,255,255,0.05) inset, 0 16px 40px -8px rgba(0,0,0,0.6)' }}
           >
             {/* LEFT gold accent bar — VISIBLE luxury signature */}
@@ -168,11 +168,11 @@ export const AdminOverview = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-bold text-white truncate">{ev.user_name || ev.user_email || t('adminDashboard.feed.unknown')}</p>
-                    <p className="text-[10px] text-text-dim font-mono">{t(`common.${ev.type.toLowerCase()}s`) || ev.type} · ${Number(ev.amount || 0).toLocaleString()}</p>
+                    <p className="text-[10px] text-text-dim font-mono">{t(`${ev.type.toLowerCase()}s`) || ev.type} · ${Number(ev.amount || 0).toLocaleString()}</p>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     {statusIcon(ev.status)}
-                    <span className={`text-[10px] font-bold ${statusColor(ev.status)}`}>{t(`common.${ev.status.toLowerCase()}`) || ev.status}</span>
+                    <span className={`text-[10px] font-bold ${statusColor(ev.status)}`}>{t(`${ev.status.toLowerCase()}`) || ev.status}</span>
                   </div>
                   <span className="text-[9px] text-text-dim font-mono shrink-0 w-20 text-right">
                     {new Date(ev.created_at).toLocaleTimeString()}

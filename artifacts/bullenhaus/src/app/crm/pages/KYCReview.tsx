@@ -122,7 +122,7 @@ export function KYCReview() {
         </div>
       )}
 
-      <div className="overflow-hidden rounded-xl border border-glass-border bg-[#121214]">
+      <div className="overflow-hidden rounded-xl border border-glass-border glass-card">
         {loading ? (
           <div className="flex items-center justify-center py-16 text-aura-platinum/40">
             <Loader2 className="mr-3 h-5 w-5 animate-spin text-aura-gold" /> Loading KYC clients
@@ -131,7 +131,7 @@ export function KYCReview() {
           <div className="flex items-center justify-center py-16 text-sm text-aura-platinum/40">{emptyText}</div>
         ) : (
           <table className="w-full text-left">
-            <thead className="border-b border-glass-border bg-black/20 text-[10px] uppercase tracking-widest text-aura-platinum/40">
+            <thead className="border-b border-glass-border glass-card text-[10px] uppercase tracking-widest text-aura-platinum/40">
               <tr>
                 <th className="px-5 py-3">Client</th>
                 <th className="px-5 py-3">Status</th>

@@ -168,8 +168,8 @@ export const Sidebar = ({ onClose }: { onClose?: () => void }) => {
         )}
 
         <div className="pt-6">
-          <ProTraderCard />
-          <SentimentGauge />
+          
+          
         </div>
       </nav>
 
@@ -198,3 +198,4 @@ export const Sidebar = ({ onClose }: { onClose?: () => void }) => {
     </aside>
   );
 };
+

@@ -33,6 +33,28 @@ import { AnimatePresence, motion } from "motion/react";
 import { useI18n } from "../lib/i18n";
 import { TeamChat } from "./TeamChat";
 
+const iconMap: Record<string, string> = {
+  'navDirectorDashboard': '/assets/icons/dashboard.png',
+  'navManagerDashboard': '/assets/icons/dashboard.png',
+  'navAdminPanel': '/assets/icons/settings.png',
+  'Kanban Board': '/assets/icons/trade.png',
+  'navLeads': '/assets/icons/users.png',
+  'Tasks': '/assets/icons/dashboard.png',
+  'navClients': '/assets/icons/users.png',
+  'navVipClients': '/assets/icons/users.png',
+  'Support Tickets': '/assets/icons/shield.png',
+  'Messages': '/assets/icons/users.png',
+  'Sales Scripts': '/assets/icons/settings.png',
+  'KYC Review': '/assets/icons/shield.png',
+  'Workflow Rules': '/assets/icons/settings.png',
+  'Call History': '/assets/icons/users.png',
+  'Telephony': '/assets/icons/users.png',
+  'AI Core Insights': '/assets/icons/dashboard.png',
+  'navTeamPipeline': '/assets/icons/users.png',
+  'navAgentWorkspace': '/assets/icons/dashboard.png',
+  'My Clients': '/assets/icons/users.png',
+};
+
 const getNavForRole = (role: string, t: (key: string) => string) => {
   switch (role) {
     case 'director':
@@ -166,22 +188,50 @@ export function Layout({ children, role, onLogout }: { children: ReactNode, role
       <div className="flex-1 overflow-y-auto px-4 pt-4 space-y-6 relative z-10 custom-scrollbar">
         <div>
           <div className="mb-2 px-4 text-[10px] font-bold tracking-widest text-aura-platinum/30 uppercase">{t('commandCenter')}</div>
-          <nav className="space-y-1">
+          <nav className="space-y-1.5">
             {navigation.map((item) => {
               const isActive = location.pathname === item.href || (item.href !== '/' && location.pathname.startsWith(item.href));
+              const customIconSrc = iconMap[item.name];
+              const Icon = item.icon;
+              
               return (
                 <Link
                   key={item.name}
                   to={item.href}
                   className={clsx(
-                    "flex items-center gap-4 px-4 py-3 rounded text-sm transition-colors outline-none focus:outline-none",
+                    "group relative flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-all duration-300 outline-none focus:outline-none overflow-hidden cursor-pointer",
+                    "bg-gradient-to-b from-[#1A1A1E] via-[#101014] to-[#08080C] shadow-[0_4px_8px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.05),inset_0_-1px_2px_rgba(0,0,0,0.6)]",
                     isActive 
-                      ? "bg-white/5 text-aura-gold border-l-2 border-aura-gold/50" 
-                      : "text-aura-platinum/50 hover:bg-white/5 hover:text-aura-platinum border-l-2 border-transparent"
+                      ? "border border-aura-gold/40 text-aura-gold shadow-[0_6px_16px_rgba(212,175,55,0.15),inset_0_1px_2px_rgba(255,255,255,0.1),inset_0_-1px_3px_rgba(0,0,0,0.6)]" 
+                      : "border border-white/5 text-aura-platinum/50 hover:bg-white/5 hover:text-aura-platinum hover:border-aura-gold/20 hover:shadow-[0_6px_12px_rgba(212,175,55,0.1),inset_0_1px_2px_rgba(255,255,255,0.1),inset_0_-1px_3px_rgba(0,0,0,0.6)]"
                   )}
                 >
-                  <item.icon className="w-4 h-4" />
-                  {item.name}
+                  {isActive && (
+                    <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-aura-gold via-yellow-400 to-aura-gold shadow-[0_0_10px_rgba(212,175,55,0.8)]" />
+                  )}
+                  <div className={clsx(
+                    "p-1 rounded-lg glass-card shadow-[inset_0_1px_2px_rgba(255,255,255,0.05)] border relative z-10 shrink-0",
+                    isActive ? "border-aura-gold/30" : "border-white/5 group-hover:border-aura-gold/20 transition-colors"
+                  )}>
+                    {customIconSrc ? (
+                      <img 
+                        src={customIconSrc} 
+                        alt={item.name} 
+                        className={clsx(
+                          "w-4 h-4 object-contain transition-all duration-300",
+                          isActive ? "drop-shadow-[0_0_8px_rgba(212,175,55,0.8)] filter brightness-110" : "opacity-80 group-hover:opacity-100 group-hover:drop-shadow-[0_0_6px_rgba(212,175,55,0.5)] filter grayscale-[0.3]"
+                        )}
+                      />
+                    ) : (
+                      <Icon className={clsx("w-3.5 h-3.5 transition-all duration-300", isActive ? "text-aura-gold drop-shadow-[0_0_8px_rgba(212,175,55,0.8)]" : "text-aura-platinum/50 group-hover:text-aura-gold group-hover:drop-shadow-[0_0_6px_rgba(212,175,55,0.5)]")} />
+                    )}
+                  </div>
+                  <span className={clsx(
+                    "font-bold text-[10px] tracking-wider uppercase relative z-10 flex-1",
+                    isActive ? "glow-text text-yellow-200" : "group-hover:text-white transition-colors"
+                  )}>
+                    {item.name}
+                  </span>
                 </Link>
               );
             })}
@@ -210,23 +260,19 @@ export function Layout({ children, role, onLogout }: { children: ReactNode, role
         )}
       </div>
 
-      <div className="p-6 border-t border-glass-border">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded bg-gradient-to-tr from-aura-gold to-aura-gold-light p-[1px]">
-              <div className="h-full w-full rounded bg-sidebar-bg flex items-center justify-center">
-                <span className="text-[10px] font-bold text-aura-gold uppercase">{role.substring(0, 2)}</span>
-              </div>
-            </div>
-            <div>
-              <div className="text-[11px] font-bold tracking-wider uppercase">{role}</div>
-              <div className="text-[9px] uppercase tracking-widest text-aura-gold">{t('auraAccount')}</div>
-            </div>
+      <div className="p-4 border-t border-white/5 glass-card shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded overflow-hidden flex items-center justify-center border border-aura-gold/20 shadow-[0_0_10px_rgba(212,175,55,0.2)] glass-card p-1">
+            <img src="/assets/icons/role_badge.png" alt="Role Badge" className="w-full h-full object-contain filter brightness-110 drop-shadow-[0_0_4px_rgba(212,175,55,0.6)]" />
           </div>
-          <button onClick={onLogout} className="p-2 text-aura-platinum/30 hover:text-aura-ruby transition-colors relative group">
-            <LogOut className="w-4 h-4" />
-          </button>
+          <div>
+            <div className="text-[11px] font-bold tracking-wider uppercase">{role}</div>
+            <div className="text-[9px] uppercase tracking-widest text-aura-gold">{t('auraAccount')}</div>
+          </div>
         </div>
+        <button onClick={onLogout} className="p-2 text-aura-platinum/30 hover:text-aura-ruby transition-colors relative group">
+          <LogOut className="w-4 h-4" />
+        </button>
       </div>
     </>
   );
@@ -272,9 +318,9 @@ export function Layout({ children, role, onLogout }: { children: ReactNode, role
       </AnimatePresence>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col relative h-screen overflow-hidden bg-gradient-to-br from-[#08080B] via-[#0A0A10] to-[#0E0E14]">
+      <div className="flex-1 flex flex-col relative h-screen overflow-hidden glass-card">
         {/* Global Command/Alert Bar — premium with bottom gold hairline */}
-        <div className="relative h-9 bg-[#0A0A0E] border-b border-gold/10 flex items-center justify-between px-6 shrink-0 z-30 overflow-hidden">
+        <div className="relative h-9 glass-card-b border-gold/10 flex items-center justify-between px-6 shrink-0 z-30 overflow-hidden">
           {/* Bottom gold hairline */}
           <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold/35 to-transparent" />
           <div className="flex items-center gap-4 text-[9px] uppercase tracking-widest font-mono text-aura-platinum/40">

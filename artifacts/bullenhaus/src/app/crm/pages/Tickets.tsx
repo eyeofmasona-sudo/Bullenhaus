@@ -44,7 +44,7 @@ function TicketRow({ ticket, onOpen }: { ticket: any, onOpen: () => void }) {
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       onClick={onOpen}
-      className="group w-full text-left flex items-center gap-3 rounded-lg border border-white/5 bg-[#15151A]/60 hover:border-gold/30 hover:bg-[#1A1A20] p-3 transition-all"
+      className="group w-full text-left flex items-center gap-3 rounded-lg border border-white/5 glass-card/60 hover:border-gold/30 hover:glass-card p-3 transition-all"
     >
       <div className="p-2 rounded-lg" style={{ backgroundColor: (priority?.color || '#64748b') + '15', color: priority?.color }}>
         <LifeBuoy size={14} />
@@ -188,7 +188,7 @@ function TicketDetail({ ticket, onClose, onUpdate, onComment }: {
             ) : comments.length === 0 ? (
               <p className="text-[11px] text-aura-platinum/40 text-center py-4">No comments yet</p>
             ) : comments.map((c) => (
-              <div key={c.id} className="rounded-lg border border-white/5 bg-[#15151A] p-2.5">
+              <div key={c.id} className="rounded-lg border border-white/5 glass-card p-2.5">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[10px] font-bold text-gold/80">{c.authorName}</span>
                   <span className="text-[9px] text-aura-platinum/40">{timeAgo(c.created_at)}</span>

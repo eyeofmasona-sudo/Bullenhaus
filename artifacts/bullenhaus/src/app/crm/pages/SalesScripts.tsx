@@ -30,7 +30,7 @@ function ScriptCard({ script, onOpen }: { script: any, onOpen: () => void }) {
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       onClick={onOpen}
-      className="group w-full text-left rounded-lg border border-white/5 bg-[#15151A]/60 hover:border-gold/30 hover:bg-[#1A1A20] p-3 transition-all"
+      className="group w-full text-left rounded-lg border border-white/5 glass-card/60 hover:border-gold/30 hover:glass-card p-3 transition-all"
     >
       <div className="flex items-start gap-3 mb-2">
         <div className="p-2 rounded-lg" style={{ backgroundColor: (cat?.color || '#64748b') + '15', color: cat?.color }}>

@@ -174,7 +174,7 @@ export const Messages = () => {
   return (
     <div className="flex h-[calc(100vh-160px)] gap-4">
       {/* Client list sidebar */}
-      <div className="w-72 shrink-0 flex flex-col bg-black/20 border border-white/5 rounded-xl overflow-hidden">
+      <div className="w-72 shrink-0 flex flex-col glass-card overflow-hidden">
         <div className="p-2 border-b border-white/5">
           <div className="relative">
             <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-aura-platinum/40" />
@@ -203,7 +203,7 @@ export const Messages = () => {
       </div>
 
       {/* Chat area */}
-      <div className="flex-1 flex flex-col bg-black/20 border border-white/5 rounded-xl overflow-hidden">
+      <div className="flex-1 flex flex-col glass-card overflow-hidden">
         {!selectedClientId ? (
           <div className="flex-1 flex flex-col items-center justify-center text-aura-platinum/40">
             <MessageCircle size={32} className="mb-2 opacity-50" />
@@ -262,7 +262,7 @@ export const Messages = () => {
 
               {/* Template dropdown */}
               {showTemplates && (
-                <div className="rounded-lg border border-white/8 bg-[#15151A] max-h-48 overflow-y-auto custom-scrollbar">
+                <div className="rounded-lg border border-white/8 glass-card max-h-48 overflow-y-auto custom-scrollbar">
                   {templatesLoading ? (
                     <p className="text-[10px] text-center py-3 text-aura-platinum/40">Loading…</p>
                   ) : templates.length === 0 ? (

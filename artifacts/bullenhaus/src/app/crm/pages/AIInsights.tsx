@@ -817,7 +817,7 @@ NOTE: This reminder is a suggestion. Agent or manager must confirm before acting
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left transition-all text-xs ${
                   selected === c.id
                     ? "bg-aura-gold/15 border border-aura-gold/30 text-aura-gold"
-                    : "bg-black/20 border border-glass-border text-aura-platinum/60 hover:text-aura-platinum hover:border-aura-gold/15"
+                    : "glass-card border-glass-border text-aura-platinum/60 hover:text-aura-platinum hover:border-aura-gold/15"
                 }`}
               >
                 <span className="font-bold truncate">{c.name}</span>
@@ -851,7 +851,7 @@ NOTE: This reminder is a suggestion. Agent or manager must confirm before acting
               className={`flex-1 py-2 rounded-lg text-[10px] font-bold border transition-all uppercase tracking-wider ${
                 mode === m
                   ? "bg-aura-gold/15 border-aura-gold/40 text-aura-gold"
-                  : "bg-black/20 border-glass-border text-aura-platinum/40 hover:text-aura-platinum hover:border-aura-gold/15"
+                  : "glass-card-glass-border text-aura-platinum/40 hover:text-aura-platinum hover:border-aura-gold/15"
               }`}
             >
               {modeLabels[m]}
@@ -1172,7 +1172,7 @@ function ApiKeyPanel({ onClose }: { onClose: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-      className="rounded-xl border border-aura-gold/20 bg-[#0E1012] p-5 space-y-4"
+      className="rounded-xl border border-aura-gold/20 glass-card p-5 space-y-4"
     >
       <div className="flex items-center justify-between">
         <p className="text-xs font-bold text-aura-platinum uppercase tracking-widest">AI Model Settings</p>
@@ -1329,7 +1329,7 @@ export function AIInsights() {
       )}
 
       {!clientsLoading && !clientsError && clients.length === 0 && (
-        <div className="rounded-xl border border-glass-border bg-black/20 p-5">
+        <div className="rounded-xl border border-glass-border glass-card p-5">
           <p className="text-sm font-bold text-aura-platinum">No AI insights yet</p>
           <p className="mt-1 text-xs text-aura-platinum/50">
             Insights will appear after client activity, calls, tasks, or lead updates.
@@ -1352,7 +1352,7 @@ export function AIInsights() {
               className={`relative flex flex-col items-start gap-1 p-3 rounded-xl border transition-all text-left ${
                 active
                   ? "bg-aura-gold/8 border-aura-gold/30 text-aura-gold"
-                  : "bg-black/20 border-glass-border text-aura-platinum/50 hover:border-aura-gold/15 hover:text-aura-platinum/80"
+                  : "glass-card-glass-border text-aura-platinum/50 hover:border-aura-gold/15 hover:text-aura-platinum/80"
               }`}
             >
               <Icon className="w-3.5 h-3.5" />
@@ -1367,7 +1367,7 @@ export function AIInsights() {
       </div>
 
       {/* ── Tab content ───────────────────────────────────────────────────── */}
-      <div className="rounded-2xl border border-glass-border bg-[#0A0A0B] p-6">
+      <div className="rounded-2xl border border-glass-border glass-card p-6">
         <AnimatePresence mode="wait">
           <motion.div key={tab} initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }} transition={{ duration: 0.15 }}>
             {tab === "summary"      && <SummaryTab     clients={clients} clientsLoading={clientsLoading} />}

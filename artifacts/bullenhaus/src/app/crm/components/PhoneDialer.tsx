@@ -212,7 +212,7 @@ export function PhoneDialer({ prefill, onClearPrefill }: PhoneDialerProps) {
 
   if (minimized) {
     return (
-      <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-[#0E1012] border border-aura-emerald/40 rounded-full px-4 py-2 shadow-[0_0_20px_rgba(16,185,129,0.2)] cursor-pointer" onClick={() => setMinimized(false)}>
+      <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 glass-card border-aura-emerald/40 rounded-full px-4 py-2 shadow-[0_0_20px_rgba(16,185,129,0.2)] cursor-pointer" onClick={() => setMinimized(false)}>
         <span className={`w-2 h-2 rounded-full ${callState === 'active' ? 'bg-aura-emerald animate-pulse' : 'bg-aura-platinum/30'}`} />
         <span className="text-xs font-mono text-aura-platinum">
           {callState === 'active' ? fmtDuration(elapsed) : (number ? fmtPhone(number) : 'Dialer')}
@@ -225,7 +225,7 @@ export function PhoneDialer({ prefill, onClearPrefill }: PhoneDialerProps) {
   // ── Full dialer panel ─────────────────────────────────────────────────────
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 w-[320px] rounded-2xl border border-glass-border bg-[#0E1012] shadow-[0_20px_60px_rgba(0,0,0,0.8)] overflow-hidden">
+    <div className="fixed bottom-6 right-6 z-50 w-[320px] rounded-2xl border border-glass-border glass-card shadow-[0_20px_60px_rgba(0,0,0,0.8)] overflow-hidden">
 
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-glass-border bg-black/30">
@@ -266,7 +266,7 @@ export function PhoneDialer({ prefill, onClearPrefill }: PhoneDialerProps) {
             <div className={`rounded-lg px-3 py-2 text-center text-[11px] font-mono border ${
               callState === 'active'  ? 'border-aura-emerald/30 bg-aura-emerald/10 text-aura-emerald' :
               callState === 'ringing' ? 'border-yellow-400/30 bg-yellow-400/10 text-yellow-400' :
-              'border-glass-border bg-black/20 text-aura-platinum/50'
+              'border-glass-border glass-card text-aura-platinum/50'
             }`}>
               {callState === 'dialing'  && '⬤ Dialing…'}
               {callState === 'ringing'  && '⬤ Ringing…'}
@@ -274,7 +274,7 @@ export function PhoneDialer({ prefill, onClearPrefill }: PhoneDialerProps) {
             </div>
           )}
           {callState === 'ended' && (
-            <div className="rounded-lg px-3 py-2 text-center text-[11px] font-mono border border-glass-border bg-black/20 text-aura-platinum/40">
+            <div className="rounded-lg px-3 py-2 text-center text-[11px] font-mono border border-glass-border glass-card text-aura-platinum/40">
               Call ended
             </div>
           )}
@@ -308,7 +308,7 @@ export function PhoneDialer({ prefill, onClearPrefill }: PhoneDialerProps) {
                 key={digit}
                 onMouseDown={() => press(digit)}
                 disabled={callState !== 'idle'}
-                className="flex flex-col items-center justify-center h-12 rounded-xl border border-glass-border bg-black/20 hover:bg-white/5 hover:border-aura-gold/20 active:bg-aura-gold/10 transition-all disabled:opacity-40 select-none"
+                className="flex flex-col items-center justify-center h-12 rounded-xl border border-glass-border glass-card hover:bg-white/5 hover:border-aura-gold/20 active:bg-aura-gold/10 transition-all disabled:opacity-40 select-none"
               >
                 <span className="text-sm font-medium text-aura-platinum leading-none">{digit}</span>
                 {sub && <span className="text-[7px] text-aura-platinum/30 tracking-widest mt-0.5">{sub}</span>}

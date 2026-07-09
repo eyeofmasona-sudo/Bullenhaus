@@ -264,7 +264,7 @@ export function ManagerDashboard() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
         {/* ── Agent Roster (real online status) ── */}
-        <div className="xl:col-span-1 rounded-xl border border-glass-border bg-[#121214] p-6 flex flex-col min-h-[460px]">
+        <div className="xl:col-span-1 rounded-xl border border-glass-border glass-card p-6 flex flex-col min-h-[460px]">
           <div className="flex items-center justify-between mb-5">
             <h3 className="text-xs font-bold tracking-[0.2em] text-aura-platinum/60 uppercase">Agents</h3>
             <button
@@ -290,7 +290,7 @@ export function ManagerDashboard() {
                 const { label, dotClass, textClass } = getOnlineStatus(agent.last_seen_at);
                 const load = agent.leadCount + agent.clientCount;
                 return (
-                  <div key={agent.id} className="p-3 rounded-lg border border-glass-border bg-black/20 flex items-center gap-3">
+                  <div key={agent.id} className="p-3 rounded-lg border border-glass-border glass-card flex items-center gap-3">
                     <div className="relative shrink-0">
                       <div className="h-9 w-9 rounded-lg bg-gradient-to-tr from-aura-gold/20 to-transparent border border-aura-gold/20 flex items-center justify-center text-[10px] font-bold text-aura-gold uppercase">
                         {displayName(agent).substring(0, 2)}
@@ -315,7 +315,7 @@ export function ManagerDashboard() {
         </div>
 
         {/* ── Assignment Panel ── */}
-        <div className="xl:col-span-2 rounded-xl border border-glass-border bg-[#121214] p-6 flex flex-col min-h-[460px]">
+        <div className="xl:col-span-2 rounded-xl border border-glass-border glass-card p-6 flex flex-col min-h-[460px]">
 
           {/* Tab bar + Auto-Assign */}
           <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
@@ -391,7 +391,7 @@ export function ManagerDashboard() {
                     className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
                       isBeingAssigned
                         ? 'border-aura-gold/40 bg-aura-gold/5'
-                        : 'border-glass-border bg-black/20 hover:bg-black/40'
+                        : 'border-glass-border glass-card hover:bg-black/40'
                     }`}
                   >
                     {/* Avatar */}
@@ -425,7 +425,7 @@ export function ManagerDashboard() {
                             await assignItem(table, item.id, val);
                           }}
                           disabled={agents.length === 0}
-                          className="bg-[#0A0A0B] border border-glass-border text-aura-platinum text-[10px] rounded-lg px-2 py-1.5 outline-none focus:border-aura-gold/50 disabled:opacity-40 max-w-[130px] cursor-pointer"
+                          className="glass-card border-glass-border text-aura-platinum text-[10px] rounded-lg px-2 py-1.5 outline-none focus:border-aura-gold/50 disabled:opacity-40 max-w-[130px] cursor-pointer"
                         >
                           <option value="">Assign to…</option>
                           {agents.map(a => (

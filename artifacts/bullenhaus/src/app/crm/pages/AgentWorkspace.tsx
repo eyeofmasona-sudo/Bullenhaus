@@ -113,7 +113,7 @@ function LeadPipeline({ leads, meta, loading, error, onRetry, onCall, onStageCha
                      <div
                        key={lead.id} 
                        onClick={() => selectable ? onToggleSelect(lead.id) : onOpen(lead)}
-                       className={`p-4 rounded-xl border bg-[#121214] hover:-translate-y-1 transition-transform cursor-pointer group shadow-sm hover:shadow-md ${selectedIds.has(lead.id) ? 'ring-2 ring-aura-gold border-aura-gold/60' : ''}
+                       className={`p-4 rounded-xl border glass-card hover:-translate-y-1 transition-transform cursor-pointer group shadow-sm hover:shadow-md ${selectedIds.has(lead.id) ? 'ring-2 ring-aura-gold border-aura-gold/60' : ''}
                          ${lead.stage === 'FUNDED' ? 'border-aura-emerald/30 hover:border-aura-emerald/50' :
                          lead.stage === 'PENDING_KYC' ? 'border-aura-warning/30 hover:border-aura-warning/50' :
                          'border-glass-border hover:border-aura-platinum/30'}
@@ -168,7 +168,7 @@ function LeadPipeline({ leads, meta, loading, error, onRetry, onCall, onStageCha
                              } ${!canMoveStage ? 'cursor-not-allowed opacity-60' : ''}`}
                            >
                              {stageOptions.map(s => (
-                               <option key={s.value} value={s.value} className="bg-[#121214] text-aura-platinum">{s.label}</option>
+                               <option key={s.value} value={s.value} className="glass-card text-aura-platinum">{s.label}</option>
                              ))}
                            </select>
                              );
@@ -613,7 +613,7 @@ export function AgentWorkspace() {
         
         {/* Featured Lead Panel */}
         <div className="xl:col-span-2 space-y-6">
-          <div className="rounded-xl border border-glass-border bg-[#121214] p-8">
+          <div className="rounded-xl border border-glass-border glass-card p-8">
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-6 h-6 text-aura-gold animate-spin" />
@@ -717,7 +717,7 @@ export function AgentWorkspace() {
 
         {/* Task Queue */}
         <div className="space-y-6">
-          <div className="rounded-xl border border-glass-border bg-[#121214] p-6">
+          <div className="rounded-xl border border-glass-border glass-card p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xs font-bold tracking-[0.2em] text-aura-platinum/60 uppercase">Task Queue</h3>
               <button 
@@ -739,7 +739,7 @@ export function AgentWorkspace() {
                 </div>
               ) : (
                 taskQueue.map((task, i) => (
-                  <div key={i} className={`p-4 rounded border-l-2 flex justify-between items-center transition-colors hover:bg-white/5 ${task.urgent ? 'border-aura-ruby bg-aura-ruby/5' : 'border-aura-platinum/30 bg-[#0A0A0B]'}`}>
+                  <div key={i} className={`p-4 rounded border-l-2 flex justify-between items-center transition-colors hover:bg-white/5 ${task.urgent ? 'border-aura-ruby bg-aura-ruby/5' : 'border-aura-platinum/30 glass-card'}`}>
                     <div>
                       <div className="text-xs font-medium text-aura-platinum">{task.name}</div>
                       <div className={`text-[9px] uppercase tracking-widest mt-1 ${task.urgent ? 'text-aura-ruby' : 'text-aura-platinum/50'}`}>{task.type}</div>
@@ -774,7 +774,7 @@ export function AgentWorkspace() {
 
       {/* Bulk selection action bar */}
       {canAssignLeads(role) && selectedIds.size > 0 && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-4 px-5 py-3 rounded-xl border border-aura-gold/30 bg-[#121214] shadow-2xl">
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-4 px-5 py-3 rounded-xl border border-aura-gold/30 glass-card shadow-2xl">
           <span className="text-xs text-aura-platinum">{t('leadSelectedLabel')}: <b className="text-aura-gold">{selectedIds.size}</b></span>
           <Button variant="primary" size="sm" onClick={() => { setAgentSearch(''); setChosenAgentId(null); setAssignOpen(true); }}>
             {t('leadAssignToAgent')}
@@ -800,7 +800,7 @@ export function AgentWorkspace() {
                 key={a.id}
                 onClick={() => setChosenAgentId(a.id)}
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border text-left text-xs transition-colors ${
-                  chosenAgentId === a.id ? 'border-aura-gold/50 bg-aura-gold/10 text-aura-platinum' : 'border-glass-border bg-black/20 text-aura-platinum/70 hover:bg-white/5'
+                  chosenAgentId === a.id ? 'border-aura-gold/50 bg-aura-gold/10 text-aura-platinum' : 'border-glass-border glass-card text-aura-platinum/70 hover:bg-white/5'
                 }`}
               >
                 <span>{agentName(a)}</span>

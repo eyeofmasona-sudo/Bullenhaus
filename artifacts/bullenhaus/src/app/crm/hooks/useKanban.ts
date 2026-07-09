@@ -43,16 +43,21 @@ export function useKanban(filters: KanbanFilters = {}) {
     setLoading(true);
     setError(null);
     try {
-      const CHUNK = 1000;
-      let from = 0;
-      let all: any[] = [];
-
-      while (true) {
+      const allLeads: any[] = [];
+      await Promise.all(KANBAN_STAGES.map(async (stage) => {
         let q = supabase
           .from('leads')
           .select(LEADS_SELECT)
           .order('created_at', { ascending: false })
-          .range(from, from + CHUNK - 1);
+          .limit(100);
+
+        // Map NEW to also include null stages if possible, or just strict match.
+        // Usually default in DB is 'NEW'.
+        if (stage.value === 'NEW') {
+          q = q.or(`stage.eq.NEW,stage.is.null`);
+        } else {
+          q = q.eq('stage', stage.value);
+        }
 
         if (filters.search) {
           q = q.or(`first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%`);
@@ -64,16 +69,14 @@ export function useKanban(filters: KanbanFilters = {}) {
           q = q.eq('acquisition_source->>channel', filters.source);
         }
 
-        const { data: chunk, error: dbError } = await q;
+        const { data, error: dbError } = await q;
         if (dbError) throw new Error(dbError.message);
+        if (data) {
+          allLeads.push(...data);
+        }
+      }));
 
-        const batch = chunk ?? [];
-        all = all.concat(batch);
-        if (batch.length < CHUNK) break;
-        from += CHUNK;
-      }
-
-      setLeads(all.map(mapLead));
+      setLeads(allLeads.map(mapLead));
     } catch (err: any) {
       setError(err.message || 'Failed to load leads');
     } finally {

@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, memo } from 'react';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
 import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
-  closestCorners, type DragEndEvent, type DragStartEvent,
+  closestCorners, useDroppable, type DragEndEvent, type DragStartEvent,
 } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -16,12 +16,12 @@ import { supabase } from '../../../lib/supabase/browserClient';
 // ---------------------------------------------------------------------------
 // Sortable Lead Card
 // ---------------------------------------------------------------------------
-function SortableLeadCard({ lead }: { lead: any }) {
+const SortableLeadCard = memo(function SortableLeadCard({ lead, isMoving }: { lead: any, isMoving: boolean }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: lead.id });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.4 : 1,
+    opacity: isDragging ? 0.4 : (isMoving ? 0.5 : 1),
   };
   const name = [lead.firstName, lead.lastName].filter(Boolean).join(' ') || lead.email || 'Unknown';
   return (
@@ -30,7 +30,7 @@ function SortableLeadCard({ lead }: { lead: any }) {
       style={style}
       {...attributes}
       {...listeners}
-      className="group cursor-grab active:cursor-grabbing rounded-lg border border-white/5 bg-gradient-to-br from-[#15151A] to-[#0E0E12] p-3 hover:border-gold/30 transition-all"
+      className="group cursor-grab active:cursor-grabbing rounded-lg border border-white/5 glass-card p-3 hover:border-gold/30 transition-all"
     >
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="min-w-0 flex-1">
@@ -61,7 +61,7 @@ function SortableLeadCard({ lead }: { lead: any }) {
       </div>
     </div>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // Static Lead Card (for DragOverlay)
@@ -69,7 +69,7 @@ function SortableLeadCard({ lead }: { lead: any }) {
 function LeadCardOverlay({ lead }: { lead: any }) {
   const name = [lead.firstName, lead.lastName].filter(Boolean).join(' ') || lead.email || 'Unknown';
   return (
-    <div className="rounded-lg border border-gold/40 bg-gradient-to-br from-[#1A1A20] to-[#12121A] p-3 shadow-[0_0_24px_rgba(212,175,55,0.3)] rotate-2">
+    <div className="rounded-lg border border-gold/40 glass-card p-3 shadow-[0_0_24px_rgba(212,175,55,0.3)] rotate-2">
       <p className="truncate text-[12px] font-bold text-aura-platinum">{name}</p>
       {lead.email && <p className="truncate text-[10px] text-aura-platinum/40">{lead.email}</p>}
     </div>
@@ -79,9 +79,11 @@ function LeadCardOverlay({ lead }: { lead: any }) {
 // ---------------------------------------------------------------------------
 // Kanban Column
 // ---------------------------------------------------------------------------
-function KanbanColumn({ stage, leads, movingId }: { stage: typeof KANBAN_STAGES[number], leads: any[], movingId: string | null }) {
+const KanbanColumn = memo(function KanbanColumn({ stage, leads, movingId }: { stage: typeof KANBAN_STAGES[number], leads: any[], movingId: string | null }) {
+  const { setNodeRef, isOver } = useDroppable({ id: stage.value });
+  
   return (
-    <div className="flex w-72 shrink-0 flex-col bg-black/20 border border-white/5 rounded-xl overflow-hidden">
+    <div className={`flex flex-1 min-w-[150px] flex-col glass-card transition-colors duration-200 rounded-xl overflow-hidden ${isOver ? 'border-gold/30 bg-gold/5' : 'border-white/5'}`}>
       <div className="flex items-center justify-between px-3 py-2 border-b border-white/5" style={{ borderTopColor: stage.color, borderTopWidth: '2px' }}>
         <div className="flex items-center gap-2">
           <span className="h-2 w-2 rounded-full" style={{ backgroundColor: stage.color }} />
@@ -90,21 +92,19 @@ function KanbanColumn({ stage, leads, movingId }: { stage: typeof KANBAN_STAGES[
         <span className="text-[10px] font-mono font-bold text-aura-platinum/60 px-1.5 py-0.5 rounded bg-white/5">{leads.length}</span>
       </div>
       <SortableContext items={leads.map((l) => l.id)} strategy={verticalListSortingStrategy}>
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2 min-h-[200px]">
+        <div ref={setNodeRef} className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2 min-h-[200px]">
           {leads.length === 0 ? (
             <div className="flex items-center justify-center h-32 text-[10px] text-aura-platinum/30 uppercase tracking-wider">
               No leads
             </div>
           ) : leads.map((lead) => (
-            <div key={lead.id} className={movingId === lead.id ? 'opacity-50' : ''}>
-              <SortableLeadCard lead={lead} />
-            </div>
+            <SortableLeadCard key={lead.id} lead={lead} isMoving={movingId === lead.id} />
           ))}
         </div>
       </SortableContext>
     </div>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // Main Page

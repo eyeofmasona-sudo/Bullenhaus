@@ -35,7 +35,7 @@ function WorkflowRow({ workflow, onToggle, onRun, onDelete, expanded, onExpand }
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       className={`rounded-lg border p-3 transition-all ${
-        workflow.is_active ? 'border-gold/20 bg-[#15151A]/80' : 'border-white/5 bg-[#0E0E12]/60 opacity-60'
+        workflow.is_active ? 'border-gold/20 glass-card/80' : 'border-white/5 glass-card/60 opacity-60'
       }`}
     >
       <div className="flex items-center gap-3">

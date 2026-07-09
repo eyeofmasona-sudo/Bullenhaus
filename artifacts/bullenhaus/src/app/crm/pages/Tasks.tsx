@@ -43,7 +43,7 @@ function TaskRow({ task, onComplete, onDelete }: { task: any, onComplete: () => 
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       className={`group flex items-center gap-3 rounded-lg border p-3 transition-all ${
-        overdue ? 'border-rose-500/30 bg-rose-500/5' : 'border-white/5 bg-[#15151A]/60 hover:border-white/10'
+        overdue ? 'border-rose-500/30 bg-rose-500/5' : 'border-white/5 glass-card/60 hover:border-white/10'
       } ${task.status === 'completed' ? 'opacity-50' : ''}`}
     >
       <div className={`p-2 rounded-lg ${task.status === 'completed' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-white/5 text-aura-platinum/60'}`}>

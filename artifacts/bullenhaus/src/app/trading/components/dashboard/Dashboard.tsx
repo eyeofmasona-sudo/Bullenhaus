@@ -4,7 +4,8 @@ import { DashboardStats } from './DashboardStats';
 import { GamificationWidget } from './GamificationWidget';
 import { TradingChart } from './TradingChart';
 import { AdvancedOrderPanel } from './AdvancedOrderPanel';
-import { Watchlist, MarketMovers, RecentActivity, MarketSentimentWidget, EliteTraderWidget } from './SecondaryWidgets';
+import { Watchlist, MarketMovers, RecentActivity } from './SecondaryWidgets';
+import { ProTraderCard, SentimentGauge } from '../layout/SidebarWidgets';
 import { UniverseBanners } from './UniverseBanners';
 import { useTranslation } from 'react-i18next';
 
@@ -119,8 +120,8 @@ const DashboardContent = () => {
         {/* Right Sidebar Section */}
         <div className="col-span-12 lg:col-span-3 space-y-6 lg:sticky lg:top-8 overflow-y-auto custom-scrollbar max-h-[calc(100vh-6rem)] pb-20">
           <motion.div variants={itemVariants}><GamificationWidget /></motion.div>
-          <motion.div variants={itemVariants}><EliteTraderWidget /></motion.div>
-          <motion.div variants={itemVariants}><MarketSentimentWidget /></motion.div>
+          <motion.div variants={itemVariants}><ProTraderCard /></motion.div>
+          <motion.div variants={itemVariants}><SentimentGauge /></motion.div>
           <motion.div variants={itemVariants}><Watchlist /></motion.div>
           <motion.div variants={itemVariants}><MarketMovers /></motion.div>
           <motion.div variants={itemVariants}><RecentActivity /></motion.div>

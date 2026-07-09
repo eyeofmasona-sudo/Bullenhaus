@@ -387,7 +387,7 @@ export function TeamChat() {
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-6 right-6 z-50 flex h-[600px] max-h-[calc(100vh-3rem)] w-[420px] max-w-[calc(100vw-3rem)] overflow-hidden rounded-2xl border border-white/10 bg-[#0A0A0B] shadow-2xl"
+            className="fixed bottom-6 right-6 z-50 flex h-[600px] max-h-[calc(100vh-3rem)] w-[420px] max-w-[calc(100vw-3rem)] overflow-hidden rounded-2xl border border-white/10 glass-card shadow-2xl"
           >
             {/* Sidebar: conversations */}
             <div className={`flex flex-col border-r border-white/5 ${activeId && !showNewChat ? 'hidden w-48 sm:flex' : 'w-full sm:w-48'}`}>
@@ -534,7 +534,7 @@ export function TeamChat() {
                   </div>
 
                   {/* Messages */}
-                  <div className="flex-1 overflow-y-auto custom-scrollbar bg-black/20 p-3">
+                  <div className="flex-1 overflow-y-auto custom-scrollbar glass-card p-3">
                     {loadingMsgs ? (
                       <div className="flex items-center justify-center py-6 text-aura-platinum/40">
                         <Loader2 size={14} className="mr-2 animate-spin" /> Loading…

@@ -71,7 +71,18 @@ function useAdminNotifications(): AdminCounts {
   return counts;
 }
 
-// ── Sidebar item ───────────────────────────────────────────────────────────────
+const iconMap: Record<string, string> = {
+  'overview': '/assets/icons/dashboard.png',
+  'user manager': '/assets/icons/users.png',
+  'kyc queue': '/assets/icons/shield.png',
+  'deposits': '/assets/icons/wallet.png',
+  'withdrawals': '/assets/icons/wallet.png',
+  'market control': '/assets/icons/trade.png',
+  'pre-market control': '/assets/icons/trade.png',
+  'transactions': '/assets/icons/trade.png',
+  'system config': '/assets/icons/settings.png'
+};
+
 const AdminSidebarItem = ({
   icon: Icon, label, to, active, badge,
 }: {
@@ -80,42 +91,68 @@ const AdminSidebarItem = ({
   to: string;
   active: boolean;
   badge?: number;
-}) => (
-  <Link to={to}>
-    <motion.div
-      whileHover={{ x: 4 }}
-      className={cn(
-        "group relative flex items-center gap-3 px-4 py-2.5 rounded-xl cursor-pointer transition-all duration-200 overflow-hidden",
-        active
-          ? "bg-gradient-to-r from-rose-500/15 to-rose-500/5 text-rose-400 border border-rose-500/20 shadow-[0_0_20px_rgba(244,63,94,0.12)]"
-          : "text-slate-400 hover:text-white hover:bg-white/[0.04] border border-transparent"
-      )}
-    >
-      {/* Active left indicator bar */}
-      {active && (
-        <motion.div
-          layoutId="admin-active-bar"
-          className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-0.5 bg-rose-500 rounded-full shadow-[0_0_8px_rgba(244,63,94,0.6)]"
-        />
-      )}
-      <Icon size={18} className={cn("transition-colors", active ? "text-rose-400" : "text-slate-500 group-hover:text-white")} />
-      <span className="font-bold text-[11px] tracking-wider uppercase flex-1">{label}</span>
-      {badge != null && badge > 0 && (
-        <AnimatePresence>
-          <motion.span
-            key={badge}
-            initial={{ scale: 0.5, opacity: 0 }}
-            animate={{ scale: 1,   opacity: 1 }}
-            exit={   { scale: 0.5, opacity: 0 }}
-            className="min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center leading-none shadow-[0_0_10px_rgba(244,63,94,0.7)]"
-          >
-            {badge > 99 ? '99+' : badge}
-          </motion.span>
-        </AnimatePresence>
-      )}
-    </motion.div>
-  </Link>
-);
+}) => {
+  const customIconSrc = iconMap[label.toLowerCase()];
+  
+  return (
+    <Link to={to}>
+      <motion.div
+        whileHover={{ y: -1, scale: 1.01 }}
+        whileTap={{ y: 1, scale: 0.99 }}
+        className={cn(
+          "group relative flex items-center gap-3 px-3 py-2 mb-1.5 rounded-xl cursor-pointer transition-all duration-300 overflow-hidden",
+          "bg-gradient-to-b from-[#1E1E24] via-[#141418] to-[#0A0A0E] shadow-[0_4px_8px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.05),inset_0_-1px_2px_rgba(0,0,0,0.6)]",
+          active
+            ? "border border-rose-500/40 text-rose-400 shadow-[0_6px_16px_rgba(244,63,94,0.2),inset_0_1px_2px_rgba(255,255,255,0.1),inset_0_-1px_3px_rgba(0,0,0,0.6)]"
+            : "border border-white/5 text-slate-400 hover:text-white hover:border-rose-500/20 hover:shadow-[0_6px_12px_rgba(244,63,94,0.1),inset_0_1px_2px_rgba(255,255,255,0.1),inset_0_-1px_3px_rgba(0,0,0,0.6)]"
+        )}
+      >
+        {active && (
+          <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-rose-500 via-rose-400 to-rose-600 shadow-[0_0_10px_rgba(244,63,94,0.8)]" />
+        )}
+        
+        <div className={cn(
+          "p-1 rounded-lg bg-[#00000080] shadow-[inset_0_1px_2px_rgba(255,255,255,0.05)] border relative z-10 shrink-0",
+          active ? "border-rose-500/30" : "border-white/5 group-hover:border-rose-500/20 transition-colors"
+        )}>
+          {customIconSrc ? (
+            <img 
+              src={customIconSrc} 
+              alt={label} 
+              className={cn(
+                "w-4 h-4 object-contain transition-all duration-300",
+                active ? "drop-shadow-[0_0_8px_rgba(244,63,94,0.8)] filter brightness-110 sepia-[0.3] hue-rotate-[-30deg]" : "opacity-80 group-hover:opacity-100 group-hover:drop-shadow-[0_0_6px_rgba(244,63,94,0.5)] filter grayscale-[0.3]"
+              )}
+            />
+          ) : (
+            <Icon size={14} className={cn("transition-all duration-300", active ? "text-rose-400 drop-shadow-[0_0_8px_rgba(244,63,94,0.8)]" : "text-slate-500 group-hover:text-rose-400 group-hover:drop-shadow-[0_0_6px_rgba(244,63,94,0.5)]")} />
+          )}
+        </div>
+        
+        <span className={cn(
+           "font-bold text-[10px] tracking-wider uppercase flex-1 relative z-10",
+           active ? "glow-text text-rose-300" : "group-hover:text-white transition-colors"
+        )}>
+           {label}
+        </span>
+        
+        {badge != null && badge > 0 && (
+          <AnimatePresence>
+            <motion.span
+              key={badge}
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1,   opacity: 1 }}
+              exit={   { scale: 0.5, opacity: 0 }}
+              className="relative z-10 min-w-[16px] h-[16px] px-1 rounded bg-gradient-to-r from-rose-500 to-rose-700 text-white text-[8px] font-black flex items-center justify-center leading-none shadow-[0_0_8px_rgba(244,63,94,0.6)]"
+            >
+              {badge > 99 ? '99+' : badge}
+            </motion.span>
+          </AnimatePresence>
+        )}
+      </motion.div>
+    </Link>
+  );
+};
 
 // ── Sign-out ───────────────────────────────────────────────────────────────────
 const AdminSignOutButton = () => {
@@ -155,10 +192,9 @@ const AdminSidebar = ({ onClose }: { onClose?: () => void }) => {
 
       {/* Brand block */}
       <div className="relative flex items-center gap-3 mb-10 px-2 pt-2">
-        <div className="relative w-11 h-11 rounded-xl bg-gradient-to-br from-rose-500 to-rose-800 flex items-center justify-center shadow-[0_0_20px_rgba(244,63,94,0.5)] border border-rose-400/20">
-          <ShieldCheck size={20} className="text-white" />
-          {/* Inner highlight */}
-          <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-transparent to-white/10 pointer-events-none" />
+        <div className="relative w-11 h-11 rounded-xl bg-transparent flex items-center justify-center shadow-[0_0_20px_rgba(244,63,94,0.5)] overflow-hidden border border-rose-400/20 group">
+          <img src="/assets/icons/admin_logo.png" alt="Admin Logo" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+          <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
         </div>
         <div>
           <p className="text-sm font-black tracking-[0.18em] text-white">{t('adminLayout.sidebar.admin')}</p>

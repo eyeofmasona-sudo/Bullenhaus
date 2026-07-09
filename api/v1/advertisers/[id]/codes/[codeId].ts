@@ -9,12 +9,13 @@ export default async function handler(req: any, res: any) {
   const callerId = await requireCrmAdmin(req, res);
   if (!callerId) return;
 
-  const { codeId } = req.query as { codeId: string };
+  const { id: advertiserId, codeId } = req.query as { id: string; codeId: string };
   const supabase = getAdminClient();
   const { error } = await supabase
     .from("referral_codes")
     .delete()
-    .eq("id", codeId);
+    .eq("id", codeId)
+    .eq("advertiser_id", advertiserId);
 
   if (error) {
     res.status(500).json({ error: error.message });

@@ -71,7 +71,7 @@ function ClientDrawer({ client, isOpen, onClose }: { client: CRMClient | null; i
         {activeTab === "overview" && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <div className="flex items-center gap-4 border-b border-glass-border pb-6">
-              <div className="h-16 w-16 rounded border border-white/5 bg-gradient-to-br from-[#121214] to-[#0A0A0B] flex items-center justify-center font-display text-2xl text-aura-gold shadow-inner shrink-0">
+              <div className="h-16 w-16 rounded border border-white/5 glass-card flex items-center justify-center font-display text-2xl text-aura-gold shadow-inner shrink-0">
                 {initials}
               </div>
               <div>
@@ -84,7 +84,7 @@ function ClientDrawer({ client, isOpen, onClose }: { client: CRMClient | null; i
             {/* Contact */}
             <div className="space-y-3">
               <div
-                className="bg-[#121214] border border-glass-border rounded p-4 flex justify-between items-center group cursor-pointer hover:border-aura-gold/30 transition-colors"
+                className="glass-card border-glass-border rounded p-4 flex justify-between items-center group cursor-pointer hover:border-aura-gold/30 transition-colors"
                 onClick={() => setUnmasked(v => !v)}
               >
                 <div className="flex items-center gap-3">
@@ -320,7 +320,7 @@ export function VIPClients({ vipOnly = false }: { vipOnly?: boolean }) {
               placeholder={searchPlaceholder}
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="bg-[#121214] border border-glass-border rounded pl-9 pr-4 py-2 text-xs text-aura-platinum outline-none focus:border-aura-gold/50 transition-colors w-full sm:w-64 focus:shadow-[0_0_15px_rgba(212,175,55,0.1)]"
+              className="glass-card border-glass-border rounded pl-9 pr-4 py-2 text-xs text-aura-platinum outline-none focus:border-aura-gold/50 transition-colors w-full sm:w-64 focus:shadow-[0_0_15px_rgba(212,175,55,0.1)]"
             />
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0">
@@ -358,7 +358,7 @@ export function VIPClients({ vipOnly = false }: { vipOnly?: boolean }) {
           ))}
         </div>
       ) : (
-        <div className="rounded-xl border border-glass-border bg-[#121214] min-h-[40vh] flex items-center justify-center">
+        <div className="rounded-xl border border-glass-border glass-card min-h-[40vh] flex items-center justify-center">
           <EmptyState
             icon={<LayoutList />}
             title={t("noVipTitle")}
@@ -375,7 +375,7 @@ export function VIPClients({ vipOnly = false }: { vipOnly?: boolean }) {
 
 function ClientCardSkeleton() {
   return (
-    <div className="rounded-xl border border-glass-border bg-[#121214] p-6">
+    <div className="rounded-xl border border-glass-border glass-card p-6">
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-4">
           <Skeleton className="h-10 w-10 shrink-0" />
@@ -462,7 +462,7 @@ function ClientCardMenu({ client, onViewProfile, onCall, isAgent }: {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-9 z-50 w-44 bg-[#0d0d0f] border border-white/10 rounded-xl shadow-2xl overflow-hidden">
+        <div className="absolute right-0 top-9 z-50 w-44 glass-card shadow-2xl overflow-hidden">
           {actions.map((a, i) => (
             <button
               key={i}
@@ -487,7 +487,7 @@ function ClientCard({ client, onViewProfile, onCall, isAgent, flashDir }: { clie
   const isNew = (Date.now() - new Date(client.createdAt).getTime()) < 48 * 60 * 60 * 1000;
 
   return (
-    <div className={`rounded-xl border bg-[#121214] p-6 relative group transition-all duration-300 hover:bg-white/5 ${
+    <div className={`rounded-xl border glass-card p-6 relative group transition-all duration-300 hover:bg-white/5 ${
       isNew
         ? "border-aura-emerald/50 shadow-[0_0_20px_rgba(16,185,129,0.08)] hover:border-aura-emerald/70"
         : client.riskScore === "CRITICAL"
@@ -507,7 +507,7 @@ function ClientCard({ client, onViewProfile, onCall, isAgent, flashDir }: { clie
 
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-4">
-          <div className="h-10 w-10 shrink-0 rounded border border-white/5 bg-gradient-to-br from-[#121214] to-[#0A0A0B] flex items-center justify-center font-display text-aura-gold shadow-inner">
+          <div className="h-10 w-10 shrink-0 rounded border border-white/5 glass-card flex items-center justify-center font-display text-aura-gold shadow-inner">
             {initials}
           </div>
           <div>

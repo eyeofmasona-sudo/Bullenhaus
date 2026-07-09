@@ -380,7 +380,7 @@ const KycRow: React.FC<{
                 exit={{ opacity: 0, height: 0 }}
                 className="overflow-hidden"
               >
-                <div className="bg-black/20 border border-white/5 rounded-xl p-4 space-y-3">
+                <div className="glass-card p-4 space-y-3">
                   {/* Bot result card (shown after analysis) */}
                   {botResult && <BotDecisionCard result={botResult} />}
 

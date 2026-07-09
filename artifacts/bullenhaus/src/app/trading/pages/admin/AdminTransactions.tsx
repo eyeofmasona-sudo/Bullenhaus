@@ -108,14 +108,14 @@ export const AdminTransactions = () => {
                 <td className="px-6 py-4">
                   <div className={`flex items-center gap-2 ${tx.type === 'Deposit' ? 'text-emerald-500' : 'text-rose-500'}`}>
                     {tx.type === 'Deposit' ? <ArrowDownRight size={14} /> : <ArrowUpRight size={14} />}
-                    <span className="font-sans font-bold text-xs uppercase">{t(`common.${tx.type.toLowerCase()}s`) || tx.type}</span>
+                    <span className="font-sans font-bold text-xs uppercase">{t(`${tx.type.toLowerCase()}s`) || tx.type}</span>
                   </div>
                 </td>
                 <td className="px-6 py-4 text-white font-bold">{tx.amount}</td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-1.5">
                     {getStatusIcon(tx.status)}
-                    <span className={getStatusColor(tx.status)}>{t(`common.${tx.status.toLowerCase()}`) || tx.status}</span>
+                    <span className={getStatusColor(tx.status)}>{t(`${tx.status.toLowerCase()}`) || tx.status}</span>
                   </div>
                 </td>
                 <td className="px-6 py-4 text-text-dim">{tx.date}</td>

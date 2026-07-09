@@ -217,7 +217,7 @@ function ClientDrawer({ client, onClose }: { client: AgentClient | null; onClose
   return (
     <div className={`fixed inset-0 z-50 flex justify-end ${client ? '' : 'pointer-events-none'}`}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-[#0E1012] border-l border-glass-border flex flex-col h-full overflow-hidden shadow-2xl">
+      <div className="relative w-full max-w-md glass-card-l border-glass-border flex flex-col h-full overflow-hidden shadow-2xl">
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-glass-border">
@@ -517,7 +517,7 @@ export function AgentClients() {
           </div>
         )}
         <button onClick={load} disabled={loading}
-          className="p-2.5 rounded-xl border border-glass-border bg-black/20 hover:bg-white/5 text-aura-platinum/40 hover:text-aura-platinum transition-colors disabled:opacity-30">
+          className="p-2.5 rounded-xl border border-glass-border glass-card hover:bg-white/5 text-aura-platinum/40 hover:text-aura-platinum transition-colors disabled:opacity-30">
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
@@ -528,7 +528,7 @@ export function AgentClients() {
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {[1,2,3,4,5,6].map(i => (
-            <div key={i} className="rounded-xl border border-glass-border bg-[#121214] p-5 animate-pulse">
+            <div key={i} className="rounded-xl border border-glass-border glass-card p-5 animate-pulse">
               <div className="h-4 bg-white/5 rounded w-3/4 mb-3" />
               <div className="h-3 bg-white/5 rounded w-1/2 mb-5" />
               <div className="h-8 bg-white/5 rounded" />
@@ -536,7 +536,7 @@ export function AgentClients() {
           ))}
         </div>
       ) : clients.length === 0 ? (
-        <div className="rounded-xl border border-glass-border bg-[#121214] py-20 flex flex-col items-center gap-3">
+        <div className="rounded-xl border border-glass-border glass-card py-20 flex flex-col items-center gap-3">
           <User className="w-10 h-10 text-aura-platinum/10" />
           <p className="text-sm text-aura-platinum/30">{search ? t('agcNoMatch') : t('agcNoneAssigned')}</p>
           <p className="text-xs text-aura-platinum/20">{t('agcAskManager')}</p>
@@ -550,7 +550,7 @@ export function AgentClients() {
             return (
               <div key={c.id}
                 onClick={() => setSelected(c)}
-                className={`rounded-xl border bg-[#121214] p-5 cursor-pointer group relative transition-all duration-200 hover:bg-white/5 ${
+                className={`rounded-xl border glass-card p-5 cursor-pointer group relative transition-all duration-200 hover:bg-white/5 ${
                   isNew ? 'border-aura-emerald/40 hover:border-aura-emerald/60' : 'border-glass-border hover:border-aura-gold/20'
                 }`}>
                 {isNew && (
@@ -589,13 +589,13 @@ export function AgentClients() {
                     disabled={!c.phone}
                     onClick={() => c.phone && openDialer({ phone: c.phone, name, clientId: c.id })}
                     title={c.phone || 'No phone'}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-glass-border bg-black/20 text-[10px] font-bold text-aura-platinum/60 hover:bg-aura-emerald/10 hover:border-aura-emerald/30 hover:text-aura-emerald transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-glass-border glass-card text-[10px] font-bold text-aura-platinum/60 hover:bg-aura-emerald/10 hover:border-aura-emerald/30 hover:text-aura-emerald transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     <Phone className="w-3 h-3" /> {c.phone ? t('call') : t('agcNoPhone')}
                   </button>
                   <button
                     onClick={() => setSelected(c)}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-glass-border bg-black/20 text-[10px] font-bold text-aura-platinum/60 hover:bg-white/5 hover:text-aura-platinum transition-all"
+                    className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-glass-border glass-card text-[10px] font-bold text-aura-platinum/60 hover:bg-white/5 hover:text-aura-platinum transition-all"
                   >
                     {t('agcView')}
                   </button>

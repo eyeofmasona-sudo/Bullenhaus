@@ -313,12 +313,12 @@ export const AdminUsers = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6 text-xs">
-            <div className="bg-black/20 border border-white/5 rounded-xl p-4">
+            <div className="glass-card p-4">
               <p className="text-slate-500 uppercase font-bold tracking-widest mb-2">{t('adminUsers.details.identity')}</p>
               <p className="text-white break-all">{selectedUser.id}</p>
               <p className="text-slate-400 mt-2">{selectedUser.email}</p>
             </div>
-            <div className="bg-black/20 border border-white/5 rounded-xl p-4">
+            <div className="glass-card p-4">
               <p className="text-slate-500 uppercase font-bold tracking-widest mb-2">{t('adminUsers.details.contact')}</p>
               {selectedUser.phone ? (
                 <div className="flex items-center gap-1.5 text-white">
@@ -337,12 +337,12 @@ export const AdminUsers = () => {
                 <p className="text-slate-500 mt-2 italic">{t('adminUsers.details.noCountry')}</p>
               )}
             </div>
-            <div className="bg-black/20 border border-white/5 rounded-xl p-4">
+            <div className="glass-card p-4">
               <p className="text-slate-500 uppercase font-bold tracking-widest mb-2">{t('adminUsers.details.access')}</p>
               <p className="text-white">{t('adminUsers.details.role')}: {t(`adminUsers.roles.${selectedUser.role || 'client'}`) as string}</p>
               <p className="text-slate-400 mt-2">KYC: {selectedUser.kyc_status || 'N/A'}</p>
             </div>
-            <div className="bg-black/20 border border-white/5 rounded-xl p-4">
+            <div className="glass-card p-4">
               <p className="text-slate-500 uppercase font-bold tracking-widest mb-2">{t('adminUsers.details.wallet')}</p>
               <p className="text-white font-mono text-lg">
                 ${Number(selectedUser.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
