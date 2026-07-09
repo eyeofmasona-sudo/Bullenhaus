@@ -78,7 +78,7 @@ const CRMTasks = React.lazy(() => import('./app/crm/pages/Tasks').then(m => ({ d
 const CRMTickets = React.lazy(() => import('./app/crm/pages/Tickets').then(m => ({ default: m.Tickets })));
 const CRMMessages = React.lazy(() => import('./app/crm/pages/Messages').then(m => ({ default: m.Messages })));
 const CRMSalesScripts = React.lazy(() => import('./app/crm/pages/SalesScripts').then(m => ({ default: m.SalesScripts })));
-const CRMKycReview = React.lazy(() => import('./app/crm/pages/KycReview').then(m => ({ default: m.KycReview })));
+const CRMKycReview = React.lazy(() => import('./app/crm/pages/KYCReview').then(m => ({ default: m.KYCReview })));
 const CRMWorkflowRules = React.lazy(() => import('./app/crm/pages/WorkflowRules').then(m => ({ default: m.WorkflowRules })));
 
 const Fallback = () => (
