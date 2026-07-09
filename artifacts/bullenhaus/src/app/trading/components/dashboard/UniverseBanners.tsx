@@ -1,36 +1,36 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Users2, Rocket, Settings2, Headset } from 'lucide-react';
+import { Users2, Rocket, Settings2 } from 'lucide-react';
 
 const banners = [
-  { icon: Users2, title: 'Refer & Earn', subtitle: 'Invite elites and earn up to 40% Commission', color: 'from-accent-primary' },
-  { icon: Rocket, title: 'Elite Level Up', subtitle: 'Increase your rank and unlock exclusive vaults', color: 'from-accent-tertiary' },
-  { icon: Settings2, title: 'Institutional Tools', subtitle: 'Access premium charts, signals and algorithms', color: 'from-slate-500' },
-  { icon: Headset, title: 'Concierge', subtitle: 'Priority 24/7 support for our elite members', color: 'from-[#444]' },
+  { icon: Users2, title: 'Refer & Earn', subtitle: 'Invite elites and earn up to 40% Commission', color: 'from-accent-primary shadow-neon-gold' },
+  { icon: Rocket, title: 'Elite Level Up', subtitle: 'Increase your rank and unlock exclusive vaults', color: 'from-accent-tertiary shadow-neon-blue' },
+  { icon: Settings2, title: 'Institutional Tools', subtitle: 'Access premium charts, signals and algorithms', color: 'from-slate-500 shadow-neon-white' }
 ];
 
 export const UniverseBanners = () => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
       {banners.map((banner, i) => (
         <motion.div
            key={banner.title}
            initial={{ opacity: 0, y: 20 }}
            animate={{ opacity: 1, y: 0 }}
-           transition={{ delay: i * 0.1 + 0.5 }}
-           className={`glass-card p-6 glass-card-hover cursor-pointer group relative overflow-hidden`}
+           transition={{ delay: i * 0.1 + 0.5, duration: 0.4, ease: "easeOut" }}
+           whileHover={{ y: -4, scale: 1.02 }}
+           className={`glass-card p-6 glass-card-hover cursor-pointer group relative overflow-hidden holo-border`}
         >
-          <div className={`absolute top-0 left-0 w-1 h-full bg-gradient-to-b ${banner.color} to-transparent opacity-50`} />
-          <div className="flex items-center gap-4 relative z-10">
-             <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/5 group-hover:border-white/10 group-hover:bg-white/10 transition-all">
-                <banner.icon size={24} className="text-white" />
+          <div className={`absolute top-0 left-0 w-1 h-full bg-gradient-to-b ${banner.color.split(' ')[0]} to-transparent opacity-70 group-hover:opacity-100 transition-opacity`} />
+          <div className="flex items-center gap-5 relative z-10">
+             <div className={`w-14 h-14 rounded-2xl bg-[#111] flex items-center justify-center border border-white/10 group-hover:border-white/20 transition-all duration-300 group-hover:${banner.color.split(' ')[1]}`}>
+                <banner.icon size={26} className="text-white group-hover:scale-110 transition-transform duration-300" />
              </div>
              <div>
-                <h4 className="text-sm font-bold text-white mb-1">{banner.title}</h4>
-                <p className="text-[10px] text-slate-500 font-medium leading-relaxed">{banner.subtitle}</p>
+                <h4 className="text-sm font-bold text-white mb-1.5 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-white group-hover:to-slate-400 transition-all">{banner.title}</h4>
+                <p className="text-[11px] text-slate-400 font-medium leading-relaxed max-w-[200px]">{banner.subtitle}</p>
              </div>
           </div>
-          <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-all" />
+          <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-white/5 rounded-full blur-3xl group-hover:bg-white/10 transition-all duration-500" />
         </motion.div>
       ))}
     </div>
