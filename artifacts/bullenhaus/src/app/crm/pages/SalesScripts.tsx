@@ -1,354 +1,310 @@
-import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Copy, FileText, Heart, Mail, MessageCircle, Search, ShieldCheck } from "lucide-react";
-import { toast } from "sonner";
-import { Button } from "../components/ui/Button";
-import { Modal } from "../components/ui/Modal";
+import { useState, useMemo } from 'react';
+import { motion } from 'motion/react';
+import { toast } from 'sonner';
 import {
-  AGENT_BEST_PRACTICES,
-  COMPLIANCE_BLACKLIST,
-  OBJECTION_HANDLING_MATRIX,
-  SALES_SCRIPT_CATEGORIES,
-  SALES_SCRIPTS,
-  type SalesScript,
-  type SalesScriptCategory,
-} from "../data/salesScripts";
+  Search, Plus, RefreshCw, Loader2, BookOpen, Copy, Trash2,
+  MessageSquareWarning, Phone, TrendingUp, ShieldCheck,
+} from 'lucide-react';
+import { useScripts, SCRIPT_CATEGORIES } from '../hooks/useScripts';
+import { Button } from '../components/ui/Button';
+import { Modal } from '../components/ui/Modal';
+import { Drawer } from '../components/ui/Drawer';
 
-const FAVORITES_KEY = "bullenhaus_sales_script_favorites";
+const CATEGORY_ICONS: Record<string, any> = {
+  cold_call: Phone,
+  follow_up: RefreshCw,
+  objection_handling: MessageSquareWarning,
+  closing: TrendingUp,
+  kyc_help: ShieldCheck,
+  general: BookOpen,
+};
 
-function emailCopy(script: SalesScript) {
-  return `Subject: ${script.emailSubject}\n\n${script.emailBody}`;
-}
+function ScriptCard({ script, onOpen }: { script: any, onOpen: () => void }) {
+  const Icon = CATEGORY_ICONS[script.category] || BookOpen;
+  const cat = SCRIPT_CATEGORIES.find((c) => c.value === script.category);
+  const objections = Array.isArray(script.objections) ? script.objections : [];
 
-async function copyText(label: string, value: string) {
-  try {
-    await navigator.clipboard.writeText(value);
-    toast.success(`${label} copied`);
-  } catch (error) {
-    console.error("[SalesScripts] Clipboard copy failed", error);
-    toast.error(`Unable to copy ${label.toLowerCase()}`);
-  }
-}
-
-function hasKeyword(script: SalesScript, keyword: string) {
-  const q = keyword.trim().toLowerCase();
-  if (!q) return true;
-  return [
-    script.title,
-    script.category,
-    script.clientStage,
-    script.channel,
-    script.useCase,
-    script.scriptShort,
-    script.scriptFull,
-    script.agentNote,
-    script.tags.join(" "),
-  ].join(" ").toLowerCase().includes(q);
-}
-
-function stageLabel(stage: string) {
-  return stage.replace(/_/g, " ");
-}
-
-function ScriptCard({
-  script,
-  favorite,
-  onFavorite,
-  onView,
-}: {
-  script: SalesScript;
-  favorite: boolean;
-  onFavorite: () => void;
-  onView: () => void;
-}) {
   return (
-    <div className="rounded-xl border border-glass-border bg-[#121214] p-4 transition-colors hover:border-aura-gold/25">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-sm font-bold text-aura-platinum">{script.title}</h3>
-            <span className="rounded border border-aura-gold/20 bg-aura-gold/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-aura-gold">
-              {script.category}
+    <motion.button
+      layout
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      onClick={onOpen}
+      className="group w-full text-left rounded-lg border border-white/5 bg-[#15151A]/60 hover:border-gold/30 hover:bg-[#1A1A20] p-3 transition-all"
+    >
+      <div className="flex items-start gap-3 mb-2">
+        <div className="p-2 rounded-lg" style={{ backgroundColor: (cat?.color || '#64748b') + '15', color: cat?.color }}>
+          <Icon size={14} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[12px] font-bold text-aura-platinum">{script.title}</p>
+          <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+            <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded" style={{ color: cat?.color, backgroundColor: (cat?.color || '#64748b') + '15' }}>
+              {cat?.label}
             </span>
-          </div>
-          <div className="mt-2 flex flex-wrap gap-2 text-[9px] font-bold uppercase tracking-widest text-aura-platinum/40">
-            <span>{stageLabel(script.clientStage)}</span>
-            <span>/</span>
-            <span>{script.channel}</span>
-            <span>/</span>
-            <span>{script.riskLevel} risk</span>
+            {script.stage && (
+              <span className="text-[9px] text-aura-platinum/40 uppercase">{script.stage.replace(/_/g, ' ')}</span>
+            )}
           </div>
         </div>
-        <button
-          type="button"
-          onClick={onFavorite}
-          className={`rounded-lg border p-2 transition-colors ${
-            favorite
-              ? "border-aura-gold/40 bg-aura-gold/10 text-aura-gold"
-              : "border-white/5 bg-black/30 text-aura-platinum/40 hover:text-aura-gold"
-          }`}
-          title={favorite ? "Remove from favorites" : "Add to favorites"}
-        >
-          <Heart className={`h-4 w-4 ${favorite ? "fill-current" : ""}`} />
-        </button>
       </div>
-
-      <p className="mt-4 line-clamp-3 text-xs leading-relaxed text-aura-platinum/65">{script.scriptShort}</p>
-
-      <div className="mt-4 flex flex-wrap gap-1.5">
-        {script.tags.slice(0, 4).map(tag => (
-          <span key={tag} className="rounded-md border border-white/5 bg-black/30 px-2 py-1 text-[9px] text-aura-platinum/40">
-            {tag}
-          </span>
-        ))}
-      </div>
-
-      <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-5">
-        <Button variant="outline" size="sm" onClick={onView}>
-          <FileText className="h-3.5 w-3.5" /> View Full Script
-        </Button>
-        <Button variant="secondary" size="sm" onClick={() => copyText("Full script", script.scriptFull)}>
-          <Copy className="h-3.5 w-3.5" /> Copy Script
-        </Button>
-        <Button variant="secondary" size="sm" onClick={() => copyText("WhatsApp", script.whatsappVersion)}>
-          <MessageCircle className="h-3.5 w-3.5" /> Copy WhatsApp
-        </Button>
-        <Button variant="secondary" size="sm" onClick={() => copyText("Email", emailCopy(script))}>
-          <Mail className="h-3.5 w-3.5" /> Copy Email
-        </Button>
-        <Button variant={favorite ? "outline" : "ghost"} size="sm" onClick={onFavorite}>
-          <Heart className={`h-3.5 w-3.5 ${favorite ? "fill-current" : ""}`} /> {favorite ? "Remove Favorite" : "Add to Favorites"}
-        </Button>
-      </div>
-    </div>
+      <p className="text-[10px] text-aura-platinum/50 line-clamp-2 mb-2">{script.body}</p>
+      {objections.length > 0 && (
+        <div className="flex items-center gap-1 flex-wrap">
+          <span className="text-[8px] text-aura-platinum/40 uppercase tracking-wider">Triggers:</span>
+          {objections.slice(0, 3).map((o: string, i: number) => (
+            <span key={i} className="text-[8px] text-amber-400/80 bg-amber-500/10 px-1 rounded">"{o}"</span>
+          ))}
+          {objections.length > 3 && <span className="text-[8px] text-aura-platinum/40">+{objections.length - 3}</span>}
+        </div>
+      )}
+    </motion.button>
   );
 }
 
-export function SalesScripts() {
-  const [query, setQuery] = useState("");
-  const [category, setCategory] = useState<SalesScriptCategory | "All">("All");
-  const [selected, setSelected] = useState<SalesScript | null>(null);
-  const [favorites, setFavorites] = useState<Set<string>>(() => {
-    try {
-      return new Set(JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]"));
-    } catch {
-      return new Set();
-    }
-  });
+function ScriptDetail({ script, onClose, onDelete }: { script: any, onClose: () => void, onDelete: () => void }) {
+  if (!script) return null;
+  const cat = SCRIPT_CATEGORIES.find((c) => c.value === script.category);
+  const objections = Array.isArray(script.objections) ? script.objections : [];
+  const tags = Array.isArray(script.tags) ? script.tags : [];
 
-  useEffect(() => {
-    localStorage.setItem(FAVORITES_KEY, JSON.stringify([...favorites]));
-  }, [favorites]);
-
-  const filtered = useMemo(() => {
-    return SALES_SCRIPTS.filter(script => {
-      const categoryMatch = category === "All" || script.category === category;
-      return categoryMatch && hasKeyword(script, query);
-    });
-  }, [category, query]);
-
-  const favoriteCount = favorites.size;
-
-  const toggleFavorite = (id: string) => {
-    setFavorites(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-        toast.success("Removed from favorites");
-      } else {
-        next.add(id);
-        toast.success("Added to favorites");
-      }
-      return next;
-    });
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(script.body);
+    toast.success('Script copied to clipboard');
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 border-b border-glass-border pb-5 md:flex-row md:items-end md:justify-between">
+    <Drawer isOpen={!!script} onClose={onClose} title="Script Details" width="max-w-xl">
+      <div className="space-y-4">
         <div>
-          <h2 className="flex items-center gap-3 font-serif text-2xl font-light italic tracking-tight text-aura-platinum">
-            <FileText className="text-aura-gold" size={22} /> Sales Scripts
-          </h2>
-          <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.2em] text-aura-platinum/40">
-            {filtered.length} visible / {SALES_SCRIPTS.length} total / {favoriteCount} favorites
-          </p>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded" style={{ color: cat?.color, backgroundColor: (cat?.color || '#64748b') + '15' }}>
+              {cat?.label}
+            </span>
+            {script.stage && (
+              <span className="text-[9px] text-aura-platinum/50 uppercase">{script.stage.replace(/_/g, ' ')}</span>
+            )}
+          </div>
+          <h3 className="font-serif text-xl text-aura-platinum">{script.title}</h3>
+        </div>
+
+        <div className="rounded-lg border border-white/5 bg-black/30 p-3">
+          <p className="text-[12px] text-aura-platinum/90 whitespace-pre-wrap leading-relaxed">{script.body}</p>
+        </div>
+
+        {objections.length > 0 && (
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-aura-platinum/60 mb-2">Triggers (auto-suggest when client says)</p>
+            <div className="flex flex-wrap gap-1.5">
+              {objections.map((o: string, i: number) => (
+                <span key={i} className="text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded">"{o}"</span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {tags.length > 0 && (
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-aura-platinum/60 mb-2">Tags</p>
+            <div className="flex flex-wrap gap-1.5">
+              {tags.map((t: string, i: number) => (
+                <span key={i} className="text-[10px] text-gold/80 bg-gold/10 border border-gold/20 px-2 py-0.5 rounded">#{t}</span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="flex gap-2 pt-2">
+          <Button variant="primary" size="sm" onClick={copyToClipboard}>
+            <Copy size={12} /> Copy Script
+          </Button>
+          <Button variant="danger" size="sm" onClick={onDelete}>
+            <Trash2 size={12} /> Delete
+          </Button>
         </div>
       </div>
+    </Drawer>
+  );
+}
 
-      <div className="flex items-start gap-3 rounded-xl border border-aura-gold/25 bg-aura-gold/8 p-4">
-        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-aura-gold" />
+function CreateScriptModal({ open, onClose, onCreated }: { open: boolean, onClose: () => void, onCreated: () => void }) {
+  const { createScript } = useScripts();
+  const [title, setTitle] = useState('');
+  const [category, setCategory] = useState('cold_call');
+  const [body, setBody] = useState('');
+  const [objections, setObjections] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim() || !body.trim()) return;
+    setSaving(true);
+    try {
+      await createScript({
+        title: title.trim(),
+        category,
+        body: body.trim(),
+        objections: objections.split(',').map((s) => s.trim()).filter(Boolean),
+      });
+      toast.success('Script created');
+      setTitle('');
+      setBody('');
+      setObjections('');
+      onCreated();
+      onClose();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal isOpen={open} onClose={onClose} title="New Sales Script" maxWidth="max-w-lg">
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <input
+          autoFocus
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Script title (e.g. Cold Call Opening)"
+          className="w-full rounded-lg border border-white/8 bg-black/30 px-3 py-2 text-[12px] text-aura-platinum focus:border-gold/40 focus:outline-none"
+        />
+        <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full rounded-lg border border-white/8 bg-black/30 px-3 py-2 text-[12px] text-aura-platinum focus:border-gold/40 focus:outline-none">
+          {SCRIPT_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+        </select>
+        <textarea
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          rows={6}
+          placeholder="Script body... Use {name} for client name placeholder"
+          className="w-full rounded-lg border border-white/8 bg-black/30 px-3 py-2 text-[12px] text-aura-platinum focus:border-gold/40 focus:outline-none resize-none"
+        />
+        <input
+          value={objections}
+          onChange={(e) => setObjections(e.target.value)}
+          placeholder="Triggers (comma-separated: think, consider, not sure)"
+          className="w-full rounded-lg border border-white/8 bg-black/30 px-3 py-2 text-[12px] text-aura-platinum focus:border-gold/40 focus:outline-none"
+        />
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" size="sm" onClick={onClose} type="button">Cancel</Button>
+          <Button variant="primary" size="sm" type="submit" disabled={saving || !title.trim() || !body.trim()}>
+            {saving ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />} Create
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+export const SalesScripts = () => {
+  const [showCreate, setShowCreate] = useState(false);
+  const [search, setSearch] = useState('');
+  const [activeCategory, setActiveCategory] = useState<string>('');
+  const [selectedScript, setSelectedScript] = useState<any | null>(null);
+
+  const { scripts, loading, error, refetch, deleteScript } = useScripts({
+    category: activeCategory || undefined,
+    search: search || undefined,
+  });
+
+  const grouped = useMemo(() => {
+    const g: Record<string, any[]> = {};
+    for (const s of scripts) {
+      if (!g[s.category]) g[s.category] = [];
+      g[s.category].push(s);
+    }
+    return g;
+  }, [scripts]);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs font-bold text-aura-gold">Compliance Reminder</p>
-          <p className="mt-1 text-xs text-aura-platinum/65">
-            Do not promise profit. Do not guarantee returns. Always explain trading risk.
-          </p>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="h-5 w-1 bg-gradient-to-b from-gold to-gold/40 rounded-full shadow-[0_0_8px_rgba(212,175,55,0.4)]" />
+            <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-gold/80">Knowledge Base</span>
+          </div>
+          <h1 className="font-serif text-3xl font-light italic tracking-tight text-aura-platinum">Sales Scripts</h1>
         </div>
+        <Button variant="primary" size="sm" onClick={() => setShowCreate(true)}>
+          <Plus size={14} /> New Script
+        </Button>
       </div>
 
-      <div className="rounded-xl border border-glass-border bg-[#121214] p-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="relative w-full lg:max-w-md">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-aura-platinum/30" />
-            <input
-              value={query}
-              onChange={event => setQuery(event.target.value)}
-              placeholder="Search by keyword, stage, tag, or channel"
-              className="w-full rounded-lg border border-glass-border bg-black/30 py-2 pl-9 pr-3 text-xs text-aura-platinum outline-none focus:border-aura-gold/40"
-            />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {(["All", ...SALES_SCRIPT_CATEGORIES] as const).map(item => (
-              <button
-                key={item}
-                type="button"
-                onClick={() => setCategory(item)}
-                className={`rounded-lg border px-3 py-2 text-[9px] font-bold uppercase tracking-widest transition-colors ${
-                  category === item
-                    ? "border-aura-gold/40 bg-aura-gold/10 text-aura-gold"
-                    : "border-white/5 bg-black/25 text-aura-platinum/45 hover:text-aura-platinum"
-                }`}
-              >
-                {item}
-              </button>
-            ))}
-          </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          onClick={() => setActiveCategory('')}
+          className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition ${
+            !activeCategory ? 'bg-gold/10 text-gold border border-gold/25' : 'text-aura-platinum/50 hover:bg-white/5'
+          }`}
+        >
+          All ({scripts.length})
+        </button>
+        {SCRIPT_CATEGORIES.map((c) => {
+          const count = grouped[c.value]?.length || 0;
+          if (count === 0) return null;
+          return (
+            <button
+              key={c.value}
+              onClick={() => setActiveCategory(c.value)}
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition ${
+                activeCategory === c.value ? 'bg-gold/10 text-gold border border-gold/25' : 'text-aura-platinum/50 hover:bg-white/5'
+              }`}
+            >
+              {c.label} ({count})
+            </button>
+          );
+        })}
+        <div className="relative ml-auto">
+          <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-aura-platinum/40" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search scripts..."
+            className="rounded-lg border border-white/8 bg-black/30 py-1.5 pl-8 pr-3 text-[12px] text-aura-platinum focus:border-gold/40 focus:outline-none w-48"
+          />
         </div>
+        <Button variant="outline" size="sm" onClick={() => refetch()}>
+          <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+        </Button>
       </div>
 
-      {filtered.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-glass-border bg-[#121214] p-12 text-center">
-          <p className="text-sm font-bold text-aura-platinum">No scripts found</p>
-          <p className="mt-1 text-xs text-aura-platinum/45">Adjust search or category filters.</p>
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-gold/50" />
+        </div>
+      ) : error ? (
+        <div className="text-center py-12 text-rose-400 text-sm">{error}</div>
+      ) : scripts.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-aura-platinum/40">
+          <BookOpen size={32} className="mb-2 opacity-50" />
+          <p className="text-sm">No scripts found</p>
+          <p className="text-[10px] mt-1">Create your first sales script or objection handler</p>
         </div>
       ) : (
-        <div className="grid gap-4 xl:grid-cols-2">
-          {filtered.map(script => (
-            <ScriptCard
-              key={script.id}
-              script={script}
-              favorite={favorites.has(script.id)}
-              onFavorite={() => toggleFavorite(script.id)}
-              onView={() => setSelected(script)}
-            />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {scripts.map((s) => (
+            <ScriptCard key={s.id} script={s} onOpen={() => setSelectedScript(s)} />
           ))}
         </div>
       )}
 
-      <div className="grid gap-4 xl:grid-cols-2">
-        <div className="rounded-xl border border-glass-border bg-[#121214] p-5">
-          <h3 className="mb-4 flex items-center gap-2 text-sm font-bold text-aura-platinum">
-            <AlertTriangle className="h-4 w-4 text-aura-gold" /> Compliance Blacklist
-          </h3>
-          <div className="space-y-3">
-            {COMPLIANCE_BLACKLIST.map(item => (
-              <div key={item.bannedPhrase} className="rounded-lg border border-white/5 bg-black/25 p-3">
-                <div className="text-xs font-bold text-aura-ruby">{item.bannedPhrase}</div>
-                <div className="mt-1 text-xs text-aura-platinum/55">{item.compliantAlternative}</div>
-              </div>
-            ))}
-          </div>
-        </div>
+      <CreateScriptModal open={showCreate} onClose={() => setShowCreate(false)} onCreated={refetch} />
 
-        <div className="rounded-xl border border-glass-border bg-[#121214] p-5">
-          <h3 className="mb-4 text-sm font-bold text-aura-platinum">Best Practices for Bullenhaus Sales Agents</h3>
-          <div className="space-y-2">
-            {AGENT_BEST_PRACTICES.map(item => (
-              <div key={item} className="rounded-lg border border-white/5 bg-black/25 p-3 text-xs text-aura-platinum/60">
-                {item}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-glass-border bg-[#121214] p-5">
-        <h3 className="mb-4 text-sm font-bold text-aura-platinum">Objection Handling Matrix</h3>
-        <div className="overflow-x-auto custom-scrollbar">
-          <table className="w-full min-w-[980px] text-left text-xs">
-            <thead className="border-b border-glass-border text-[9px] uppercase tracking-widest text-aura-platinum/35">
-              <tr>
-                <th className="p-3">Objection</th>
-                <th className="p-3">Client Meaning</th>
-                <th className="p-3">Wrong Response</th>
-                <th className="p-3">Best Practice</th>
-                <th className="p-3">Soft Close</th>
-                <th className="p-3">Compliance</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-glass-border">
-              {OBJECTION_HANDLING_MATRIX.map(row => (
-                <tr key={row.objection}>
-                  <td className="p-3 font-bold text-aura-platinum">{row.objection}</td>
-                  <td className="p-3 text-aura-platinum/55">{row.clientMeaning}</td>
-                  <td className="p-3 text-aura-ruby/80">{row.wrongResponse}</td>
-                  <td className="p-3 text-aura-platinum/70">{row.bestPracticeResponse}</td>
-                  <td className="p-3 text-aura-gold/80">{row.softClose}</td>
-                  <td className="p-3 text-aura-platinum/45">{row.complianceReminder}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <Modal
-        isOpen={Boolean(selected)}
-        onClose={() => setSelected(null)}
-        title={selected?.title ?? "Sales Script"}
-        subtitle={selected ? `${selected.category} / ${stageLabel(selected.clientStage)} / ${selected.channel}` : undefined}
-        className="max-w-3xl"
-      >
-        {selected && (
-          <div className="max-h-[72vh] space-y-5 overflow-y-auto pr-1 custom-scrollbar">
-            <section>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-aura-platinum/40">Use Case</p>
-              <p className="mt-1 text-sm text-aura-platinum/70">{selected.useCase}</p>
-            </section>
-            <section>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-aura-platinum/40">Full Script</p>
-              <p className="mt-2 whitespace-pre-wrap rounded-lg border border-glass-border bg-black/25 p-4 text-sm leading-relaxed text-aura-platinum/80">
-                {selected.scriptFull}
-              </p>
-            </section>
-            <section className="grid gap-3 md:grid-cols-2">
-              <div className="rounded-lg border border-glass-border bg-black/25 p-4">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-aura-platinum/40">WhatsApp</p>
-                <p className="mt-2 text-xs leading-relaxed text-aura-platinum/65">{selected.whatsappVersion}</p>
-              </div>
-              <div className="rounded-lg border border-glass-border bg-black/25 p-4">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-aura-platinum/40">Email</p>
-                <p className="mt-2 text-xs font-bold text-aura-gold">{selected.emailSubject}</p>
-                <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-aura-platinum/65">{selected.emailBody}</p>
-              </div>
-            </section>
-            <section className="grid gap-3 md:grid-cols-3">
-              <div className="rounded-lg border border-glass-border bg-black/25 p-4">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-aura-platinum/40">Soft Close</p>
-                <p className="mt-2 text-xs text-aura-platinum/65">{selected.softClose}</p>
-              </div>
-              <div className="rounded-lg border border-glass-border bg-black/25 p-4">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-aura-platinum/40">Agent Note</p>
-                <p className="mt-2 text-xs text-aura-platinum/65">{selected.agentNote}</p>
-              </div>
-              <div className="rounded-lg border border-aura-gold/20 bg-aura-gold/5 p-4">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-aura-gold">Compliance Notes</p>
-                <p className="mt-2 text-xs text-aura-platinum/65">{selected.complianceNotes}</p>
-              </div>
-            </section>
-            <div className="flex flex-wrap justify-end gap-2 border-t border-glass-border pt-4">
-              <Button variant="secondary" onClick={() => copyText("Full script", selected.scriptFull)}>
-                <Copy className="h-3.5 w-3.5" /> Copy Script
-              </Button>
-              <Button variant="secondary" onClick={() => copyText("WhatsApp", selected.whatsappVersion)}>
-                <MessageCircle className="h-3.5 w-3.5" /> Copy WhatsApp
-              </Button>
-              <Button onClick={() => copyText("Email", emailCopy(selected))}>
-                <Mail className="h-3.5 w-3.5" /> Copy Email
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
+      <ScriptDetail
+        script={selectedScript}
+        onClose={() => setSelectedScript(null)}
+        onDelete={async () => {
+          if (!selectedScript?.id) return;
+          try {
+            await deleteScript(selectedScript.id);
+            toast.success('Script deleted');
+            setSelectedScript(null);
+          } catch (e: any) {
+            toast.error(e.message);
+          }
+        }}
+      />
     </div>
   );
-}
+};

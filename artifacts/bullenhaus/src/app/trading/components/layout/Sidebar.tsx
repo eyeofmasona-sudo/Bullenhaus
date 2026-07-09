@@ -81,7 +81,16 @@ export const Sidebar = ({ onClose }: { onClose?: () => void }) => {
   };
 
   return (
-    <aside className="w-64 h-full border-r border-border bg-bg-2 flex flex-col p-4">
+    <aside className="w-64 h-full border-r border-gold/15 bg-gradient-to-b from-[#0C0C10] via-[#0A0A0E] to-[#060608] flex flex-col p-4 relative overflow-hidden shadow-[10px_0_50px_rgba(0,0,0,0.6)]">
+      {/* Ambient gold glow at top */}
+      <div
+        className="absolute top-0 left-0 right-0 h-56 pointer-events-none opacity-60"
+        style={{
+          background: 'radial-gradient(ellipse at 50% 0%, rgba(212,175,55,0.22) 0%, transparent 70%)',
+        }}
+      />
+      {/* Visible gold accent line at top */}
+      <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-gold/50 to-transparent" />
       <div className="flex flex-col items-center gap-2 mb-8 pr-4 relative min-h-[100px] justify-center">
         {onClose && (
            <button onClick={onClose} className="absolute right-0 top-0 md:hidden p-2 text-text-muted hover:text-text z-10">
@@ -91,7 +100,7 @@ export const Sidebar = ({ onClose }: { onClose?: () => void }) => {
         <img
           src="/logo.png"
           alt="Bullenhaus Logo"
-          className="w-full max-w-[160px] h-auto object-contain mt-2"
+          className="w-full max-w-[200px] h-auto object-contain mt-2 drop-shadow-[0_0_20px_rgba(212,175,55,0.4)]"
           onError={(e) => {
             e.currentTarget.style.display = 'none';
             const fallback = document.getElementById('logo-fallback');

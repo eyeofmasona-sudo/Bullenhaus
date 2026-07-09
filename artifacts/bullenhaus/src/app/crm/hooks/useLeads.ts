@@ -160,10 +160,10 @@ export function useLeads(page = 1, limit = 50, search = '') {
 }
 
 export const LEAD_STAGES = [
-  { value: 'NEW_INQUIRY',  label: 'New Inquiry'  },
+  { value: 'NEW_INQUIRY',   label: 'New Inquiry'   },
   { value: 'IN_DISCUSSION', label: 'In Discussion' },
-  { value: 'PENDING_KYC',  label: 'Pending KYC'  },
-  { value: 'FUNDED',       label: 'Funded (FTD)'  },
+  { value: 'PENDING_KYC',   label: 'Pending KYC'   },
+  { value: 'FUNDED',        label: 'Funded (FTD)'  },
 ] as const;
 
 export type LeadStage = typeof LEAD_STAGES[number]['value'];

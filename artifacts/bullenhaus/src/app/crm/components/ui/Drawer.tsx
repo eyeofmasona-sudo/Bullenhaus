@@ -10,10 +10,11 @@ interface DrawerProps {
   subtitle?: string;
   children: React.ReactNode;
   className?: string;
+  width?: string;
   position?: 'left' | 'right';
 }
 
-export function Drawer({ isOpen, onClose, title, subtitle, children, className, position = 'right' }: DrawerProps) {
+export function Drawer({ isOpen, onClose, title, subtitle, children, className, width, position = 'right' }: DrawerProps) {
   return (
     <AnimatePresence>
       {isOpen && (
@@ -33,6 +34,7 @@ export function Drawer({ isOpen, onClose, title, subtitle, children, className, 
             className={cn(
               "fixed top-0 bottom-0 z-50 w-full max-w-md border-glass-border bg-[#0A0A0B] shadow-2xl flex flex-col",
               position === 'right' ? 'right-0 border-l' : 'left-0 border-r',
+              width,
               className
             )}
           >

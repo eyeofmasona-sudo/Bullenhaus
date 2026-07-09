@@ -93,10 +93,14 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
       : <Zap         size={14} className="text-yellow-400" />;
 
   return (
-    <div className="flex h-screen bg-surface-bg font-sans overflow-hidden">
+    <div className="flex h-screen bg-gradient-to-br from-[#08080B] via-[#0A0A10] to-[#0E0E14] font-sans overflow-hidden relative">
+      {/* Ambient background glows */}
+      <div className="fixed top-0 left-1/4 w-96 h-96 bg-accent-primary/15 blur-[150px] rounded-full pointer-events-none z-[-1]" />
+      <div className="fixed bottom-0 right-1/4 w-96 h-96 bg-accent-secondary/8 blur-[150px] rounded-full pointer-events-none z-[-1]" />
+
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 md:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
@@ -106,18 +110,20 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
       </div>
 
       <div className="flex-1 flex flex-col relative min-h-0">
-        {/* Header */}
-        <header className="h-16 flex items-center justify-between px-4 md:px-8 border-b border-border-glass bg-surface-bg/50 backdrop-blur-xl z-20">
+        {/* Header — premium with bottom gold hairline */}
+        <header className="relative h-16 flex items-center justify-between px-4 md:px-8 border-b border-border-glass bg-[#0A0A0E]/60 backdrop-blur-xl z-20">
+          {/* Bottom gold hairline — luxury signature */}
+          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold/30 to-transparent" />
           <div className="flex-1 flex items-center gap-4 max-w-xl">
             <button className="md:hidden p-2 text-slate-400 hover:text-white" onClick={() => setIsMobileMenuOpen(true)}>
               <Menu size={24} />
             </button>
             <div className="relative group w-full hidden sm:block">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-accent-primary transition-colors" size={18} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-gold transition-colors" size={18} />
               <input
                 type="text"
                 placeholder={t('search') + '...'}
-                className="w-full bg-white/5 border border-white/5 rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-accent-primary/30 focus:bg-white/10 transition-all font-mono placeholder:font-sans"
+                className="w-full bg-white/5 border border-white/8 rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-gold/40 focus:bg-white/10 transition-all font-mono placeholder:font-sans hover:border-white/15"
                 onKeyDown={e => {
                   if (e.key === 'Enter' && e.currentTarget.value.trim()) {
                     navigate(`/trade/markets?q=${encodeURIComponent(e.currentTarget.value.trim())}`);
@@ -225,15 +231,15 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
 
             <div onClick={() => navigate('/trade/settings')} className="flex items-center gap-3 pl-2 cursor-pointer group">
               <div className="text-right hidden sm:block">
-                <p className="text-xs font-bold text-white leading-none mb-1 group-hover:text-accent-primary transition-colors">{displayName}</p>
+                <p className="text-xs font-bold text-white leading-none mb-1 group-hover:text-gold transition-colors">{displayName}</p>
                 <div className="flex items-center justify-end gap-1">
-                  <span className={`w-1.5 h-1.5 rounded-full ${kycStatus === 'VERIFIED' ? 'bg-accent-secondary shadow-neon-emerald' : 'bg-orange-500'}`} />
-                  <p className="text-[9px] font-bold text-accent-secondary uppercase tracking-tighter">
+                  <span className={`w-1.5 h-1.5 rounded-full ${kycStatus === 'VERIFIED' ? 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]' : 'bg-orange-500 shadow-[0_0_6px_rgba(244,63,94,0.5)]'}`} />
+                  <p className="text-[9px] font-bold text-gold uppercase tracking-tighter">
                     {role?.toUpperCase() || 'CLIENT'} • {kycStatus || 'UNVERIFIED'}
                   </p>
                 </div>
               </div>
-              <div className="w-10 h-10 rounded-xl border border-white/10 p-0.5 overflow-hidden group-hover:border-accent-primary transition-colors group-hover:shadow-neon-gold">
+              <div className="w-10 h-10 rounded-xl border border-white/10 p-0.5 overflow-hidden group-hover:border-gold/50 group-hover:shadow-[0_0_16px_rgba(212,175,55,0.3)] transition-all">
                 <img src={avatarUrl} alt="avatar" className="w-full h-full rounded-lg bg-[#111]" />
               </div>
             </div>
@@ -241,8 +247,6 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
         </header>
 
         <main className="flex-1 overflow-y-auto custom-scrollbar relative">
-          <div className="fixed top-0 left-1/4 w-96 h-96 bg-accent-primary/20 blur-[150px] rounded-full pointer-events-none z-[-1]" />
-          <div className="fixed bottom-0 right-1/4 w-96 h-96 bg-accent-secondary/10 blur-[150px] rounded-full pointer-events-none z-[-1]" />
           <div className="min-h-full flex flex-col relative z-10">
             <div className="flex-1 w-full p-4 md:p-8">{children}</div>
             <TradingFooter />

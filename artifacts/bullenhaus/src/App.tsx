@@ -73,9 +73,13 @@ const CRMCallHistory = React.lazy(() => import('./app/crm/pages/CallHistory').th
 const CRMAgentClients = React.lazy(() => import('./app/crm/pages/AgentClients').then(m => ({ default: m.AgentClients })));
 const CRMTelephonySettings = React.lazy(() => import('./app/crm/pages/TelephonySettings').then(m => ({ default: m.TelephonySettings })));
 const CRMAIInsights = React.lazy(() => import('./app/crm/pages/AIInsights').then(m => ({ default: m.AIInsights })));
-const CRMKYCReview = React.lazy(() => import('./app/crm/pages/KYCReview').then(m => ({ default: m.KYCReview })));
-const CRMWorkflowRules = React.lazy(() => import('./app/crm/pages/WorkflowRules').then(m => ({ default: m.WorkflowRules })));
+const CRMLeadKanban = React.lazy(() => import('./app/crm/pages/LeadKanban').then(m => ({ default: m.LeadKanban })));
+const CRMTasks = React.lazy(() => import('./app/crm/pages/Tasks').then(m => ({ default: m.Tasks })));
+const CRMTickets = React.lazy(() => import('./app/crm/pages/Tickets').then(m => ({ default: m.Tickets })));
+const CRMMessages = React.lazy(() => import('./app/crm/pages/Messages').then(m => ({ default: m.Messages })));
 const CRMSalesScripts = React.lazy(() => import('./app/crm/pages/SalesScripts').then(m => ({ default: m.SalesScripts })));
+const CRMKycReview = React.lazy(() => import('./app/crm/pages/KycReview').then(m => ({ default: m.KycReview })));
+const CRMWorkflowRules = React.lazy(() => import('./app/crm/pages/WorkflowRules').then(m => ({ default: m.WorkflowRules })));
 
 const Fallback = () => (
   <div className="flex h-dvh w-full items-center justify-center bg-bg">
@@ -196,7 +200,6 @@ const AppContent = () => {
                 <Route path="manager" element={<CRMManagerDashboard />} />
                 <Route path="workspace" element={<CRMAgentWorkspace />} />
                 <Route path="leads" element={<CRMAgentWorkspace />} />
-                <Route path="kanban" element={<CRMAgentWorkspace />} />
                 <Route path="clients" element={<CRMVIPClients />} />
                 <Route path="vip" element={<CRMVIPOnly />} />
                 <Route path="calls" element={<CRMCallHistory />} />
@@ -204,10 +207,15 @@ const AppContent = () => {
                 <Route path="telephony" element={<CRMTelephonySettings />} />
                 <Route path="ai-insights" element={<CRMAIInsights />} />
                 <Route path="sales-scripts" element={<CRMSalesScripts />} />
+                <Route path="kanban" element={<CRMLeadKanban />} />
+                <Route path="tasks" element={<CRMTasks />} />
+                <Route path="tickets" element={<CRMTickets />} />
+                <Route path="messages" element={<CRMMessages />} />
+                <Route path="scripts" element={<CRMSalesScripts />} />
+                <Route path="kyc-review" element={<CRMKycReview />} />
+                <Route path="workflows" element={<CRMWorkflowRules />} />
                 <Route element={<RoleGuard allowedRoles={['admin', 'crm_admin']} fallbackUrl="/unauthorized" />}>
                   <Route path="admin" element={<CRMAdminPanel />} />
-                  <Route path="kyc-review" element={<CRMKYCReview />} />
-                  <Route path="workflows" element={<CRMWorkflowRules />} />
                 </Route>
               </Route>
             </Route>
