@@ -40,13 +40,16 @@ const AssetCard = ({ asset, wallet, buyAsset, isBuyingItem, setIsBuyingItem, con
 
   return (
     <>
-      <ContractModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+      <ContractModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        assetId={asset.id}
+        assetName={asset.name}
+        assetPrice={asset.price}
         onSign={() => {
           checkContractSignature();
           executeBuy();
-        }} 
+        }}
       />
       <div className="glass-card border-accent-primary/20 relative overflow-hidden group flex flex-col">
       <div className="w-full relative overflow-hidden shrink-0 bg-[#0A0E17]">

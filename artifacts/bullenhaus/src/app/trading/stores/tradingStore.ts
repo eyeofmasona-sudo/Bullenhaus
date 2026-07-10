@@ -801,8 +801,25 @@ export const useTradingStore = create<TradingState>()(
       },
       
       buyAsset: async (symbol, name, price, amount) => {
+        // Fetch live price from DB — don't trust the client-side value which may
+        // be stale if the admin changed the asset price after the page loaded.
+        let livePrice = price;
+        try {
+          const { data: assetRow } = await supabase
+            .from('premarket_assets')
+            .select('price')
+            .eq('symbol', symbol)
+            .eq('is_active', true)
+            .maybeSingle();
+          if (assetRow?.price != null) {
+            livePrice = Number(assetRow.price);
+          }
+        } catch {
+          // Network error — fall back to provided price; purchase will still proceed
+        }
+
         const state = get();
-        const cost = price * amount;
+        const cost = livePrice * amount;
         if (state.wallet.balance - state.wallet.marginUsed < cost) {
           return false;
         }
@@ -824,8 +841,8 @@ export const useTradingStore = create<TradingState>()(
           symbol,
           name,
           amount,
-          buyPrice: price,
-          currentPrice: price,
+          buyPrice: livePrice,
+          currentPrice: livePrice,
           createdAt: new Date().toISOString()
         };
 
@@ -853,7 +870,7 @@ export const useTradingStore = create<TradingState>()(
               currency: 'USD',
               method: 'Other',
               status: 'Completed',
-              instructions: `Pre-Market Purchase: ${amount} ${symbol} at $${price.toLocaleString()}`,
+              instructions: `Pre-Market Purchase: ${amount} ${symbol} at $${livePrice.toLocaleString()}`,
             });
             if (txErr) throw txErr;
 

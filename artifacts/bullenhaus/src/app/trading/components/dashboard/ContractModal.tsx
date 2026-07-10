@@ -6,17 +6,21 @@ interface ContractModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSign: () => void;
+  assetId?: string;
+  assetName?: string;
+  assetPrice?: number;
 }
 
-export const ContractModal: React.FC<ContractModalProps> = ({ isOpen, onClose, onSign }) => {
+export const ContractModal: React.FC<ContractModalProps> = ({ isOpen, onClose, onSign, assetId, assetName, assetPrice }) => {
   const [agreed, setAgreed] = useState(false);
   const [signing, setSigning] = useState(false);
 
   const handleSign = async () => {
     setSigning(true);
     try {
-      const { error } = await supabase.rpc('sign_premarket_contract', { 
-        version: 'v1.0' 
+      const { error } = await supabase.rpc('sign_premarket_contract', {
+        version: 'v1.0',
+        asset_id: assetId ?? null,
       });
       
       if (error) throw error;
@@ -55,6 +59,16 @@ export const ContractModal: React.FC<ContractModalProps> = ({ isOpen, onClose, o
         </div>
 
         <div className="p-6 border-t border-white/10 bg-[#0a0a0b] rounded-b-xl space-y-4">
+           {assetPrice != null && (
+             <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-white/5 border border-white/10">
+               <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                 {assetName ? `${assetName} — ` : ''}Purchase Price
+               </span>
+               <span className="font-mono font-bold text-white text-sm">
+                 ${Number(assetPrice).toFixed(2)}
+               </span>
+             </div>
+           )}
            <label className="flex items-center gap-3 cursor-pointer select-none">
              <input 
                type="checkbox" 
