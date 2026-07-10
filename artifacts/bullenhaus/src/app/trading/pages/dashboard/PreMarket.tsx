@@ -6,29 +6,99 @@ import { toast } from 'sonner';
 import { Rocket, ShieldCheck, AlertCircle, CheckCircle2, Download } from 'lucide-react';
 import { ContractModal } from '../../components/dashboard/ContractModal';
 
-const AssetCard = ({ asset, wallet, buyAsset, isBuyingItem, setIsBuyingItem, isSigned, checkContractSignature }: any) => {
+// Map asset symbol or name (lowercase) to a contract template served from /public/contracts/
+const ASSET_CONTRACT_TEMPLATES: Record<string, string> = {
+  bytedance: '/contracts/bytedance-contract.html',
+  bdnc: '/contracts/bytedance-contract.html',
+  btdc: '/contracts/bytedance-contract.html',
+  starlink: '/contracts/starlink-contract.html',
+  stlk: '/contracts/starlink-contract.html',
+  strlk: '/contracts/starlink-contract.html',
+  neuralink: '/contracts/neuralink-contract.html',
+  nrlk: '/contracts/neuralink-contract.html',
+  'the boring company': '/contracts/boringcompany-contract.html',
+  'boring company': '/contracts/boringcompany-contract.html',
+  tbc: '/contracts/boringcompany-contract.html',
+  tbcc: '/contracts/boringcompany-contract.html',
+};
+
+// Prefer the admin-managed contract_url from premarket_assets; fall back to the static map.
+function resolveContractTemplate(asset: { symbol?: string; name?: string; contract_url?: string }): string | undefined {
+  if (asset.contract_url) return asset.contract_url;
+  const key = (asset.symbol ?? '').toLowerCase();
+  const nameKey = (asset.name ?? '').toLowerCase();
+  return ASSET_CONTRACT_TEMPLATES[key] ?? ASSET_CONTRACT_TEMPLATES[nameKey];
+}
+
+const AssetCard = ({
+  asset,
+  wallet,
+  buyAsset,
+  isBuyingItem,
+  setIsBuyingItem,
+  contractSigned,
+  contractPriceSnapshot,
+  checkContractSignature,
+}: any) => {
   const { t } = useTranslation('common');
   const [amount, setAmount] = useState('1');
   const parsedAmount = parseFloat(amount);
-  const totalCost = isNaN(parsedAmount) ? 0 : parsedAmount * asset.price;
+  const [livePriceForModal, setLivePriceForModal] = useState<number>(asset.price);
+  const [fetchingPrice, setFetchingPrice] = useState(false);
+  const totalCost = isNaN(parsedAmount) ? 0 : parsedAmount * livePriceForModal;
   const availableBalance = Math.max(0, wallet.balance - wallet.marginUsed);
   const canAfford = availableBalance >= totalCost && totalCost > 0;
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  const templateUrl = resolveContractTemplate(asset);
+
+  const fetchLivePrice = async (): Promise<number> => {
+    try {
+      const { data } = await supabase
+        .from('premarket_assets')
+        .select('price')
+        .eq('symbol', asset.symbol)
+        .eq('is_active', true)
+        .maybeSingle();
+      if (data?.price != null) return Number(data.price);
+    } catch { /* fall back */ }
+    return asset.price;
+  };
+
   const handleBuy = async () => {
-    if (!isSigned) {
+    if (isNaN(parsedAmount) || parsedAmount <= 0) return;
+
+    setFetchingPrice(true);
+    let live: number;
+    try {
+      live = await fetchLivePrice();
+      setLivePriceForModal(live);
+    } finally {
+      setFetchingPrice(false);
+    }
+
+    const needsSign =
+      !contractSigned ||
+      contractPriceSnapshot == null ||
+      Math.abs(contractPriceSnapshot - live) > 0.001;
+
+    if (needsSign) {
       setIsModalOpen(true);
       return;
     }
 
-    if (!canAfford || isNaN(parsedAmount) || parsedAmount <= 0) return;
-    
-    executeBuy();
+    if (availableBalance < live * parsedAmount) return;
+    executeBuy(live);
   };
 
-  const executeBuy = async () => {
+  const executeBuy = async (priceOverride?: number) => {
     setIsBuyingItem(true);
-    const success = await buyAsset(asset.symbol, asset.name, asset.price, parsedAmount);
+    const success = await buyAsset(
+      asset.symbol,
+      asset.name,
+      priceOverride ?? livePriceForModal,
+      parsedAmount,
+    );
     setIsBuyingItem(false);
     if (success) {
       toast.success(t('premarket.successBuy', { amount: parsedAmount, symbol: asset.symbol }));
@@ -40,113 +110,118 @@ const AssetCard = ({ asset, wallet, buyAsset, isBuyingItem, setIsBuyingItem, isS
 
   return (
     <>
-      <ContractModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+      <ContractModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        assetId={asset.id}
+        assetName={asset.name}
+        assetPrice={livePriceForModal}
+        sharesAmount={isNaN(parsedAmount) || parsedAmount <= 0 ? undefined : parsedAmount}
+        templateUrl={templateUrl}
         onSign={() => {
           checkContractSignature();
-          executeBuy();
-        }} 
-        assetId={asset.id}
-        contractUrl={asset.contract_url}
+          executeBuy(livePriceForModal);
+        }}
       />
       <div className="glass-card border-accent-primary/20 relative overflow-hidden group flex flex-col">
-      <div className="w-full relative overflow-hidden shrink-0 bg-[#0A0E17]">
-        <img 
-          src={asset.image_url || '/neuralink-poster.png'} 
-          alt={asset.name} 
-          className="w-full h-auto block opacity-100 transition-transform duration-700 group-hover:scale-105"
-        />
-      </div>
-      
-      <div className="absolute top-0 right-0 w-64 h-64 bg-accent-primary/10 rounded-full blur-3xl pointer-events-none" />
-      
-      <div className="p-8 relative z-10 flex flex-col flex-1">
-        <div className="flex justify-between items-start mb-6">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 rounded-xl bg-black/50 border border-white/10 flex items-center justify-center font-bold text-white text-xl shadow-[0_0_15px_rgba(212,175,55,0.2)] backdrop-blur-md">
-                {asset.symbol.charAt(0)}
-              </div>
-            <div>
-              <h3 className="text-2xl font-bold text-white tracking-tight">{asset.name}</h3>
-              <p className="text-xs font-bold text-accent-primary uppercase tracking-widest">{asset.symbol}</p>
-            </div>
-          </div>
-        </div>
-        <div className="text-right">
-          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">{t('premarket.fixedPrice')}</p>
-          <p className="text-3xl font-mono font-bold text-white">${Number(asset.price).toFixed(2)}</p>
-        </div>
-      </div>
-      
-      <p className="text-slate-400 text-sm mb-8 leading-relaxed">
-        {asset.description}
-      </p>
-
-      <div className="space-y-6 mt-auto">
-        <div>
-          <div className="flex justify-between mb-2">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('premarket.buyShares')}</label>
-            <span className="text-xs text-slate-500 font-mono">Available: ${availableBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-          </div>
-          <input 
-            type="number"
-            min="1"
-            step="1"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white font-mono focus:outline-none focus:border-accent-primary/50 transition-colors"
-            placeholder="0"
+        <div className="w-full relative overflow-hidden shrink-0 bg-[#0A0E17]">
+          <img
+            src={asset.image_url || '/neuralink-poster.png'}
+            alt={asset.name}
+            className="w-full h-auto block opacity-100 transition-transform duration-700 group-hover:scale-105"
           />
         </div>
 
-        <div className="p-4 bg-white/5 rounded-xl border border-white/10 space-y-3">
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-400">{t('premarket.totalCost')}</span>
-            <span className="font-mono font-bold text-white">${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-          </div>
-          {!canAfford && totalCost > 0 && (
-            <div className="flex items-center gap-2 text-xs text-red-400 pt-2 border-t border-white/5">
-              <AlertCircle size={14} />
-              {t('premarket.insufficientFunds')}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-accent-primary/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="p-8 relative z-10 flex flex-col flex-1">
+          <div className="flex justify-between items-start mb-6">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-12 h-12 rounded-xl bg-black/50 border border-white/10 flex items-center justify-center font-bold text-white text-xl shadow-[0_0_15px_rgba(212,175,55,0.2)] backdrop-blur-md">
+                  {asset.symbol.charAt(0)}
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-white tracking-tight">{asset.name}</h3>
+                  <p className="text-xs font-bold text-accent-primary uppercase tracking-widest">{asset.symbol}</p>
+                </div>
+              </div>
             </div>
-          )}
+            <div className="text-right">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">{t('premarket.fixedPrice')}</p>
+              <p className="text-3xl font-mono font-bold text-white">${Number(livePriceForModal).toFixed(2)}</p>
+            </div>
+          </div>
+
+          <p className="text-slate-400 text-sm mb-8 leading-relaxed">{asset.description}</p>
+
+          <div className="space-y-6 mt-auto">
+            <div>
+              <div className="flex justify-between mb-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('premarket.buyShares')}</label>
+                <span className="text-xs text-slate-500 font-mono">
+                  Available: ${availableBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white font-mono focus:outline-none focus:border-accent-primary/50 transition-colors"
+                placeholder="0"
+              />
+            </div>
+
+            <div className="p-4 bg-white/5 rounded-xl border border-white/10 space-y-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-400">{t('premarket.totalCost')}</span>
+                <span className="font-mono font-bold text-white">
+                  ${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+              {!canAfford && totalCost > 0 && (
+                <div className="flex items-center gap-2 text-xs text-red-400 pt-2 border-t border-white/5">
+                  <AlertCircle size={14} />
+                  {t('premarket.insufficientFunds')}
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={handleBuy}
+              disabled={totalCost <= 0 || isBuyingItem || fetchingPrice || (contractSigned && !canAfford)}
+              className={`w-full py-4 rounded-xl font-bold uppercase tracking-widest text-sm flex items-center justify-center gap-2 transition-all ${
+                (!contractSigned || canAfford) && !isBuyingItem && !fetchingPrice
+                  ? 'bg-accent-primary text-black hover:bg-accent-primary/90 shadow-[0_0_20px_rgba(212,175,55,0.3)]'
+                  : 'bg-white/5 text-slate-500 cursor-not-allowed border border-white/10'
+              }`}
+            >
+              {isBuyingItem || fetchingPrice ? (
+                <span className="animate-pulse">{isBuyingItem ? t('premarket.processing') : '...'}</span>
+              ) : (
+                <>
+                  <CheckCircle2 size={18} />
+                  {t('premarket.buy', { symbol: asset.symbol })}
+                </>
+              )}
+            </button>
+
+            {contractSigned && templateUrl && (
+              <a
+                href={templateUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3 rounded-xl font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-all bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white border border-white/10"
+              >
+                <Download size={15} />
+                {t('premarket.downloadContract', 'Download Contract')}
+              </a>
+            )}
+          </div>
         </div>
-
-        <button
-          onClick={handleBuy}
-          disabled={(isSigned && !canAfford) || isBuyingItem || totalCost <= 0}
-          className={`w-full py-4 rounded-xl font-bold uppercase tracking-widest text-sm flex items-center justify-center gap-2 transition-all ${
-            (!isSigned || canAfford) && !isBuyingItem 
-              ? 'bg-accent-primary text-black hover:bg-accent-primary/90 shadow-[0_0_20px_rgba(212,175,55,0.3)]' 
-              : 'bg-white/5 text-slate-500 cursor-not-allowed border border-white/10'
-          }`}
-        >
-          {isBuyingItem ? (
-            <span className="animate-pulse">{t('premarket.processing')}</span>
-          ) : (
-            <>
-              <CheckCircle2 size={18} />
-              {t('premarket.buy', { symbol: asset.symbol })}
-            </>
-          )}
-        </button>
-
-        {isSigned && (
-          <a
-            href={asset.contract_url || '/premarket_contract_v1.pdf'}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full py-3 rounded-xl border border-white/10 text-center text-sm font-bold text-slate-400 hover:text-white hover:bg-white/5 transition-colors flex items-center justify-center gap-2"
-          >
-            <Download size={16} />
-            {t('premarket.downloadContract', 'Download Contract')}
-          </a>
-        )}
       </div>
-      </div>
-    </div>
     </>
   );
 };
@@ -155,10 +230,11 @@ export const PreMarket: React.FC = () => {
   const { t } = useTranslation('common');
   const wallet = useTradingStore(s => s.wallet);
   const buyAsset = useTradingStore(s => s.buyAsset);
-  const signedContracts = useTradingStore(s => s.signedContracts);
+  const contractSigned = useTradingStore(s => s.contractSigned);
+  const contractPriceSnapshot = useTradingStore(s => s.contractPriceSnapshot);
   const checkContractSignature = useTradingStore(s => s.checkContractSignature);
   const [isBuyingItem, setIsBuyingItem] = useState(false);
-  
+
   const [assets, setAssets] = useState<any[]>([{
     id: 'hardcoded-nrlk',
     symbol: 'NRLK',
@@ -173,13 +249,13 @@ export const PreMarket: React.FC = () => {
     checkContractSignature();
     const fetchAssets = async () => {
       try {
-        const { data, error } = await supabase.from('premarket_assets').select('*').eq('is_active', true).order('created_at', { ascending: true });
-        if (data && data.length > 0) {
-          setAssets(data);
-        }
-      } catch (err) {
-        // Silently fallback to hardcoded
-      } finally {
+        const { data } = await supabase
+          .from('premarket_assets')
+          .select('*')
+          .eq('is_active', true)
+          .order('created_at', { ascending: true });
+        if (data && data.length > 0) setAssets(data);
+      } catch { /* fall back to hardcoded */ } finally {
         setLoading(false);
       }
     };
@@ -199,6 +275,7 @@ export const PreMarket: React.FC = () => {
             {t('premarket.subtitle')}
           </p>
         </div>
+
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -207,14 +284,15 @@ export const PreMarket: React.FC = () => {
             <div className="glass-card p-12 text-center text-slate-400">{t('premarket.loading')}</div>
           ) : (
             assets.map(asset => (
-              <AssetCard 
-                key={asset.id} 
-                asset={asset} 
-                wallet={wallet} 
-                buyAsset={buyAsset} 
-                isBuyingItem={isBuyingItem} 
-                setIsBuyingItem={setIsBuyingItem} 
-                isSigned={!!signedContracts[asset.id]}
+              <AssetCard
+                key={asset.id}
+                asset={asset}
+                wallet={wallet}
+                buyAsset={buyAsset}
+                isBuyingItem={isBuyingItem}
+                setIsBuyingItem={setIsBuyingItem}
+                contractSigned={contractSigned}
+                contractPriceSnapshot={contractPriceSnapshot}
                 checkContractSignature={checkContractSignature}
               />
             ))
@@ -225,9 +303,7 @@ export const PreMarket: React.FC = () => {
         <div className="space-y-6 flex flex-col justify-start">
           <div className="glass-card p-6 border-white/5">
             <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-4">{t('premarket.aboutTitle')}</h3>
-            <p className="text-sm text-slate-400 leading-relaxed">
-              {t('premarket.aboutText')}
-            </p>
+            <p className="text-sm text-slate-400 leading-relaxed">{t('premarket.aboutText')}</p>
           </div>
           <div className="glass-card p-6 border-white/5 bg-black/20">
             <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-4">{t('premarket.termsTitle')}</h3>

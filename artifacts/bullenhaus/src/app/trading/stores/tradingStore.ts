@@ -64,7 +64,8 @@ interface TradingState {
   prices: Record<string, number>;
   priceChanges: Record<string, number>;
   priceOverrides: Record<string, number>;
-  signedContracts: Record<string, boolean>;
+  contractSigned: boolean;
+  contractPriceSnapshot: number | null;
 
   // Actions
   checkContractSignature: () => Promise<void>;
@@ -100,27 +101,19 @@ export const useTradingStore = create<TradingState>()(
       prices: {},
       priceChanges: {},
       priceOverrides: {},
-      signedContracts: {},
+      contractSigned: false,
+      contractPriceSnapshot: null,
 
       checkContractSignature: async () => {
         try {
-          // Fetch old v1.0 signatures for legacy support
-          const { data: v1Data, error: v1Error } = await supabase.from('premarket_contract_signatures').select('id').eq('contract_version', 'v1.0');
-          const hasV1 = !v1Error && v1Data && v1Data.length > 0;
-
-          // Fetch new per-asset signatures
-          const { data: assetData, error: assetError } = await supabase.from('premarket_asset_signatures').select('asset_id');
-
-          const signedMap: Record<string, boolean> = {};
-          if (hasV1) {
-            signedMap['hardcoded-nrlk'] = true; // Legacy support
+          const { data, error } = await supabase
+            .from('premarket_contract_signatures')
+            .select('id, price_snapshot')
+            .eq('contract_version', 'v1.0');
+          if (!error && data && data.length > 0) {
+            const snapshot = data[0].price_snapshot != null ? Number(data[0].price_snapshot) : null;
+            set({ contractSigned: true, contractPriceSnapshot: snapshot });
           }
-          if (!assetError && assetData) {
-            assetData.forEach((row: { asset_id: string }) => {
-              signedMap[row.asset_id] = true;
-            });
-          }
-          set({ signedContracts: signedMap });
         } catch (err) {
           console.error('Failed to check contract signature', err);
         }
@@ -814,8 +807,25 @@ export const useTradingStore = create<TradingState>()(
       },
       
       buyAsset: async (symbol, name, price, amount) => {
+        // Fetch live price from DB — don't trust the client-side value which may
+        // be stale if the admin changed the asset price after the page loaded.
+        let livePrice = price;
+        try {
+          const { data: assetRow } = await supabase
+            .from('premarket_assets')
+            .select('price')
+            .eq('symbol', symbol)
+            .eq('is_active', true)
+            .maybeSingle();
+          if (assetRow?.price != null) {
+            livePrice = Number(assetRow.price);
+          }
+        } catch {
+          // Network error — fall back to provided price; purchase will still proceed
+        }
+
         const state = get();
-        const cost = price * amount;
+        const cost = livePrice * amount;
         if (state.wallet.balance - state.wallet.marginUsed < cost) {
           return false;
         }
@@ -837,8 +847,8 @@ export const useTradingStore = create<TradingState>()(
           symbol,
           name,
           amount,
-          buyPrice: price,
-          currentPrice: price,
+          buyPrice: livePrice,
+          currentPrice: livePrice,
           createdAt: new Date().toISOString()
         };
 
@@ -866,7 +876,7 @@ export const useTradingStore = create<TradingState>()(
               currency: 'USD',
               method: 'Other',
               status: 'Completed',
-              instructions: `Pre-Market Purchase: ${amount} ${symbol} at $${price.toLocaleString()}`,
+              instructions: `Pre-Market Purchase: ${amount} ${symbol} at $${livePrice.toLocaleString()}`,
             });
             if (txErr) throw txErr;
 
