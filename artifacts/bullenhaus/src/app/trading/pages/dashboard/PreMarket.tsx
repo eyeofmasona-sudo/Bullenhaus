@@ -12,6 +12,12 @@ const ASSET_CONTRACT_TEMPLATES: Record<string, string> = {
   bdnc: '/contracts/bytedance-contract.html',
   starlink: '/contracts/starlink-contract.html',
   stlk: '/contracts/starlink-contract.html',
+  neuralink: '/contracts/neuralink-contract.html',
+  nrlk: '/contracts/neuralink-contract.html',
+  'the boring company': '/contracts/boringcompany-contract.html',
+  'boring company': '/contracts/boringcompany-contract.html',
+  tbc: '/contracts/boringcompany-contract.html',
+  tbcc: '/contracts/boringcompany-contract.html',
 };
 
 function resolveContractTemplate(asset: { symbol?: string; name?: string }): string | undefined {
@@ -197,6 +203,18 @@ const AssetCard = ({
                 </>
               )}
             </button>
+
+            {contractSigned && templateUrl && (
+              <a
+                href={templateUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3 rounded-xl font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-all bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white border border-white/10"
+              >
+                <Download size={15} />
+                {t('premarket.downloadContract', 'Download Contract')}
+              </a>
+            )}
           </div>
         </div>
       </div>
@@ -254,18 +272,6 @@ export const PreMarket: React.FC = () => {
           </p>
         </div>
 
-        {contractSigned && (
-          <a
-            href="/premarket_contract_v1.pdf"
-            download
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-colors border border-white/10 text-sm font-medium"
-          >
-            <Download size={16} />
-            {t('premarket.downloadContract', 'Download Contract')}
-          </a>
-        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
