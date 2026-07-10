@@ -45,7 +45,7 @@ export const AdminSettings = () => {
                 <label className="block text-xs font-bold text-slate-400 uppercase mb-2">{t('adminSettings.platform.balance')}</label>
                 <div className="flex gap-2">
                   <input type="text" defaultValue="100000"
-                    className="flex-1 bg-[#111] border border-white/5 rounded-xl px-4 py-3 text-white font-mono focus:outline-none focus:border-accent-primary/30 transition-all"
+                    className="flex-1 glass-card px-4 py-3 text-white font-mono focus:outline-none focus:border-accent-primary/30 transition-all"
                   />
                   <button onClick={() => toast.success(t('adminSettings.platform.balanceUpdated', 'Starting balance updated successfully'))}
                     className="px-4 py-2 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-black font-bold uppercase transition-all rounded-xl border border-emerald-500/20 text-xs"
@@ -93,7 +93,7 @@ export const AdminSettings = () => {
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase mb-2">{t('adminSettings.ai.modelTitle', 'Server model policy')}</label>
                 <select value={aiModel} onChange={e => setAiModel(e.target.value)}
-                  className="w-full bg-[#111] border border-white/5 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-accent-primary/30 transition-all appearance-none cursor-pointer"
+                  className="w-full glass-card px-4 py-3 text-white text-sm focus:outline-none focus:border-accent-primary/30 transition-all appearance-none cursor-pointer"
                 >
                   {AI_MODEL_OPTIONS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
                 </select>
@@ -118,7 +118,7 @@ export const AdminSettings = () => {
               <Shield size={18} className="text-emerald-500" /> {t('adminSettings.security.title')}
             </h3>
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-[#111] border border-white/5 rounded-xl">
+              <div className="flex items-center justify-between p-4 glass-card">
                 <div>
                   <p className="text-sm text-white font-bold">{t('adminSettings.security.mfaTitle')}</p>
                   <p className="text-[10px] text-slate-500 uppercase mt-1">{t('adminSettings.security.mfaDesc')}</p>
@@ -129,7 +129,7 @@ export const AdminSettings = () => {
                   <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all ${mfa ? 'right-0.5' : 'left-0.5'}`} />
                 </button>
               </div>
-              <div className="flex items-center justify-between p-4 bg-[#111] border border-white/5 rounded-xl">
+              <div className="flex items-center justify-between p-4 glass-card">
                 <div>
                   <p className="text-sm text-white font-bold">{t('adminSettings.security.banTitle')}</p>
                   <p className="text-[10px] text-slate-500 uppercase mt-1">{t('adminSettings.security.banDesc')}</p>

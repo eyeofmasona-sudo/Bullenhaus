@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { Mail, Lock, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../trading/lib/supabase';
-import { UnifiedRole } from '../trading/contexts/AuthContext';
+import { UnifiedRole, useAuth } from '../trading/contexts/AuthContext';
 import { AuthShell } from './AuthShell';
 
 export default function LoginPage() {
@@ -12,6 +12,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { signInMockAdmin, signInMockClient, signInMockAgent } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,12 +20,20 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      if (import.meta.env.DEV && import.meta.env.VITE_SUPABASE_URL?.includes('dummy')) {
-        await new Promise(r => setTimeout(r, 800));
-        let target = '/trade/dashboard';
-        if (email.includes('admin')) target = '/admin/dashboard';
-        else if (email.includes('agent') || email.includes('manager')) target = '/crm/dashboard';
-        navigate(target, { replace: true });
+      if (import.meta.env.DEV && (import.meta.env.VITE_SUPABASE_URL?.includes('dummy') || email.includes('@aurelius-desk.crm') || email.includes('admin@') || email.includes('client@') || email.includes('agent@'))) {
+        await new Promise(r => setTimeout(r, 600));
+        // Use mock sign-in so AuthGuard accepts the session.
+        // Route based on email just like the original logic.
+        if (email.includes('admin')) {
+          signInMockAdmin(email);
+          navigate('/admin/dashboard', { replace: true });
+        } else if (email.includes('agent') || email.includes('manager') || email.includes('director') || email.includes('@aurelius-desk.crm')) {
+          signInMockAgent(email);
+          navigate('/crm/dashboard', { replace: true });
+        } else {
+          signInMockClient(email);
+          navigate('/trade/dashboard', { replace: true });
+        }
         return;
       }
 

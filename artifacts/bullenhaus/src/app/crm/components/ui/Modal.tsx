@@ -10,9 +10,10 @@ interface ModalProps {
   subtitle?: string;
   children: React.ReactNode;
   className?: string;
+  maxWidth?: string;
 }
 
-export function Modal({ isOpen, onClose, title, subtitle, children, className }: ModalProps) {
+export function Modal({ isOpen, onClose, title, subtitle, children, className, maxWidth }: ModalProps) {
   return (
     <AnimatePresence>
       {isOpen && (
@@ -30,7 +31,8 @@ export function Modal({ isOpen, onClose, title, subtitle, children, className }:
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             className={cn(
-              "fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-xl border border-glass-border bg-[#121214] p-6 shadow-2xl",
+              "fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-xl border border-glass-border glass-card p-6 shadow-2xl",
+              maxWidth,
               className
             )}
           >

@@ -66,7 +66,7 @@ function AddNumberModal({ agents, onClose, onAdded }: {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-md mx-4 bg-[#0E1012] border border-glass-border rounded-2xl p-6 shadow-2xl">
+      <div className="relative w-full max-w-md mx-4 glass-card border-glass-border rounded-2xl p-6 shadow-2xl">
         <h3 className="text-sm font-bold tracking-[0.15em] uppercase text-aura-platinum mb-5">{t('telModalTitle')}</h3>
 
         {error && <div className="mb-4 p-3 rounded-lg bg-aura-ruby/10 border border-aura-ruby/30 text-aura-ruby text-xs flex items-center gap-2"><AlertCircle className="w-3.5 h-3.5" />{error}</div>}
@@ -195,7 +195,7 @@ export function TelephonySettings() {
           { name: 'Telnyx',  logo: '🔗', status: t('telNotConnected'), color: 'text-aura-ruby/70',    border: 'border-glass-border' },
           { name: 'Vonage',  logo: '📡', status: t('telNotConnected'), color: 'text-aura-ruby/70',    border: 'border-glass-border' },
         ].map(p => (
-          <div key={p.name} className={`rounded-xl border ${p.border} bg-[#121214] p-5`}>
+          <div key={p.name} className={`rounded-xl border ${p.border} glass-card p-5`}>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <span className="text-lg">{p.logo}</span>
@@ -214,7 +214,7 @@ export function TelephonySettings() {
       </div>
 
       {/* Numbers management */}
-      <div className="rounded-xl border border-glass-border bg-[#121214] overflow-hidden">
+      <div className="rounded-xl border border-glass-border glass-card overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-glass-border">
           <div className="flex items-center gap-3">
             <PhoneCall className="w-4 h-4 text-aura-gold" />
@@ -252,7 +252,7 @@ export function TelephonySettings() {
         ) : (
           <>
             {/* Table header */}
-            <div className="grid grid-cols-[2fr_1.5fr_1.5fr_1fr_80px] gap-4 px-6 py-2.5 border-b border-glass-border bg-black/20">
+            <div className="grid grid-cols-[2fr_1.5fr_1.5fr_1fr_80px] gap-4 px-6 py-2.5 border-b border-glass-border glass-card">
               {[t('telColNumber'), t('telColLabel'), t('telColAssigned'), t('status'), t('telColActions')].map(h => (
                 <div key={h} className="text-[9px] font-bold uppercase tracking-[0.2em] text-aura-platinum/30">{h}</div>
               ))}

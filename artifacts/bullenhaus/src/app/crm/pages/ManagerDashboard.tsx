@@ -5,6 +5,7 @@ import {
 import { Button } from "../components/ui/Button";
 import { useI18n } from "../lib/i18n";
 import { supabase } from "../../../lib/supabase/browserClient";
+import { getLeadCounts } from "../../trading/services/leadsService";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -66,6 +67,8 @@ export function ManagerDashboard() {
   const [leads, setLeads]               = useState<Lead[]>([]);
   const [clients, setClients]           = useState<ClientRecord[]>([]);
   const [totalDeposits, setTotalDeposits] = useState(0);
+  const [activeClientCount, setActiveClientCount] = useState(0);
+  const [unassignedSummary, setUnassignedSummary] = useState({ leads: 0, clients: 0 });
   const [loading, setLoading]           = useState(true);
   const [error, setError]               = useState<string | null>(null);
 
@@ -80,7 +83,7 @@ export function ManagerDashboard() {
     setLoading(true);
     setError(null);
     try {
-      const [teamRes, clientsRes, txRes] = await Promise.all([
+      const [teamRes, clientsRes, txRes, clientCountRes, unassignedLeadCount, unassignedClientRes, leadsRes] = await Promise.all([
         supabase
           .from('users')
           .select('id, full_name, email, role, last_seen_at')
@@ -90,55 +93,67 @@ export function ManagerDashboard() {
           .from('users')
           .select('id, full_name, email, assigned_agent_id')
           .eq('role', 'client')
+          .is('assigned_agent_id', null)
           .order('created_at', { ascending: false })
-          .limit(200),
+          .limit(25),
         supabase
           .from('transactions')
           .select('amount')
           .eq('type', 'Deposit')
-          .in('status', ['Completed', 'Approved']),
-      ]);
-
-      if (teamRes.error)    throw new Error(teamRes.error.message);
-      if (clientsRes.error) throw new Error(clientsRes.error.message);
-
-      // Fetch ALL leads — PostgREST caps each request at 1000 rows, so page through.
-      let leadsData: Lead[] = [];
-      for (let from = 0; from < 100000; from += 1000) {
-        const { data: leadsChunk, error: leadsErr } = await supabase
+          .in('status', ['Completed', 'Approved'])
+          .limit(1000),
+        supabase
+          .from('users')
+          .select('id', { count: 'exact', head: true })
+          .eq('role', 'client'),
+        getLeadCounts({ assignedTo: null }),
+        supabase
+          .from('users')
+          .select('id', { count: 'exact', head: true })
+          .eq('role', 'client')
+          .is('assigned_agent_id', null),
+        supabase
           .from('leads')
           .select('id, first_name, last_name, email, stage, assigned_agent_id')
+          .is('assigned_agent_id', null)
           .order('created_at', { ascending: false })
-          .range(from, from + 999);
-        if (leadsErr) throw new Error(leadsErr.message);
-        const batch = (leadsChunk ?? []) as Lead[];
-        leadsData = leadsData.concat(batch);
-        if (batch.length < 1000) break;
-      }
-      const clientsData = (clientsRes.data ?? []) as ClientRecord[];
-      const teamData    = (teamRes.data    ?? []) as any[];
+          .limit(25),
+      ]);
 
-      const agentList: Agent[] = teamData
-        .filter(u => u.role === 'agent')
-        .map(a => ({
-          ...a,
-          leadCount:   leadsData.filter(l => l.assigned_agent_id === a.id).length,
-          clientCount: clientsData.filter(c => c.assigned_agent_id === a.id).length,
-        }));
+      if (teamRes.error) throw new Error(teamRes.error.message);
+      if (clientsRes.error) throw new Error(clientsRes.error.message);
+      if (leadsRes.error) throw new Error(leadsRes.error.message);
+
+      const leadsData = (leadsRes.data ?? []) as Lead[];
+      const clientsData = (clientsRes.data ?? []) as ClientRecord[];
+      const teamData = (teamRes.data ?? []) as any[];
+      const rawAgents = teamData.filter(u => u.role === 'agent');
+
+      const agentList: Agent[] = await Promise.all(rawAgents.map(async (a) => {
+        const [leadCount, clientCountRes] = await Promise.all([
+          getLeadCounts({ assignedTo: a.id }),
+          supabase
+            .from('users')
+            .select('id', { count: 'exact', head: true })
+            .eq('role', 'client')
+            .eq('assigned_agent_id', a.id),
+        ]);
+        return { ...a, leadCount, clientCount: clientCountRes.count ?? 0 };
+      }));
 
       setAgents(agentList);
       setLeads(leadsData);
       setClients(clientsData);
-      setTotalDeposits(
-        (txRes.data ?? []).reduce((s: number, tx: any) => s + Number(tx.amount), 0)
-      );
-    } catch (err: any) {
-      setError(err.message || 'Failed to load data');
+      setActiveClientCount(clientCountRes.count ?? clientsData.length);
+      setUnassignedSummary({ leads: unassignedLeadCount, clients: unassignedClientRes.count ?? 0 });
+      setTotalDeposits((txRes.data ?? []).reduce((s: number, tx: any) => s + Number(tx.amount), 0));
+    } catch (err) {
+      console.error('[ManagerDashboard] Failed to load dashboard', err);
+      setError('Unable to load manager dashboard');
     } finally {
       setLoading(false);
     }
   }, []);
-
   useEffect(() => { loadAll(); }, [loadAll]);
 
   // ── Assignment helpers ─────────────────────────────────────────────────────
@@ -202,8 +217,8 @@ export function ManagerDashboard() {
 
   const itemsForTab = assignTab === 'leads' ? leads : clients;
   const unassignedCount = {
-    leads:   leads.filter(l => !l.assigned_agent_id).length,
-    clients: clients.filter(c => !c.assigned_agent_id).length,
+    leads:   unassignedSummary.leads,
+    clients: unassignedSummary.clients,
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -225,7 +240,7 @@ export function ManagerDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {[
           { label: 'Total Deposits', value: loading ? '—' : fmt(totalDeposits), sub: 'All completed deposits', icon: DollarSign, color: 'text-aura-gold', border: 'border-aura-gold/20' },
-          { label: 'Active Clients', value: loading ? '—' : String(clients.length),   sub: 'Registered on platform', icon: Users,       color: 'text-aura-platinum', border: 'border-glass-border' },
+          { label: 'Active Clients', value: loading ? '—' : String(activeClientCount),   sub: 'Registered on platform', icon: Users,       color: 'text-aura-platinum', border: 'border-glass-border' },
           { label: 'Team Agents',    value: loading ? '—' : String(agents.length),    sub: `${unassignedCount.leads} unassigned leads`, icon: TrendingUp,  color: 'text-aura-platinum', border: 'border-glass-border' },
         ].map(kpi => (
           <div key={kpi.label} className={`rounded-xl border ${kpi.border} bg-gradient-to-b from-white/5 to-transparent p-6 hover:border-aura-gold/20 transition-colors`}>
@@ -249,7 +264,7 @@ export function ManagerDashboard() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
         {/* ── Agent Roster (real online status) ── */}
-        <div className="xl:col-span-1 rounded-xl border border-glass-border bg-[#121214] p-6 flex flex-col min-h-[460px]">
+        <div className="xl:col-span-1 rounded-xl border border-glass-border glass-card p-6 flex flex-col min-h-[460px]">
           <div className="flex items-center justify-between mb-5">
             <h3 className="text-xs font-bold tracking-[0.2em] text-aura-platinum/60 uppercase">Agents</h3>
             <button
@@ -275,7 +290,7 @@ export function ManagerDashboard() {
                 const { label, dotClass, textClass } = getOnlineStatus(agent.last_seen_at);
                 const load = agent.leadCount + agent.clientCount;
                 return (
-                  <div key={agent.id} className="p-3 rounded-lg border border-glass-border bg-black/20 flex items-center gap-3">
+                  <div key={agent.id} className="p-3 rounded-lg border border-glass-border glass-card flex items-center gap-3">
                     <div className="relative shrink-0">
                       <div className="h-9 w-9 rounded-lg bg-gradient-to-tr from-aura-gold/20 to-transparent border border-aura-gold/20 flex items-center justify-center text-[10px] font-bold text-aura-gold uppercase">
                         {displayName(agent).substring(0, 2)}
@@ -300,7 +315,7 @@ export function ManagerDashboard() {
         </div>
 
         {/* ── Assignment Panel ── */}
-        <div className="xl:col-span-2 rounded-xl border border-glass-border bg-[#121214] p-6 flex flex-col min-h-[460px]">
+        <div className="xl:col-span-2 rounded-xl border border-glass-border glass-card p-6 flex flex-col min-h-[460px]">
 
           {/* Tab bar + Auto-Assign */}
           <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
@@ -376,7 +391,7 @@ export function ManagerDashboard() {
                     className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
                       isBeingAssigned
                         ? 'border-aura-gold/40 bg-aura-gold/5'
-                        : 'border-glass-border bg-black/20 hover:bg-black/40'
+                        : 'border-glass-border glass-card hover:bg-black/40'
                     }`}
                   >
                     {/* Avatar */}
@@ -410,7 +425,7 @@ export function ManagerDashboard() {
                             await assignItem(table, item.id, val);
                           }}
                           disabled={agents.length === 0}
-                          className="bg-[#0A0A0B] border border-glass-border text-aura-platinum text-[10px] rounded-lg px-2 py-1.5 outline-none focus:border-aura-gold/50 disabled:opacity-40 max-w-[130px] cursor-pointer"
+                          className="glass-card border-glass-border text-aura-platinum text-[10px] rounded-lg px-2 py-1.5 outline-none focus:border-aura-gold/50 disabled:opacity-40 max-w-[130px] cursor-pointer"
                         >
                           <option value="">Assign to…</option>
                           {agents.map(a => (

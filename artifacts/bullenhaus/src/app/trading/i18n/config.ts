@@ -363,7 +363,7 @@ i18n
           },
           empty: {
             loading: "Loading...",
-            noPending: "No pending KYC requests",
+            noPending: "No pending KYC reviews",
             noUsers: "No users found",
             noDocs: "No documents uploaded yet"
           },

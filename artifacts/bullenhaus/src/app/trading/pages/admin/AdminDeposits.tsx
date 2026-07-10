@@ -92,10 +92,10 @@ export const AdminDeposits = () => {
             <tr className="border-b border-border text-[10px] font-bold text-text-dim uppercase tracking-widest bg-surface/60">
               <th className="px-6 py-4 font-bold">{t('adminTx.columns.user')}</th>
               <th className="px-6 py-4 font-bold">{t('adminTx.columns.amount')}</th>
-              <th className="px-6 py-4 font-bold">{t('common.method')}</th>
+              <th className="px-6 py-4 font-bold">{t('method')}</th>
               <th className="px-6 py-4 font-bold">{t('adminTx.columns.status')}</th>
               <th className="px-6 py-4 font-bold">Payment Details</th>
-              <th className="px-6 py-4 font-bold">{t('common.date')}</th>
+              <th className="px-6 py-4 font-bold">{t('date')}</th>
               <th className="px-6 py-4 text-right font-bold">Actions</th>
             </tr>
           </thead>
@@ -134,7 +134,7 @@ export const AdminDeposits = () => {
                     req.status === 'Pending'   ? 'bg-warning/10 text-warning' :
                     req.status === 'Rejected'  ? 'bg-danger/10 text-danger'  :
                     'bg-info/10 text-info'
-                  }`}>{t(`common.${req.status.toLowerCase()}`) || req.status}</span>
+                  }`}>{t(`${req.status.toLowerCase()}`) || req.status}</span>
                 </td>
                 <td className="px-6 py-4">
                   {req.payment_details ? (

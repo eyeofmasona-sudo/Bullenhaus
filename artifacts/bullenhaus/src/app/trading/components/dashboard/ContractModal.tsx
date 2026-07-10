@@ -107,7 +107,7 @@ export const ContractModal: React.FC<ContractModalProps> = ({
     try {
       const { error } = await supabase.rpc('sign_premarket_contract', {
         version: 'v1.0',
-        asset_id: assetId ?? null,
+        asset_id: assetId && assetId !== 'hardcoded-nrlk' ? assetId : null,
       });
       if (error) throw error;
       toast.success('Contract signed successfully. You may now proceed with your purchase.');

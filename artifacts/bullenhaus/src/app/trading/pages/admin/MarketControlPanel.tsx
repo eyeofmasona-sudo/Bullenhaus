@@ -228,7 +228,7 @@ export const MarketControlPanel = () => {
                   ? 'bg-accent-primary/5 border-accent-primary/30'
                   : pair.isPaused
                   ? 'bg-black/40 border-white/5 grayscale'
-                  : 'bg-[#111] border-white/10 hover:border-white/20'
+                  : 'glass-card-white/10 hover:border-white/20'
               }`}
             >
               <div className="flex justify-between items-start mb-6">

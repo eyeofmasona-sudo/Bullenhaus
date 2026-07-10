@@ -22,7 +22,9 @@ const ASSET_CONTRACT_TEMPLATES: Record<string, string> = {
   tbcc: '/contracts/boringcompany-contract.html',
 };
 
-function resolveContractTemplate(asset: { symbol?: string; name?: string }): string | undefined {
+// Prefer the admin-managed contract_url from premarket_assets; fall back to the static map.
+function resolveContractTemplate(asset: { symbol?: string; name?: string; contract_url?: string }): string | undefined {
+  if (asset.contract_url) return asset.contract_url;
   const key = (asset.symbol ?? '').toLowerCase();
   const nameKey = (asset.name ?? '').toLowerCase();
   return ASSET_CONTRACT_TEMPLATES[key] ?? ASSET_CONTRACT_TEMPLATES[nameKey];

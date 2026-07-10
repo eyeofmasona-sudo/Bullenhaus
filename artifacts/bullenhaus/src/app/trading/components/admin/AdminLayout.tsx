@@ -71,7 +71,18 @@ function useAdminNotifications(): AdminCounts {
   return counts;
 }
 
-// ── Sidebar item ───────────────────────────────────────────────────────────────
+const iconMap: Record<string, string> = {
+  'overview': '/assets/icons/dashboard.png',
+  'user manager': '/assets/icons/users.png',
+  'kyc queue': '/assets/icons/shield.png',
+  'deposits': '/assets/icons/wallet.png',
+  'withdrawals': '/assets/icons/wallet.png',
+  'market control': '/assets/icons/trade.png',
+  'pre-market control': '/assets/icons/trade.png',
+  'transactions': '/assets/icons/trade.png',
+  'system config': '/assets/icons/settings.png'
+};
+
 const AdminSidebarItem = ({
   icon: Icon, label, to, active, badge,
 }: {
@@ -80,33 +91,68 @@ const AdminSidebarItem = ({
   to: string;
   active: boolean;
   badge?: number;
-}) => (
-  <Link to={to}>
-    <motion.div
-      whileHover={{ x: 4 }}
-      className={cn(
-        "flex items-center gap-3 px-4 py-2 rounded-xl cursor-pointer transition-all duration-200",
-        active ? "bg-rose-500/10 text-rose-500" : "text-slate-400 hover:text-white hover:bg-white/5"
-      )}
-    >
-      <Icon size={20} />
-      <span className="font-bold text-xs tracking-wider uppercase flex-1">{label}</span>
-      {badge != null && badge > 0 && (
-        <AnimatePresence>
-          <motion.span
-            key={badge}
-            initial={{ scale: 0.5, opacity: 0 }}
-            animate={{ scale: 1,   opacity: 1 }}
-            exit={   { scale: 0.5, opacity: 0 }}
-            className="min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center leading-none shadow-[0_0_8px_rgba(244,63,94,0.6)]"
-          >
-            {badge > 99 ? '99+' : badge}
-          </motion.span>
-        </AnimatePresence>
-      )}
-    </motion.div>
-  </Link>
-);
+}) => {
+  const customIconSrc = iconMap[label.toLowerCase()];
+  
+  return (
+    <Link to={to}>
+      <motion.div
+        whileHover={{ y: -1, scale: 1.01 }}
+        whileTap={{ y: 1, scale: 0.99 }}
+        className={cn(
+          "group relative flex items-center gap-3 px-3 py-2 mb-1.5 rounded-xl cursor-pointer transition-all duration-300 overflow-hidden",
+          "bg-gradient-to-b from-[#1E1E24] via-[#141418] to-[#0A0A0E] shadow-[0_4px_8px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.05),inset_0_-1px_2px_rgba(0,0,0,0.6)]",
+          active
+            ? "border border-rose-500/40 text-rose-400 shadow-[0_6px_16px_rgba(244,63,94,0.2),inset_0_1px_2px_rgba(255,255,255,0.1),inset_0_-1px_3px_rgba(0,0,0,0.6)]"
+            : "border border-white/5 text-slate-400 hover:text-white hover:border-rose-500/20 hover:shadow-[0_6px_12px_rgba(244,63,94,0.1),inset_0_1px_2px_rgba(255,255,255,0.1),inset_0_-1px_3px_rgba(0,0,0,0.6)]"
+        )}
+      >
+        {active && (
+          <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-rose-500 via-rose-400 to-rose-600 shadow-[0_0_10px_rgba(244,63,94,0.8)]" />
+        )}
+        
+        <div className={cn(
+          "p-1 rounded-lg bg-[#00000080] shadow-[inset_0_1px_2px_rgba(255,255,255,0.05)] border relative z-10 shrink-0",
+          active ? "border-rose-500/30" : "border-white/5 group-hover:border-rose-500/20 transition-colors"
+        )}>
+          {customIconSrc ? (
+            <img 
+              src={customIconSrc} 
+              alt={label} 
+              className={cn(
+                "w-4 h-4 object-contain transition-all duration-300",
+                active ? "drop-shadow-[0_0_8px_rgba(244,63,94,0.8)] filter brightness-110 sepia-[0.3] hue-rotate-[-30deg]" : "opacity-80 group-hover:opacity-100 group-hover:drop-shadow-[0_0_6px_rgba(244,63,94,0.5)] filter grayscale-[0.3]"
+              )}
+            />
+          ) : (
+            <Icon size={14} className={cn("transition-all duration-300", active ? "text-rose-400 drop-shadow-[0_0_8px_rgba(244,63,94,0.8)]" : "text-slate-500 group-hover:text-rose-400 group-hover:drop-shadow-[0_0_6px_rgba(244,63,94,0.5)]")} />
+          )}
+        </div>
+        
+        <span className={cn(
+           "font-bold text-[10px] tracking-wider uppercase flex-1 relative z-10",
+           active ? "glow-text text-rose-300" : "group-hover:text-white transition-colors"
+        )}>
+           {label}
+        </span>
+        
+        {badge != null && badge > 0 && (
+          <AnimatePresence>
+            <motion.span
+              key={badge}
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1,   opacity: 1 }}
+              exit={   { scale: 0.5, opacity: 0 }}
+              className="relative z-10 min-w-[16px] h-[16px] px-1 rounded bg-gradient-to-r from-rose-500 to-rose-700 text-white text-[8px] font-black flex items-center justify-center leading-none shadow-[0_0_8px_rgba(244,63,94,0.6)]"
+            >
+              {badge > 99 ? '99+' : badge}
+            </motion.span>
+          </AnimatePresence>
+        )}
+      </motion.div>
+    </Link>
+  );
+};
 
 // ── Sign-out ───────────────────────────────────────────────────────────────────
 const AdminSignOutButton = () => {
@@ -133,14 +179,26 @@ const AdminSidebar = ({ onClose }: { onClose?: () => void }) => {
   const currentPath = location.pathname;
 
   return (
-    <div className="w-64 h-full bg-[#050505] border-r border-rose-500/10 flex flex-col p-4 shadow-[10px_0_30px_rgba(0,0,0,0.5)]">
-      <div className="flex items-center gap-3 mb-10 px-2">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-rose-800 flex items-center justify-center shadow-[0_0_15px_rgba(244,63,94,0.4)]">
-          <ShieldCheck size={20} className="text-white" />
+    <div className="w-64 h-full bg-gradient-to-b from-[#0A0A0E] via-[#060608] to-[#030305] border-r border-rose-500/15 flex flex-col p-4 shadow-[10px_0_50px_rgba(0,0,0,0.7)] relative overflow-hidden">
+      {/* Ambient rose glow at top */}
+      <div
+        className="absolute top-0 left-0 right-0 h-48 pointer-events-none opacity-50"
+        style={{
+          background: 'radial-gradient(ellipse at 50% 0%, rgba(244,63,94,0.3) 0%, transparent 70%)',
+        }}
+      />
+      {/* Visible rose accent line at top */}
+      <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-rose-500/60 to-transparent" />
+
+      {/* Brand block */}
+      <div className="relative flex items-center gap-3 mb-10 px-2 pt-2">
+        <div className="relative w-11 h-11 rounded-xl bg-transparent flex items-center justify-center shadow-[0_0_20px_rgba(244,63,94,0.5)] overflow-hidden border border-rose-400/20 group">
+          <img src="/assets/icons/admin_logo.png" alt="Admin Logo" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+          <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
         </div>
         <div>
-          <p className="text-xs font-black tracking-[0.2em] text-white">{t('adminLayout.sidebar.admin')}</p>
-          <p className="text-[8px] font-bold text-rose-500/50 tracking-[0.1em] uppercase">{t('adminLayout.sidebar.controlSystem')}</p>
+          <p className="text-sm font-black tracking-[0.18em] text-white">{t('adminLayout.sidebar.admin')}</p>
+          <p className="text-[8px] font-bold text-rose-500/60 tracking-[0.15em] uppercase mt-0.5">{t('adminLayout.sidebar.controlSystem')}</p>
         </div>
       </div>
 
@@ -228,8 +286,15 @@ export const AdminLayout = () => {
   if (role !== 'admin' && role !== 'trade_admin') return null;
 
   return (
-    <div className="min-h-screen bg-[#020202] text-slate-300 font-sans selection:bg-rose-500/30">
-      <div className="flex h-screen overflow-hidden">
+    <div className="min-h-screen bg-[#040406] text-slate-300 font-sans selection:bg-rose-500/30 relative">
+      {/* Ambient background glow */}
+      <div
+        className="fixed inset-0 pointer-events-none opacity-70"
+        style={{
+          background: 'radial-gradient(ellipse at top right, rgba(244,63,94,0.06) 0%, transparent 50%), radial-gradient(ellipse at bottom left, rgba(212,175,55,0.03) 0%, transparent 50%)',
+        }}
+      />
+      <div className="flex h-screen overflow-hidden relative">
         <div className="hidden md:block">
           <AdminSidebar />
         </div>
@@ -242,7 +307,7 @@ export const AdminLayout = () => {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={() => setSidebarOpen(false)}
-                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+                className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 md:hidden"
               />
               <motion.div
                 initial={{ x: -260 }}
@@ -258,7 +323,10 @@ export const AdminLayout = () => {
         </AnimatePresence>
 
         <main className="flex-1 flex flex-col overflow-hidden relative">
-          <header className="h-16 border-b border-rose-500/10 bg-[#050505]/50 backdrop-blur-md flex items-center justify-between px-6 z-30">
+          {/* Premium header with bottom glow line */}
+          <header className="relative h-16 border-b border-rose-500/15 bg-[#060608]/70 backdrop-blur-xl flex items-center justify-between px-6 z-30">
+            {/* Bottom hairline glow */}
+            <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-rose-500/40 to-transparent" />
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setSidebarOpen(true)}
@@ -267,18 +335,21 @@ export const AdminLayout = () => {
                 <Menu size={20} />
               </button>
               <h2 className="text-sm font-black tracking-widest text-white uppercase flex items-center gap-2">
-                <Activity size={16} className="text-rose-500" />
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)]" />
+                </span>
                 {t('adminLayout.header.systemStatus')} <span className="text-emerald-500">{t('adminLayout.header.operational')}</span>
               </h2>
             </div>
             <div className="flex items-center gap-4 text-[10px] font-bold">
-              <div className="px-3 py-1 bg-rose-500/10 text-rose-500 rounded border border-rose-500/20 uppercase tracking-tighter">
+              <div className="px-3 py-1.5 bg-gradient-to-r from-rose-500/10 to-rose-500/5 text-rose-400 rounded-lg border border-rose-500/20 uppercase tracking-tighter shadow-[0_0_12px_rgba(244,63,94,0.15)]">
                 Version 2.4.0-BETA
               </div>
             </div>
           </header>
 
-          <div className="flex-1 overflow-y-auto custom-scrollbar bg-[radial-gradient(circle_at_top_right,rgba(244,63,94,0.03),transparent)]">
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
             <React.Suspense fallback={<div className="flex h-full w-full items-center justify-center min-h-[400px]"><div className="w-8 h-8 rounded-full border-2 border-rose-500 border-t-transparent animate-spin" /></div>}>
               <Outlet />
             </React.Suspense>

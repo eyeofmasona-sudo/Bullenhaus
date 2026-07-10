@@ -301,7 +301,7 @@ export function AdminPanel() {
           { icon: Database, label: "Managers",            value: roleCounts.manager || 0,                           color: "text-blue-400" },
           { icon: Settings, label: "Agents",              value: roleCounts.agent   || 0,                           color: "text-aura-platinum/60" },
         ] as const).map(({ icon: Icon, label, value, color }) => (
-          <div key={label} className="rounded-xl border border-glass-border bg-[#121214] p-5 text-center">
+          <div key={label} className="rounded-xl border border-glass-border glass-card p-5 text-center">
             <Icon className={`w-5 h-5 mx-auto mb-2 ${color}`} />
             <div className="text-xl font-light text-aura-platinum">{loading ? "—" : value}</div>
             <div className="text-[9px] uppercase tracking-widest text-aura-platinum/40 mt-1">{label}</div>
@@ -310,7 +310,7 @@ export function AdminPanel() {
       </div>
 
       {/* Workers table */}
-      <div className="rounded-xl border border-glass-border bg-[#121214] overflow-hidden">
+      <div className="rounded-xl border border-glass-border glass-card overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 p-5 border-b border-glass-border">
           <h3 className="text-xs font-bold tracking-[0.2em] text-aura-platinum/60 uppercase">CRM Workers</h3>
           <div className="flex items-center gap-2 flex-wrap">
@@ -472,7 +472,7 @@ export function AdminPanel() {
       </Modal>
 
       {/* ── AI Core Insights — API Key Configuration ── */}
-      <div className="rounded-2xl border border-glass-border bg-black/20 p-6">
+      <div className="rounded-2xl border border-glass-border glass-card p-6">
         <div className="flex items-center gap-3 mb-1">
           <div className="w-8 h-8 rounded-xl bg-aura-gold/10 border border-aura-gold/20 flex items-center justify-center">
             <Bot className="w-4 h-4 text-aura-gold" />

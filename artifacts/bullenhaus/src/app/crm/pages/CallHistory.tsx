@@ -100,7 +100,7 @@ export function CallHistory() {
         <button
           onClick={refetch}
           disabled={loading}
-          className="p-2.5 rounded-xl border border-glass-border bg-black/20 hover:bg-white/5 text-aura-platinum/40 hover:text-aura-platinum transition-colors disabled:opacity-30"
+          className="p-2.5 rounded-xl border border-glass-border glass-card hover:bg-white/5 text-aura-platinum/40 hover:text-aura-platinum transition-colors disabled:opacity-30"
         >
           <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
         </button>
@@ -112,7 +112,7 @@ export function CallHistory() {
       )}
 
       {/* Table */}
-      <div className="rounded-xl border border-glass-border bg-[#121214] overflow-hidden">
+      <div className="rounded-xl border border-glass-border glass-card overflow-hidden">
         {/* Head */}
         <div className="grid grid-cols-[2fr_1.5fr_1.5fr_1fr_1fr_1fr] gap-4 px-5 py-3 border-b border-glass-border bg-black/30">
           {[t('chColPhone'), t('chColClient'), t('chColAgent'), t('status'), t('chColDuration'), t('chColDate')].map(h => (

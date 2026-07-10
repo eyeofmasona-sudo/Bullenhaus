@@ -10,10 +10,11 @@ interface DrawerProps {
   subtitle?: string;
   children: React.ReactNode;
   className?: string;
+  width?: string;
   position?: 'left' | 'right';
 }
 
-export function Drawer({ isOpen, onClose, title, subtitle, children, className, position = 'right' }: DrawerProps) {
+export function Drawer({ isOpen, onClose, title, subtitle, children, className, width, position = 'right' }: DrawerProps) {
   return (
     <AnimatePresence>
       {isOpen && (
@@ -31,8 +32,9 @@ export function Drawer({ isOpen, onClose, title, subtitle, children, className, 
             exit={{ x: position === 'right' ? '100%' : '-100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className={cn(
-              "fixed top-0 bottom-0 z-50 w-full max-w-md border-glass-border bg-[#0A0A0B] shadow-2xl flex flex-col",
+              "fixed top-0 bottom-0 z-50 w-full max-w-md border-glass-border glass-card shadow-2xl flex flex-col",
               position === 'right' ? 'right-0 border-l' : 'left-0 border-r',
+              width,
               className
             )}
           >
@@ -55,7 +57,7 @@ export function Drawer({ isOpen, onClose, title, subtitle, children, className, 
               <div className="absolute top-4 right-4 z-10">
                 <button
                   onClick={onClose}
-                  className="rounded p-1 text-aura-platinum/50 hover:bg-white/5 hover:text-aura-platinum transition-colors backdrop-blur-md bg-black/20"
+                  className="rounded p-1 text-aura-platinum/50 hover:bg-white/5 hover:text-aura-platinum transition-colors backdrop-blur-md glass-card"
                 >
                   <X className="w-5 h-5" />
                 </button>

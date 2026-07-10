@@ -144,7 +144,7 @@ export const PaymentDetailsForm: React.FC<Props> = ({
                 <div>
                   <h3 className="font-bold text-text text-base">{t('adminPaymentDetails.title')}</h3>
                   <p className="text-xs text-text-muted mt-0.5">
-                    {t(`common.${txType.toLowerCase()}s`) || txType} · {clientName} · ${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    {t(`${txType.toLowerCase()}s`) || txType} · {clientName} · ${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </p>
                 </div>
                 <button onClick={onClose} className="p-1.5 text-text-muted hover:text-text transition-colors rounded-lg hover:bg-white/5">

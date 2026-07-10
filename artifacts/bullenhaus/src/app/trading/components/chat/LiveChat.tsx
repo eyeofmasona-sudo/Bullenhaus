@@ -104,20 +104,21 @@ export const LiveChat: React.FC = () => {
       <motion.button
         onClick={() => setOpen(o => !o)}
         whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.94 }}
-        className="fixed bottom-20 right-5 z-50 w-14 h-14 rounded-2xl bg-accent-primary text-black shadow-neon-gold flex items-center justify-center"
+        className="fixed bottom-20 right-5 z-50 w-16 h-16 rounded-2xl shadow-neon-gold flex items-center justify-center overflow-hidden border border-gold/30 bg-[#121215]"
         title="Bullenhouse Support Assistant"
       >
         <AnimatePresence mode="wait">
           {open
-            ? <motion.div key="x" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.15 }}><X size={22} strokeWidth={2.5} /></motion.div>
-            : <motion.div key="chat" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.15 }}><MessageSquare size={22} strokeWidth={2.5} /></motion.div>
+            ? <motion.div key="x" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.15 }} className="bg-black/50 w-full h-full flex items-center justify-center backdrop-blur-sm"><X size={26} strokeWidth={2.5} className="text-gold" /></motion.div>
+            : <motion.img key="chat" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.15 }} src="/assets/icons/chatbot.png" alt="Chatbot" className="w-full h-full object-cover" />
           }
         </AnimatePresence>
+        
+        {/* Green dot indicator */}
+        {!open && <span className="absolute bottom-1 right-1 w-3.5 h-3.5 rounded-full bg-[#00e676] border-2 border-[#121215] shadow-[0_0_8px_rgba(0,230,118,0.8)] z-10" />}
       </motion.button>
 
-      {!open && messages.length === 0 && (
-        <span className="fixed bottom-[4.8rem] right-5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-[#07070A] z-50 pointer-events-none" />
-      )}
+
 
       <AnimatePresence>
         {open && (

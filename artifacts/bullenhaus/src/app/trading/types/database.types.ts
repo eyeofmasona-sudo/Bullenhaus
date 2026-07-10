@@ -183,6 +183,51 @@ export interface Database {
           created_at?: string
         }
       }
+      workflows: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          status: 'active' | 'disabled' | 'draft'
+          trigger: string | null
+          trigger_type: string | null
+          trigger_config: Json
+          conditions: Json
+          actions: Json
+          created_by: string | null
+          workspace_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          status?: 'active' | 'disabled' | 'draft'
+          trigger?: string | null
+          trigger_type?: string | null
+          trigger_config?: Json
+          conditions?: Json
+          actions?: Json
+          created_by?: string | null
+          workspace_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          name?: string
+          description?: string | null
+          status?: 'active' | 'disabled' | 'draft'
+          trigger?: string | null
+          trigger_type?: string | null
+          trigger_config?: Json
+          conditions?: Json
+          actions?: Json
+          created_by?: string | null
+          workspace_id?: string | null
+          updated_at?: string
+        }
+      }
       gamification_profiles: {
         Row: {
           user_id: string

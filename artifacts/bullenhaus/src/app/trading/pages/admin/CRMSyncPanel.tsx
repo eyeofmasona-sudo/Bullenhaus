@@ -175,7 +175,7 @@ export const CRMSyncPanel: React.FC = () => {
             {webhooks.length === 0 ? (
                <div className="text-center py-8 text-slate-500 text-sm">{t('adminCrm.endpoints.none')}</div>
             ) : webhooks.map((wh) => (
-              <div key={wh.id} className="p-4 border border-white/5 rounded-xl bg-[#111] flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div key={wh.id} className="p-4 border border-white/5 rounded-xl glass-card flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <h4 className="text-sm font-bold text-white">{wh.name}</h4>
@@ -213,7 +213,7 @@ export const CRMSyncPanel: React.FC = () => {
         </div>
 
         {/* Data Architecture Info */}
-        <div className="glass-card p-6 border-white/5 bg-gradient-to-br from-[#111] to-[#0A0A0A]">
+        <div className="glass-card p-6 border-white/5 glass-card">
             <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-4 flex items-center gap-2">
               <Database size={18} className="text-accent-secondary" /> {t('adminCrm.dataPolicy.title')}
             </h3>
@@ -251,7 +251,7 @@ export const CRMSyncPanel: React.FC = () => {
             {syncEvents.length === 0 ? (
                <div className="text-center py-8 text-slate-500 text-sm">{t('adminCrm.audit.none')}</div>
             ) : syncEvents.map((evt) => (
-              <div key={evt.id} className="p-3 border border-white/5 rounded-xl bg-[#111] hover:bg-white/5 transition-colors group">
+              <div key={evt.id} className="p-3 border border-white/5 rounded-xl glass-card hover:bg-white/5 transition-colors group">
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex items-center gap-2">
                     {evt.status === 'success' ? (

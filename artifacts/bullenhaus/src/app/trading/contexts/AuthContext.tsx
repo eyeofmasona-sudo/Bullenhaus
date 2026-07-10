@@ -11,9 +11,9 @@ interface AuthContextType {
   kycStatus: 'UNVERIFIED' | 'PENDING' | 'VERIFIED' | 'REJECTED' | null;
   loading: boolean;
   signOut: () => Promise<void>;
-  signInMockAdmin: () => void;
-  signInMockClient: () => void;
-  signInMockAgent: () => void;
+  signInMockAdmin: (email?: string) => void;
+  signInMockClient: (email?: string) => void;
+  signInMockAgent: (email?: string) => void;
   refreshProfile: () => Promise<void>;
 }
 
@@ -84,9 +84,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signInMockAdmin = () => {
+  const signInMockAdmin = (email?: string) => {
     if (!import.meta.env.DEV) return;
-    const mockUser = { id: 'admin-mock', email: 'admin@bullenhaus.local' } as User;
+    const mockUser = { id: 'admin-mock', email: email || 'admin@bullenhaus.local' } as User;
     const mockSession = { user: mockUser, access_token: 'mock-token', refresh_token: 'mock', expires_in: 9999, token_type: 'bearer' } as Session;
     setSession(mockSession);
     setUser(mockUser);
@@ -95,9 +95,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(false);
   };
 
-  const signInMockClient = () => {
+  const signInMockClient = (email?: string) => {
     if (!import.meta.env.DEV) return;
-    const mockUser = { id: 'client-mock', email: 'client@bullenhaus.local' } as User;
+    const mockUser = { id: 'client-mock', email: email || 'client@bullenhaus.local' } as User;
     const mockSession = { user: mockUser, access_token: 'mock-token', refresh_token: 'mock', expires_in: 9999, token_type: 'bearer' } as Session;
     setSession(mockSession);
     setUser(mockUser);
@@ -106,9 +106,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(false);
   };
 
-  const signInMockAgent = () => {
+  const signInMockAgent = (email?: string) => {
     if (!import.meta.env.DEV) return;
-    const mockUser = { id: 'agent-mock', email: 'agent@bullenhaus.local' } as User;
+    const mockUser = { id: 'agent-mock', email: email || 'agent@bullenhaus.local' } as User;
     const mockSession = { user: mockUser, access_token: 'mock-token', refresh_token: 'mock', expires_in: 9999, token_type: 'bearer' } as Session;
     setSession(mockSession);
     setUser(mockUser);
