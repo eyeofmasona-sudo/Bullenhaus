@@ -63,8 +63,32 @@ export const ContractModal: React.FC<ContractModalProps> = ({
       : null;
 
   const fillIframeFields = useCallback(() => {
-    const win = iframeRef.current?.contentWindow as (Window & { set?: (k: string, v: string) => void }) | null;
-    if (!win?.set) return;
+    const win = iframeRef.current?.contentWindow as
+      | (Window & {
+          set?: (k: string, v: string) => void;
+          setContractPurchaseData?: (data: Record<string, unknown>) => void;
+        })
+      | null;
+    if (!win) return;
+
+    // Newer templates (Neuralink, Boring Company) expose a single data-object API
+    if (typeof win.setContractPurchaseData === 'function') {
+      win.setContractPurchaseData({
+        quantity: sharesAmount != null && sharesAmount > 0 ? sharesAmount : '',
+        price: assetPrice != null ? Number(assetPrice) : '',
+        currency: 'USD',
+        purchaseDate: new Date().toISOString().slice(0, 10),
+        place: 'Online',
+        buyer: {
+          fullName: userName || '',
+          email: userEmail || '',
+        },
+      });
+      return;
+    }
+
+    // Older templates (ByteDance, Starlink) expose set(key, value)
+    if (typeof win.set !== 'function') return;
     if (sharesAmount != null && sharesAmount > 0) win.set('quantity', String(sharesAmount));
     if (assetPrice != null) win.set('price', `$${Number(assetPrice).toFixed(2)}`);
     if (totalAmount != null) win.set('amount', `$${totalAmount.toFixed(2)}`);
