@@ -10,8 +10,10 @@ import { ContractModal } from '../../components/dashboard/ContractModal';
 const ASSET_CONTRACT_TEMPLATES: Record<string, string> = {
   bytedance: '/contracts/bytedance-contract.html',
   bdnc: '/contracts/bytedance-contract.html',
+  btdc: '/contracts/bytedance-contract.html',
   starlink: '/contracts/starlink-contract.html',
   stlk: '/contracts/starlink-contract.html',
+  strlk: '/contracts/starlink-contract.html',
   neuralink: '/contracts/neuralink-contract.html',
   nrlk: '/contracts/neuralink-contract.html',
   'the boring company': '/contracts/boringcompany-contract.html',
