@@ -65,6 +65,7 @@ interface TradingState {
   priceChanges: Record<string, number>;
   priceOverrides: Record<string, number>;
   contractSigned: boolean;
+  contractPriceSnapshot: number | null;
 
   // Actions
   checkContractSignature: () => Promise<void>;
@@ -101,12 +102,17 @@ export const useTradingStore = create<TradingState>()(
       priceChanges: {},
       priceOverrides: {},
       contractSigned: false,
+      contractPriceSnapshot: null,
 
       checkContractSignature: async () => {
         try {
-          const { data, error } = await supabase.from('premarket_contract_signatures').select('id').eq('contract_version', 'v1.0');
+          const { data, error } = await supabase
+            .from('premarket_contract_signatures')
+            .select('id, price_snapshot')
+            .eq('contract_version', 'v1.0');
           if (!error && data && data.length > 0) {
-            set({ contractSigned: true });
+            const snapshot = data[0].price_snapshot != null ? Number(data[0].price_snapshot) : null;
+            set({ contractSigned: true, contractPriceSnapshot: snapshot });
           }
         } catch (err) {
           console.error('Failed to check contract signature', err);
