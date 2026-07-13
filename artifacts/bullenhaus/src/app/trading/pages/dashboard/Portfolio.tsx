@@ -4,6 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTradingStore } from '../../stores/tradingStore';
 import { useTransactionStore } from '../../stores/transactionStore';
+import { useSpotStore } from '../../stores/spotStore';
+import { AssetIcon } from '../../components/common/AssetIcon';
+import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase';
 import { useWalletSync } from '../../hooks/useWalletSync';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
@@ -21,6 +24,24 @@ export const Portfolio: React.FC = () => {
   const requests = useTransactionStore(s => s.requests);
   const positions = useTradingStore(s => s.positions);
   const assets = useTradingStore(s => s.assets) || [];
+  const prices = useTradingStore(s => s.prices);
+  const spotHoldings = useSpotStore(s => s.holdings);
+  const loadSpotHoldings = useSpotStore(s => s.loadHoldings);
+  const executeSpotTrade = useSpotStore(s => s.executeTrade);
+  const spotExecuting = useSpotStore(s => s.executing);
+
+  useEffect(() => { loadSpotHoldings(); }, [loadSpotHoldings]);
+
+  const handleSpotSell = async (symbol: string, amount: number) => {
+    const price = prices[`${symbol}USDT`];
+    if (!price) {
+      toast.error('Live price not available');
+      return;
+    }
+    const err = await executeSpotTrade(symbol, 'sell', amount, price);
+    if (err) { toast.error(err); return; }
+    toast.success(`Sold ${amount} ${symbol} for $${(amount * price).toLocaleString(undefined, { maximumFractionDigits: 2 })}`);
+  };
 
   const closedPositions = useMemo(() => {
     return positions.filter(p => p.status === 'closed').sort((a, b) => {
@@ -245,6 +266,70 @@ export const Portfolio: React.FC = () => {
                   </div>
                 )}
               </div>
+          </div>
+
+          {/* Spot Holdings */}
+          <div className="glass-card p-6">
+            <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-6">Spot Holdings</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">
+                  <tr>
+                    <th className="text-left pb-4 font-bold">Asset</th>
+                    <th className="text-right pb-4 font-bold">Amount</th>
+                    <th className="text-right pb-4 font-bold">Avg Buy</th>
+                    <th className="text-right pb-4 font-bold">Value (USD)</th>
+                    <th className="text-right pb-4 font-bold">P&amp;L</th>
+                    <th className="text-right pb-4 font-bold"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {spotHoldings.length > 0 ? spotHoldings.map((h) => {
+                    const livePrice = prices[`${h.symbol}USDT`] ?? null;
+                    const value = livePrice != null ? h.amount * livePrice : null;
+                    const pnl = livePrice != null ? (livePrice - h.avgBuyPrice) * h.amount : null;
+                    const pnlPositive = (pnl ?? 0) >= 0;
+                    return (
+                      <tr key={h.symbol} className="group hover:bg-white/5 transition-all">
+                        <td className="py-4">
+                          <div className="flex items-center gap-3">
+                            <AssetIcon symbol={h.symbol} size={32} />
+                            <p className="font-bold text-text text-sm group-hover:text-gold transition-colors">{h.symbol}</p>
+                          </div>
+                        </td>
+                        <td className="py-4 text-right font-mono text-sm text-text-muted">
+                          {h.amount.toLocaleString(undefined, { maximumFractionDigits: 8 })}
+                        </td>
+                        <td className="py-4 text-right font-mono text-sm text-text-muted">
+                          ${h.avgBuyPrice.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                        </td>
+                        <td className="py-4 text-right font-mono text-sm text-text font-bold">
+                          {value != null ? `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                        </td>
+                        <td className={`py-4 text-right font-mono text-xs font-bold ${pnl == null ? 'text-slate-500' : pnlPositive ? 'text-accent-secondary' : 'text-accent-quaternary'}`}>
+                          {pnl != null ? `${pnlPositive ? '+' : ''}$${pnl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                        </td>
+                        <td className="py-4 text-right">
+                          <button
+                            onClick={() => handleSpotSell(h.symbol, h.amount)}
+                            disabled={spotExecuting || livePrice == null}
+                            className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest bg-accent-quaternary/10 text-accent-quaternary border border-accent-quaternary/30 hover:bg-accent-quaternary/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            Sell All
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  }) : (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center text-sm text-slate-500">
+                        No spot holdings yet. Switch the order panel to Spot mode to buy &amp; hold crypto.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Holdings List */}
