@@ -16,6 +16,7 @@ import { AuthProvider, useAuth } from './app/trading/contexts/AuthContext';
 import { AuthGuard } from './components/guards/AuthGuard';
 import { RoleGuard } from './components/guards/RoleGuard';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { MaintenanceGate } from './components/MaintenanceGate';
 
 // Global Auth Pages
 import LoginPage from './app/login/LoginPage';
@@ -264,10 +265,12 @@ const AppContent = () => {
 export default function App() {
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <AppContent />
-        <Toaster theme="dark" position="top-right" richColors />
-      </AuthProvider>
+      <MaintenanceGate>
+        <AuthProvider>
+          <AppContent />
+          <Toaster theme="dark" position="top-right" richColors />
+        </AuthProvider>
+      </MaintenanceGate>
     </ErrorBoundary>
   );
 }
