@@ -4,6 +4,7 @@ import { ChevronRight, Percent, Minus, Plus, Bitcoin, ShieldAlert, Target, Shiel
 import { useTradingContext } from '../../contexts/TradingContext';
 import { useTradingStore } from '../../stores/tradingStore';
 import { AssetIcon } from '../common/AssetIcon';
+import { SpotOrderContent } from './SpotOrderContent';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { crmService } from '../../services/crmService';
@@ -34,6 +35,7 @@ export const AdvancedOrderPanel: React.FC = () => {
 
   const [user, setUser] = useState<any>(null);
   const [conditionalPrice, setConditionalPrice] = useState('');
+  const [tradeMode, setTradeMode] = useState<'margin' | 'spot'>('margin');
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
   }, []);
@@ -196,14 +198,24 @@ export const AdvancedOrderPanel: React.FC = () => {
         <div className="flex items-center justify-between p-6 border-b border-white/5 relative z-10">
           <h3 className="text-sm font-bold text-white tracking-wide uppercase">{t('launchProtocol')}</h3>
           <div className="flex items-center gap-1 p-1 bg-[#111] rounded-lg border border-white/5">
-             <button 
-               className="px-3 py-1 rounded text-[10px] font-bold transition-colors bg-accent-primary text-black shadow-neon-gold"
+             <button
+               onClick={() => setTradeMode('spot')}
+               className={`px-3 py-1 rounded text-[10px] font-bold transition-colors ${tradeMode === 'spot' ? 'bg-accent-primary text-black shadow-neon-gold' : 'text-slate-500 hover:text-white'}`}
+             >
+               Spot
+             </button>
+             <button
+               onClick={() => setTradeMode('margin')}
+               className={`px-3 py-1 rounded text-[10px] font-bold transition-colors ${tradeMode === 'margin' ? 'bg-accent-primary text-black shadow-neon-gold' : 'text-slate-500 hover:text-white'}`}
              >
                {t('market')}
              </button>
           </div>
         </div>
-  
+
+        {tradeMode === 'spot' ? (
+          <SpotOrderContent currentPair={currentPair} />
+        ) : (<>
         <div className="flex-1 p-6 overflow-y-auto custom-scrollbar relative z-10">
         
         {/* Pair Display */}
@@ -412,6 +424,7 @@ export const AdvancedOrderPanel: React.FC = () => {
             </button>
          </div>
       </div>
+      </>)}
     </div>
   );
 };
