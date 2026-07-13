@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { ChevronRight, Percent, Minus, Plus, Bitcoin, ShieldAlert, Target, ShieldX, TrendingUp, TrendingDown, Lock } from 'lucide-react';
 import { useTradingContext } from '../../contexts/TradingContext';
 import { useTradingStore } from '../../stores/tradingStore';
+import { AssetIcon } from '../common/AssetIcon';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { crmService } from '../../services/crmService';
@@ -208,9 +209,7 @@ export const AdvancedOrderPanel: React.FC = () => {
         {/* Pair Display */}
         <div className="p-4 bg-[#111] border border-white/10 rounded-xl flex items-center justify-between mb-6">
           <div className="flex items-center gap-3 w-full">
-             <div className="w-10 h-10 rounded-xl bg-[#222] flex items-center justify-center border border-white/10 shrink-0 text-[10px] font-bold text-white uppercase tracking-widest break-all px-1 text-center leading-none">
-                {currentPair?.substring(0, 3)}
-             </div>
+             <AssetIcon symbol={currentPair} size={40} />
              <div className="flex-1 w-full relative group">
                 <div className="w-full bg-transparent text-sm font-bold text-white outline-none p-0 m-0">
                   {currentPair?.endsWith('USDT') ? currentPair.replace('USDT', ' / USDT') : currentPair?.endsWith('USD') ? currentPair.replace('USD', ' / USD') : currentPair}

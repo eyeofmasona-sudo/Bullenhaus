@@ -5,6 +5,7 @@ import { useTradingStore } from '../../stores/tradingStore';
 import { toast } from 'sonner';
 import { Rocket, ShieldCheck, AlertCircle, CheckCircle2, Download } from 'lucide-react';
 import { ContractModal } from '../../components/dashboard/ContractModal';
+import { AssetIcon } from '../../components/common/AssetIcon';
 
 // Map asset symbol or name (lowercase) to a contract template served from /public/contracts/
 const ASSET_CONTRACT_TEMPLATES: Record<string, string> = {
@@ -138,8 +139,8 @@ const AssetCard = ({
           <div className="flex justify-between items-start mb-6">
             <div>
               <div className="flex items-center gap-3 mb-2">
-                <div className="w-12 h-12 rounded-xl bg-black/50 border border-white/10 flex items-center justify-center font-bold text-white text-xl shadow-[0_0_15px_rgba(212,175,55,0.2)] backdrop-blur-md">
-                  {asset.symbol.charAt(0)}
+                <div className="w-12 h-12 rounded-xl bg-black/50 border border-white/10 flex items-center justify-center overflow-hidden shadow-[0_0_15px_rgba(212,175,55,0.2)] backdrop-blur-md">
+                  <AssetIcon symbol={asset.symbol} size={48} className="rounded-xl" />
                 </div>
                 <div>
                   <h3 className="text-2xl font-bold text-white tracking-tight">{asset.name}</h3>
