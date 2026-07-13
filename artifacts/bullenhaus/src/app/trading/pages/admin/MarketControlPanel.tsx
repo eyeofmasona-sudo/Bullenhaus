@@ -5,6 +5,7 @@ import { Activity, Play, Pause, Zap, BarChart2, Hash, Edit3, Lock, Unlock } from
 import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase';
 import { ASSETS } from '../../components/dashboard/AssetSelector';
+import { AssetIcon } from '../../components/common/AssetIcon';
 import { useTranslation } from 'react-i18next';
 
 // Dynamic slider ranges per symbol type
@@ -234,6 +235,7 @@ export const MarketControlPanel = () => {
               <div className="flex justify-between items-start mb-6">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
+                    <AssetIcon symbol={pair.symbol} size={24} />
                     <h4 className="text-xl font-bold text-white tracking-tight">
                       {pair.symbol?.substring(0, 3)} / {pair.symbol?.substring(3)}
                     </h4>

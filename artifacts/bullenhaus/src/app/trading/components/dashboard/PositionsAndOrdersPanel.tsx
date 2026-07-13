@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTradingStore } from '../../stores/tradingStore';
+import { AssetIcon } from '../common/AssetIcon';
 import { useTradingContext } from '../../contexts/TradingContext';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
@@ -157,9 +158,7 @@ export const PositionsAndOrdersPanel = () => {
                     <tr key={pos.id} className="group hover:bg-white/5 transition-all duration-200">
                       <td className="py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-[#111] border border-white/10 flex items-center justify-center font-bold text-white text-[10px]">
-                                {pos.symbol?.substring(0, 3)}
-                            </div>
+                            <AssetIcon symbol={pos.symbol} size={32} />
                             <div>
                               <p className="font-bold text-white text-xs leading-none mb-1 group-hover:text-accent-primary transition-colors">{pos.symbol}</p>
                               <p className="text-[10px] text-slate-500 font-medium">{pos.marginType}</p>
@@ -231,9 +230,7 @@ export const PositionsAndOrdersPanel = () => {
                     <tr key={order.id} className="group hover:bg-white/5 transition-all duration-200">
                       <td className="py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-[#111] border border-white/10 flex items-center justify-center font-bold text-white text-[10px]">
-                                {order.symbol?.substring(0, 3)}
-                            </div>
+                            <AssetIcon symbol={order.symbol} size={32} />
                             <div>
                               <p className="font-bold text-white text-xs leading-none mb-1 group-hover:text-accent-primary transition-colors">{order.symbol}</p>
                               <p className="text-[10px] text-slate-500 font-medium">{order.marginType}</p>

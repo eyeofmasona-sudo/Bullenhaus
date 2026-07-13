@@ -4,6 +4,7 @@ import { Search, Filter, TrendingUp, TrendingDown, ExternalLink } from 'lucide-r
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTradingStore } from '../../stores/tradingStore';
 import { useForexStore } from '../../stores/forexStore';
+import { AssetIcon } from '../../components/common/AssetIcon';
 
 const MarketRow = React.memo(({ symbol, handleTrade, t }: { symbol: string, handleTrade: (s:string)=>void, t: any }) => {
   const price = useTradingStore(s => s.prices[symbol]);
@@ -18,9 +19,7 @@ const MarketRow = React.memo(({ symbol, handleTrade, t }: { symbol: string, hand
     <tr className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
       <td className="px-6 py-4">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-white/10 flex items-center justify-center font-bold text-white text-[10px]">
-            {symbol?.substring(0, 3)}
-          </div>
+          <AssetIcon symbol={symbol} size={32} />
           <div>
             <p className="font-bold text-white group-hover:text-accent-primary transition-colors">{displaySym}</p>
           </div>

@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { TrendingUp, TrendingDown, Clock, Search, Filter, ShieldCheck, ArrowUpRight, Activity } from 'lucide-react';
 import { useTradingStore } from '../../stores/tradingStore';
 import { useTradingContext } from '../../contexts/TradingContext';
+import { AssetIcon } from '../common/AssetIcon';
 
 export const Watchlist = () => {
   const { setCurrentPair } = useTradingContext();
@@ -52,9 +53,7 @@ export const Watchlist = () => {
             className="grid grid-cols-12 items-center px-2 py-3 rounded-xl cursor-pointer transition-all border border-transparent hover:border-white/5"
           >
             <div className="col-span-6 flex items-center gap-3 min-w-0">
-               <div className="w-8 h-8 rounded-lg bg-[#111] border border-white/5 flex items-center justify-center text-xs font-bold text-accent-primary">
-                  {item.symbol.charAt(0)}
-               </div>
+               <AssetIcon symbol={item.id} size={32} />
                <span className="text-xs font-bold text-slate-200 truncate">{item.symbol}</span>
             </div>
             <span className="col-span-3 text-right text-xs font-mono text-slate-300 truncate">{item.price}</span>

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useTradingContext } from '../../contexts/TradingContext';
 import { Search, Star, ChevronDown, Check, Flame, TrendingUp, TrendingDown, Bitcoin } from 'lucide-react';
 import { useTradingStore } from '../../stores/tradingStore';
+import { AssetIcon } from '../common/AssetIcon';
 
 const CATEGORIES = ['Crypto', 'Forex', 'Metals'];
 export const ASSETS = {
@@ -184,6 +185,7 @@ export const AssetSelector: React.FC = () => {
                         <div onClick={(e) => toggleFav(e, symbol)} className={`cursor-pointer transition-colors ${isFav ? 'text-accent-primary' : 'text-slate-600 hover:text-slate-400'}`}>
                            <Star size={14} className={isFav ? 'fill-accent-primary' : ''} />
                         </div>
+                        <AssetIcon symbol={symbol} size={24} />
                         <div className="text-left">
                           <div className={`text-sm font-bold font-mono ${currentPair === symbol ? 'text-accent-primary' : 'text-white group-hover:text-white'}`}>
                             {formatPair(symbol)}
