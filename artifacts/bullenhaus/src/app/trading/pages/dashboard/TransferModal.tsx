@@ -15,7 +15,9 @@ export const TransferModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
   type: 'deposit' | 'withdraw';
-}> = ({ isOpen, onClose, type }) => {
+  /** Prefills the amount field when the modal opens (e.g. Elite upgrade = 10000). */
+  initialAmount?: number;
+}> = ({ isOpen, onClose, type, initialAmount }) => {
   const { t } = useTranslation('common');
   const [step, setStep]                         = useState(1);
   const [amount, setAmount]                     = useState('');
@@ -43,6 +45,13 @@ export const TransferModal: React.FC<{
   const activeRequest   = requestId ? requests.find(r => r.id === requestId) : null;
   const displayRequest  = serverRequest || activeRequest;
   const displayInstructions = serverRequest?.instructions || activeRequest?.instructions || serverInstructions;
+
+  // Prefill amount on open (a pending transaction found below still overrides it)
+  useEffect(() => {
+    if (isOpen && initialAmount && initialAmount > 0) {
+      setAmount(prev => (prev ? prev : String(initialAmount)));
+    }
+  }, [isOpen, initialAmount]);
 
   // Load existing pending transaction on mount/open
   useEffect(() => {
