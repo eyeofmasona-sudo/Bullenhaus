@@ -43,6 +43,7 @@ const TradeNotifications = React.lazy(() => import('./app/trading/pages/dashboar
 const TradeSupport = React.lazy(() => import('./app/trading/pages/dashboard/Support').then(m => ({ default: m.Support })));
 const TradeProfileSettings = React.lazy(() => import('./app/trading/pages/dashboard/ProfileSettings').then(m => ({ default: m.ProfileSettings })));
 const TradeGamification = React.lazy(() => import('./app/trading/pages/dashboard/Gamification').then(m => ({ default: m.Gamification })));
+const TradeInstitutionalTools = React.lazy(() => import('./app/trading/pages/dashboard/InstitutionalTools').then(m => ({ default: m.InstitutionalTools })));
 
 // Trade Admin Components
 const TradeAdminLayout = React.lazy(() => import('./app/trading/components/admin/AdminLayout').then(m => ({ default: m.AdminLayout })));
@@ -185,6 +186,7 @@ const AppContent = () => {
                 <Route path="notifications" element={<TradeNotifications />} />
                 <Route path="support" element={<TradeSupport />} />
                 <Route path="gamification" element={<TradeGamification />} />
+                <Route path="tools" element={<TradeInstitutionalTools />} />
                 <Route path="settings" element={<TradeProfileSettings />} />
               </Route>
             </Route>

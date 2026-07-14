@@ -125,11 +125,11 @@ const AssetCard = ({
         }}
       />
       <div className="glass-card border-accent-primary/20 relative overflow-hidden group flex flex-col">
-        <div className="w-full relative overflow-hidden shrink-0 bg-[#0A0E17] max-h-44">
+        <div className="w-full relative overflow-hidden shrink-0 bg-[#0A0E17]">
           <img
             src={asset.image_url || '/neuralink-poster.png'}
             alt={asset.name}
-            className="w-full h-44 object-cover block opacity-100 transition-transform duration-700 group-hover:scale-105"
+            className="w-full h-auto block opacity-100 transition-transform duration-700 group-hover:scale-105"
           />
         </div>
 

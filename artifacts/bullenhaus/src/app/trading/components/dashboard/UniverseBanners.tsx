@@ -1,14 +1,17 @@
 import React from 'react';
 import { motion } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
 import { Users2, Rocket, Settings2 } from 'lucide-react';
 
 const banners = [
-  { icon: Users2, title: 'Refer & Earn', subtitle: 'Invite elites and earn up to 40% Commission', color: 'from-accent-primary shadow-neon-gold' },
-  { icon: Rocket, title: 'Elite Level Up', subtitle: 'Increase your rank and unlock exclusive vaults', color: 'from-accent-tertiary shadow-neon-blue' },
-  { icon: Settings2, title: 'Institutional Tools', subtitle: 'Access premium charts, signals and algorithms', color: 'from-slate-500 shadow-neon-white' }
+  { icon: Users2, title: 'Refer & Earn', subtitle: 'Invite elites and earn up to 40% Commission', color: 'from-accent-primary shadow-neon-gold', to: '/trade/referrals' },
+  { icon: Rocket, title: 'Elite Level Up', subtitle: 'Increase your rank and unlock exclusive vaults', color: 'from-accent-tertiary shadow-neon-blue', to: '/trade/gamification' },
+  { icon: Settings2, title: 'Institutional Tools', subtitle: 'Access premium charts, signals and algorithms', color: 'from-slate-500 shadow-neon-white', to: '/trade/tools' }
 ];
 
 export const UniverseBanners = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
       {banners.map((banner, i) => (
@@ -18,6 +21,8 @@ export const UniverseBanners = () => {
            animate={{ opacity: 1, y: 0 }}
            transition={{ delay: i * 0.1 + 0.5, duration: 0.4, ease: "easeOut" }}
            whileHover={{ y: -4, scale: 1.02 }}
+           onClick={() => navigate(banner.to)}
+           role="link"
            className={`glass-card p-6 glass-card-hover cursor-pointer group relative overflow-hidden holo-border`}
         >
           <div className={`absolute top-0 left-0 w-1 h-full bg-gradient-to-b ${banner.color.split(' ')[0]} to-transparent opacity-70 group-hover:opacity-100 transition-opacity`} />
