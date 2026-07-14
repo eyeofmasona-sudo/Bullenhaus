@@ -1,9 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Settings2, TrendingUp, TrendingDown, Activity, Zap, Target, BarChart3, ArrowRight } from 'lucide-react';
+import { Settings2, TrendingUp, TrendingDown, Activity, Zap, Target, BarChart3, ArrowRight, Lock, Crown } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useTradingStore } from '../../stores/tradingStore';
 import { AssetIcon } from '../../components/common/AssetIcon';
+import { useEliteStatus, ELITE_REQUIREMENT } from '../../hooks/useEliteStatus';
+import { LuxIcon, LuxIconTile } from '../../components/common/LuxIcon';
+import { useWalletSync } from '../../hooks/useWalletSync';
+import { TransferModal } from './TransferModal';
 
 /**
  * Institutional Tools — live market signals computed from the real price feed.
@@ -40,7 +45,7 @@ const SIGNAL_STYLE: Record<SignalKind, string> = {
 
 type Strategy = 'momentum' | 'gainers' | 'losers' | 'all';
 
-const STRATEGIES: { id: Strategy; name: string; description: string; icon: React.ElementType }[] = [
+const STRATEGIES: { id: Strategy; name: string; description: string; icon: LucideIcon }[] = [
   { id: 'momentum', name: 'Momentum Radar', description: 'Strongest absolute movers first — ride the wave', icon: Zap },
   { id: 'gainers', name: 'Bull Scanner', description: 'Only assets with positive 24h momentum', icon: TrendingUp },
   { id: 'losers', name: 'Dip Hunter', description: 'Oversold assets for mean-reversion entries', icon: Target },
@@ -49,9 +54,12 @@ const STRATEGIES: { id: Strategy; name: string; description: string; icon: React
 
 export const InstitutionalTools: React.FC = () => {
   const navigate = useNavigate();
+  useWalletSync();
   const prices = useTradingStore(s => s.prices);
   const priceChanges = useTradingStore(s => s.priceChanges);
   const [strategy, setStrategy] = useState<Strategy>('momentum');
+  const { isElite, balance, missing, progress } = useEliteStatus();
+  const [depositOpen, setDepositOpen] = useState(false);
 
   const rows = useMemo<SignalRow[]>(() => {
     const list: SignalRow[] = Object.entries(prices)
@@ -86,13 +94,74 @@ export const InstitutionalTools: React.FC = () => {
 
   const openTerminal = (symbol: string) => navigate(`/trade/terminal?symbol=${symbol}`);
 
+  if (!isElite) {
+    return (
+      <div className="p-4 lg:p-8 animate-in fade-in duration-500">
+        <TransferModal
+          isOpen={depositOpen}
+          onClose={() => setDepositOpen(false)}
+          type="deposit"
+          initialAmount={ELITE_REQUIREMENT}
+        />
+        <div className="max-w-2xl mx-auto mt-8 lg:mt-16">
+          <div className="glass-card p-8 lg:p-12 text-center border-accent-primary/20 relative overflow-hidden holo-border">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-accent-primary/5 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl border-2 border-accent-primary/40 bg-gradient-to-br from-[#1A1A1A] to-[#0A0A0A] shadow-[0_0_30px_rgba(212,175,55,0.2)]">
+              <Lock className="text-accent-primary" size={34} />
+            </div>
+
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <h1 className="text-2xl font-bold text-white uppercase tracking-[0.15em]">Elite Trade</h1>
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-accent-primary text-black">VIP</span>
+            </div>
+            <p className="text-sm text-slate-400 mb-8 max-w-md mx-auto leading-relaxed">
+              Institutional Tools — premium signals, momentum scanners and algorithmic presets — are
+              reserved for Elite members. Deposit <span className="text-accent-primary font-bold">${ELITE_REQUIREMENT.toLocaleString()}</span> to unlock.
+            </p>
+
+            {/* Progress toward requirement */}
+            <div className="max-w-sm mx-auto mb-8 text-left">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Your balance</span>
+                <span className="text-[10px] font-bold text-accent-primary">
+                  ${balance.toLocaleString(undefined, { maximumFractionDigits: 2 })} / ${ELITE_REQUIREMENT.toLocaleString()}
+                </span>
+              </div>
+              <div className="h-2.5 w-full bg-[#111] rounded-full overflow-hidden border border-white/5">
+                <div
+                  className="h-full bg-gradient-to-r from-accent-primary/50 via-accent-primary to-yellow-300 shadow-[0_0_10px_rgba(212,175,55,0.6)] transition-all duration-700"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest mt-2 text-right">
+                ${missing.toLocaleString(undefined, { maximumFractionDigits: 2 })} to go
+              </p>
+            </div>
+
+            <button
+              onClick={() => setDepositOpen(true)}
+              className="w-full max-w-sm mx-auto py-4 rounded-xl bg-gradient-to-r from-accent-primary via-yellow-400 to-yellow-600 text-sm font-bold text-black uppercase tracking-widest hover:shadow-[0_0_25px_rgba(212,175,55,0.7)] transition-all duration-300 flex items-center justify-center gap-2"
+            >
+              <Crown size={16} /> Upgrade Now — Deposit ${ELITE_REQUIREMENT.toLocaleString()}
+            </button>
+
+            <p className="text-[10px] text-slate-600 mt-6 leading-relaxed">
+              Access unlocks automatically as soon as your wallet balance reaches ${ELITE_REQUIREMENT.toLocaleString()}.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-[1400px] mx-auto space-y-8 animate-in fade-in duration-500 p-4 lg:p-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold text-white uppercase tracking-[0.2em] flex items-center gap-3">
-            <Settings2 className="text-accent-primary" size={28} />
+            <LuxIcon icon={Settings2} size={28} />
             Institutional Tools
           </h2>
           <p className="text-sm text-slate-400 mt-2">
@@ -148,9 +217,7 @@ export const InstitutionalTools: React.FC = () => {
               }`}
             >
               <div className="flex items-center gap-3 mb-2">
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center border ${active ? 'bg-accent-primary/20 border-accent-primary/40' : 'bg-[#111] border-white/10'}`}>
-                  <Icon size={18} className={active ? 'text-accent-primary' : 'text-white'} />
-                </div>
+                <LuxIconTile icon={Icon} size={36} iconSize={18} className={active ? 'border-gold/60' : ''} />
                 <h4 className={`text-sm font-bold ${active ? 'text-accent-primary' : 'text-white'}`}>{s.name}</h4>
               </div>
               <p className="text-[10px] text-slate-500 leading-relaxed font-medium">{s.description}</p>

@@ -95,6 +95,18 @@ export const Notifications = () => {
     }
   };
 
+  const markRead = async (id: string) => {
+    const target = notifications.find(n => n.id === id);
+    if (!target || target.read) return;
+    setNotifications(prev => prev.map(n => (n.id === id ? { ...n, read: true } : n)));
+    try {
+      const supabase = getSupabaseBrowserClient();
+      await supabase.from('notifications').update({ read_at: new Date().toISOString() }).eq('id', id);
+    } catch (err) {
+      console.error('[Notifications] mark read failed', err);
+    }
+  };
+
   const hasUnread = notifications.some(n => !n.read);
 
   return (
@@ -138,7 +150,8 @@ export const Notifications = () => {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.05 }}
-                className={`glass-card p-6 flex gap-6 group relative transition-all ${!n.read ? 'border-l-4 border-accent-primary' : 'border-white/5'}`}
+                onClick={() => markRead(n.id)}
+                className={`glass-card p-6 flex gap-6 group relative transition-all ${!n.read ? 'border-l-4 border-accent-primary cursor-pointer hover:bg-white/[0.02]' : 'border-white/5'}`}
               >
                 <div className={`p-4 rounded-2xl ${!n.read ? 'bg-accent-primary/10 text-accent-primary' : 'bg-white/5 text-slate-500'}`}>
                    <n.icon size={24} />

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Book, Rocket, Wallet, CandlestickChart, Coins, ShieldCheck, Trophy, Users2, ArrowLeft, Search } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { LuxIcon, LuxIconTile } from '../../components/common/LuxIcon';
 
 /**
  * Platform documentation — detailed guides for every major feature.
@@ -9,7 +11,7 @@ import { Book, Rocket, Wallet, CandlestickChart, Coins, ShieldCheck, Trophy, Use
 
 interface Guide {
   id: string;
-  icon: React.ElementType;
+  icon: LucideIcon;
   title: string;
   summary: string;
   sections: { heading: string; body: string }[];
@@ -126,7 +128,7 @@ export const Documentation: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold text-white uppercase tracking-[0.2em] flex items-center gap-3">
-              <Book className="text-accent-primary" size={28} />
+              <LuxIcon icon={Book} size={28} />
               Documentation
             </h1>
             <p className="text-sm text-slate-400 mt-2">Detailed guides for every part of the platform.</p>
@@ -149,9 +151,7 @@ export const Documentation: React.FC = () => {
               <ArrowLeft size={14} /> All guides
             </button>
             <div className="flex items-center gap-4 mb-2">
-              <div className="w-12 h-12 rounded-xl bg-accent-primary/10 border border-accent-primary/20 flex items-center justify-center">
-                <active.icon size={24} className="text-accent-primary" />
-              </div>
+              <LuxIconTile icon={active.icon} size={48} iconSize={24} />
               <h2 className="text-2xl font-bold text-white">{active.title}</h2>
             </div>
             <p className="text-sm text-slate-400 mb-8">{active.summary}</p>
@@ -186,9 +186,7 @@ export const Documentation: React.FC = () => {
                   className="glass-card p-6 text-left hover:bg-white/[0.02] hover:border-accent-primary/20 transition-all group"
                 >
                   <div className="flex items-center gap-4 mb-3">
-                    <div className="w-11 h-11 rounded-xl bg-[#111] border border-white/10 flex items-center justify-center group-hover:border-accent-primary/30 transition-colors">
-                      <g.icon size={22} className="text-accent-primary" />
-                    </div>
+                    <LuxIconTile icon={g.icon} size={44} iconSize={22} className="group-hover:border-gold/50 transition-colors" />
                     <h3 className="text-base font-bold text-white group-hover:text-accent-primary transition-colors">{g.title}</h3>
                   </div>
                   <p className="text-xs text-slate-400 leading-relaxed">{g.summary}</p>

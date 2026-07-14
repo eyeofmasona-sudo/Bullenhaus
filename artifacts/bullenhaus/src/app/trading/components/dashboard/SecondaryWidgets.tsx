@@ -1,9 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { TrendingUp, TrendingDown, Clock, Search, Filter, ShieldCheck, ArrowUpRight, Activity } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { TrendingUp, TrendingDown, Clock, Search, Filter, ShieldCheck, ArrowUpRight, Activity, Crown } from 'lucide-react';
 import { useTradingStore } from '../../stores/tradingStore';
 import { useTradingContext } from '../../contexts/TradingContext';
 import { AssetIcon } from '../common/AssetIcon';
+import { useEliteStatus } from '../../hooks/useEliteStatus';
+import { ELITE_REQUIREMENT } from '../../hooks/useEliteStatus';
+import { TransferModal } from '../../pages/dashboard/TransferModal';
 
 export const Watchlist = () => {
   const { setCurrentPair } = useTradingContext();
@@ -233,33 +237,57 @@ export const MarketSentimentWidget = () => {
 };
 
 export const EliteTraderWidget = () => {
-  return (
-    <motion.div 
-      whileHover={{ scale: 1.02, rotateX: 2, rotateY: -2 }}
-      style={{ perspective: 1000 }}
-      className="glass-card p-0 border-accent-primary/30 relative overflow-hidden holo-border cursor-pointer group h-64"
-    >
-      <div className="absolute inset-0 bg-gradient-to-t from-[#000000] via-[#000000aa] to-transparent z-10 pointer-events-none" />
-      <img 
-        src="/elite-trade-ad.png" 
-        alt="BullenHaus Elite Trade" 
-        className="w-full h-full object-cover transform group-hover:scale-110 group-hover:rotate-1 transition-transform duration-700 absolute inset-0" 
-      />
-      
-      <div className="relative z-20 flex flex-col justify-end h-full p-6 pb-4">
-        <div className="flex items-center gap-2 mb-1">
-           <h3 className="text-xl font-bold text-white uppercase tracking-[0.1em] drop-shadow-lg">Elite Trade</h3>
-           <div className="px-2 py-0.5 rounded text-[10px] font-bold bg-accent-primary text-black shadow-[0_0_15px_rgba(212,175,55,0.8)]">VIP</div>
-        </div>
-        
-        <p className="text-xs text-slate-200 leading-relaxed font-medium mb-3 drop-shadow-md">
-          Institutional intelligence. Exclusive vaults. <span className="text-gold font-bold">0% maker fees.</span>
-        </p>
+  const navigate = useNavigate();
+  const { isElite } = useEliteStatus();
+  const [depositOpen, setDepositOpen] = useState(false);
 
-        <button className="w-full py-2 rounded-xl bg-gradient-to-r from-accent-primary via-yellow-400 to-yellow-600 text-[11px] font-bold text-black uppercase tracking-widest hover:shadow-[0_0_20px_rgba(212,175,55,0.8)] transition-all duration-300">
-          Upgrade Now
-        </button>
-      </div>
-    </motion.div>
+  return (
+    <>
+      <TransferModal
+        isOpen={depositOpen}
+        onClose={() => setDepositOpen(false)}
+        type="deposit"
+        initialAmount={ELITE_REQUIREMENT}
+      />
+      <motion.div
+        whileHover={{ scale: 1.02, rotateX: 2, rotateY: -2 }}
+        style={{ perspective: 1000 }}
+        className="glass-card p-0 border-accent-primary/30 relative overflow-hidden holo-border cursor-pointer group h-64"
+      >
+        <div className="absolute inset-0 bg-gradient-to-t from-[#000000] via-[#000000aa] to-transparent z-10 pointer-events-none" />
+        <img
+          src="/elite-trade-ad.png"
+          alt="BullenHaus Elite Trade"
+          className="w-full h-full object-cover transform group-hover:scale-110 group-hover:rotate-1 transition-transform duration-700 absolute inset-0"
+        />
+
+        <div className="relative z-20 flex flex-col justify-end h-full p-6 pb-4">
+          <div className="flex items-center gap-2 mb-1">
+             <h3 className="text-xl font-bold text-white uppercase tracking-[0.1em] drop-shadow-lg">Elite Trade</h3>
+             <div className="px-2 py-0.5 rounded text-[10px] font-bold bg-accent-primary text-black shadow-[0_0_15px_rgba(212,175,55,0.8)]">VIP</div>
+          </div>
+
+          <p className="text-xs text-slate-200 leading-relaxed font-medium mb-3 drop-shadow-md">
+            Institutional intelligence. Exclusive vaults. <span className="text-gold font-bold">0% maker fees.</span>
+          </p>
+
+          {isElite ? (
+            <button
+              onClick={() => navigate('/trade/tools')}
+              className="w-full py-2 rounded-xl bg-gradient-to-r from-accent-secondary/90 to-emerald-500 text-[11px] font-bold text-black uppercase tracking-widest hover:shadow-[0_0_20px_rgba(0,230,118,0.6)] transition-all duration-300 flex items-center justify-center gap-1.5"
+            >
+              <Crown size={13} /> Elite Active — Open Tools
+            </button>
+          ) : (
+            <button
+              onClick={() => setDepositOpen(true)}
+              className="w-full py-2 rounded-xl bg-gradient-to-r from-accent-primary via-yellow-400 to-yellow-600 text-[11px] font-bold text-black uppercase tracking-widest hover:shadow-[0_0_20px_rgba(212,175,55,0.8)] transition-all duration-300"
+            >
+              Upgrade Now — Deposit ${ELITE_REQUIREMENT.toLocaleString()}
+            </button>
+          )}
+        </div>
+      </motion.div>
+    </>
   );
 };
