@@ -125,42 +125,42 @@ const AssetCard = ({
         }}
       />
       <div className="glass-card border-accent-primary/20 relative overflow-hidden group flex flex-col">
-        <div className="w-full relative overflow-hidden shrink-0 bg-[#0A0E17]">
+        <div className="w-full relative overflow-hidden shrink-0 bg-[#0A0E17] max-h-44">
           <img
             src={asset.image_url || '/neuralink-poster.png'}
             alt={asset.name}
-            className="w-full h-auto block opacity-100 transition-transform duration-700 group-hover:scale-105"
+            className="w-full h-44 object-cover block opacity-100 transition-transform duration-700 group-hover:scale-105"
           />
         </div>
 
         <div className="absolute top-0 right-0 w-64 h-64 bg-accent-primary/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="p-8 relative z-10 flex flex-col flex-1">
-          <div className="flex justify-between items-start mb-6">
+        <div className="p-5 relative z-10 flex flex-col flex-1">
+          <div className="flex justify-between items-start mb-3">
             <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-12 h-12 rounded-xl bg-black/50 border border-white/10 flex items-center justify-center overflow-hidden shadow-[0_0_15px_rgba(212,175,55,0.2)] backdrop-blur-md">
-                  <AssetIcon symbol={asset.symbol} size={48} className="rounded-xl" />
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-lg bg-black/50 border border-white/10 flex items-center justify-center overflow-hidden shadow-[0_0_15px_rgba(212,175,55,0.2)] backdrop-blur-md">
+                  <AssetIcon symbol={asset.symbol} size={36} className="rounded-lg" />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-bold text-white tracking-tight">{asset.name}</h3>
-                  <p className="text-xs font-bold text-accent-primary uppercase tracking-widest">{asset.symbol}</p>
+                  <h3 className="text-lg font-bold text-white tracking-tight leading-tight">{asset.name}</h3>
+                  <p className="text-[10px] font-bold text-accent-primary uppercase tracking-widest">{asset.symbol}</p>
                 </div>
               </div>
             </div>
             <div className="text-right">
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">{t('premarket.fixedPrice')}</p>
-              <p className="text-3xl font-mono font-bold text-white">${Number(livePriceForModal).toFixed(2)}</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">{t('premarket.fixedPrice')}</p>
+              <p className="text-xl font-mono font-bold text-white">${Number(livePriceForModal).toFixed(2)}</p>
             </div>
           </div>
 
-          <p className="text-slate-400 text-sm mb-8 leading-relaxed">{asset.description}</p>
+          <p className="text-slate-400 text-xs mb-4 leading-relaxed line-clamp-2">{asset.description}</p>
 
-          <div className="space-y-6 mt-auto">
+          <div className="space-y-3 mt-auto">
             <div>
-              <div className="flex justify-between mb-2">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('premarket.buyShares')}</label>
-                <span className="text-xs text-slate-500 font-mono">
+              <div className="flex justify-between mb-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('premarket.buyShares')}</label>
+                <span className="text-[10px] text-slate-500 font-mono">
                   Available: ${availableBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
@@ -170,21 +170,21 @@ const AssetCard = ({
                 step="1"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white font-mono focus:outline-none focus:border-accent-primary/50 transition-colors"
+                className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-accent-primary/50 transition-colors"
                 placeholder="0"
               />
             </div>
 
-            <div className="p-4 bg-white/5 rounded-xl border border-white/10 space-y-3">
-              <div className="flex justify-between text-sm">
+            <div className="p-3 bg-white/5 rounded-lg border border-white/10 space-y-2">
+              <div className="flex justify-between text-xs">
                 <span className="text-slate-400">{t('premarket.totalCost')}</span>
                 <span className="font-mono font-bold text-white">
                   ${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
               {!canAfford && totalCost > 0 && (
-                <div className="flex items-center gap-2 text-xs text-red-400 pt-2 border-t border-white/5">
-                  <AlertCircle size={14} />
+                <div className="flex items-center gap-2 text-[10px] text-red-400 pt-1.5 border-t border-white/5">
+                  <AlertCircle size={12} />
                   {t('premarket.insufficientFunds')}
                 </div>
               )}
@@ -193,7 +193,7 @@ const AssetCard = ({
             <button
               onClick={handleBuy}
               disabled={totalCost <= 0 || isBuyingItem || fetchingPrice || (contractSigned && !canAfford)}
-              className={`w-full py-4 rounded-xl font-bold uppercase tracking-widest text-sm flex items-center justify-center gap-2 transition-all ${
+              className={`w-full py-2.5 rounded-lg font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-all ${
                 (!contractSigned || canAfford) && !isBuyingItem && !fetchingPrice
                   ? 'bg-accent-primary text-black hover:bg-accent-primary/90 shadow-[0_0_20px_rgba(212,175,55,0.3)]'
                   : 'bg-white/5 text-slate-500 cursor-not-allowed border border-white/10'
@@ -203,7 +203,7 @@ const AssetCard = ({
                 <span className="animate-pulse">{isBuyingItem ? t('premarket.processing') : '...'}</span>
               ) : (
                 <>
-                  <CheckCircle2 size={18} />
+                  <CheckCircle2 size={15} />
                   {t('premarket.buy', { symbol: asset.symbol })}
                 </>
               )}
@@ -214,9 +214,9 @@ const AssetCard = ({
                 href={templateUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full py-3 rounded-xl font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-all bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white border border-white/10"
+                className="w-full py-2 rounded-lg font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-all bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white border border-white/10"
               >
-                <Download size={15} />
+                <Download size={13} />
                 {t('premarket.downloadContract', 'Download Contract')}
               </a>
             )}
@@ -280,9 +280,9 @@ export const PreMarket: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-8">
+        <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 content-start">
           {loading ? (
-            <div className="glass-card p-12 text-center text-slate-400">{t('premarket.loading')}</div>
+            <div className="glass-card p-12 text-center text-slate-400 md:col-span-2">{t('premarket.loading')}</div>
           ) : (
             assets.map(asset => (
               <AssetCard
