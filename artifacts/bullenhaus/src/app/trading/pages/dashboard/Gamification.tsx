@@ -231,16 +231,16 @@ export const Gamification: React.FC = () => {
                      : 'bg-[#111] border-white/5 hover:border-white/20'
                    }`}
                  >
-                   <div className="flex items-center gap-4">
-                     <span className={`text-sm font-bold font-mono w-6 text-center ${
+                   <div className="flex items-center gap-4 min-w-0 flex-1">
+                     <span className={`text-sm font-bold font-mono w-6 text-center shrink-0 ${
                        row.rank === 1 ? 'text-accent-primary' :
                        row.rank === 2 ? 'text-slate-300' :
                        row.rank === 3 ? 'text-orange-400' : 'text-slate-600'
                      }`}>
                        #{row.rank}
                      </span>
-                     <div>
-                       <p className={`text-sm font-bold ${row.is_me ? 'text-accent-primary' : 'text-white'}`}>
+                     <div className="min-w-0">
+                       <p className={`text-sm font-bold truncate ${row.is_me ? 'text-accent-primary' : 'text-white'}`}>
                          {row.display_name} {row.is_me && '(You)'}
                        </p>
                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{row.trades} trades</p>

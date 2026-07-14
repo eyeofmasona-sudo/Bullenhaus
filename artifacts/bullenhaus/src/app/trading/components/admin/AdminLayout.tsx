@@ -354,7 +354,7 @@ export const AdminLayout = () => {
             </div>
           </header>
 
-          <div className="flex-1 overflow-y-auto custom-scrollbar">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
             <React.Suspense fallback={<div className="flex h-full w-full items-center justify-center min-h-[400px]"><div className="w-8 h-8 rounded-full border-2 border-rose-500 border-t-transparent animate-spin" /></div>}>
               <Outlet />
             </React.Suspense>
