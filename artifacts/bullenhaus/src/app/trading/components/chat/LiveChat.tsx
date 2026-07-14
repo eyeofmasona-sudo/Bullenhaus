@@ -39,8 +39,19 @@ const STARTERS = [
   'How do I change my account settings?',
 ];
 
+const OPEN_LIVECHAT_EVENT = 'bullenhaus:open-livechat';
+
+/** Opens the floating AI support assistant from anywhere in the app. */
+export const openLiveChat = () => window.dispatchEvent(new Event(OPEN_LIVECHAT_EVENT));
+
 export const LiveChat: React.FC = () => {
   const [open,     setOpen]     = useState(false);
+
+  useEffect(() => {
+    const handler = () => setOpen(true);
+    window.addEventListener(OPEN_LIVECHAT_EVENT, handler);
+    return () => window.removeEventListener(OPEN_LIVECHAT_EVENT, handler);
+  }, []);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input,    setInput]    = useState('');
   const [loading,  setLoading]  = useState(false);
