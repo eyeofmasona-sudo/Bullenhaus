@@ -92,7 +92,7 @@ export const Transactions = () => {
           </div>
         </div>
 
-        <div className="glass-card overflow-hidden">
+        <div className="glass-card overflow-x-auto">
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-border text-[10px] font-bold text-text-dim uppercase tracking-widest bg-surface/60">

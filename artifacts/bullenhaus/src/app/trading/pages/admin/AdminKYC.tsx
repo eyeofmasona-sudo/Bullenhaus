@@ -486,7 +486,7 @@ export const AdminKYC = () => {
   const pendingCount = users.filter(u => u.kyc_status === 'PENDING').length;
 
   return (
-    <div className="p-8 max-w-[1600px] mx-auto animate-in fade-in duration-300">
+    <div className="p-4 lg:p-8 max-w-[1600px] mx-auto animate-in fade-in duration-300">
       {/* Header — premium with gold accent */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
@@ -539,7 +539,7 @@ export const AdminKYC = () => {
       </div>
 
       {/* Table — premium with top gold hairline */}
-      <div className="relative glass-card overflow-hidden">
+      <div className="relative glass-card overflow-x-auto">
         {/* Top gold hairline */}
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent-primary/30 to-transparent" />
         <table className="w-full text-left">

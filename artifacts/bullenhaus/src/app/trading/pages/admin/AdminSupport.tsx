@@ -161,7 +161,7 @@ export const AdminSupport: React.FC = () => {
                     {tk.contact_email && (
                       <a
                         href={`mailto:${tk.contact_email}`}
-                        className="flex items-center gap-1.5 text-accent-primary hover:underline font-mono"
+                        className="flex items-center gap-1.5 text-accent-primary hover:underline font-mono break-all"
                       >
                         <Mail size={12} /> {tk.contact_email}
                       </a>

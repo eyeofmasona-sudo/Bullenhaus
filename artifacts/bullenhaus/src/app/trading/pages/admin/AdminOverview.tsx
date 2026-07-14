@@ -91,7 +91,7 @@ export const AdminOverview = () => {
   ];
 
   return (
-    <div className="p-8 space-y-8 max-w-[1600px] mx-auto animate-in fade-in duration-300 relative">
+    <div className="p-4 lg:p-8 space-y-8 max-w-[1600px] mx-auto animate-in fade-in duration-300 relative">
       {/* Ambient glows */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-rose-500/6 blur-[140px] rounded-full pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-gold/4 blur-[140px] rounded-full pointer-events-none" />
@@ -186,7 +186,7 @@ export const AdminOverview = () => {
             <Globe2 size={80} className="text-white/5 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
             <div className="relative z-10 w-full">
               <h3 className="text-sm font-bold text-white uppercase tracking-widest text-left mb-4">{t('adminDashboard.nodes.title')}</h3>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {['EU_WEST_1', 'US_EAST_2', 'AP_SOUTHEAST_1'].map(node => (
                   <div key={node} className="p-3 bg-white/5 rounded-xl border border-white/10">
                     <p className="text-[10px] text-text-dim font-bold uppercase tracking-widest mb-1">{node}</p>

@@ -179,7 +179,7 @@ export const ContractModal: React.FC<ContractModalProps> = ({
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <div className="bg-[#121214] border border-white/10 rounded-xl w-full max-w-4xl flex flex-col h-[85vh] shadow-2xl">
         {/* Header */}
-        <div className="p-6 border-b border-white/10 flex justify-between items-center bg-[#0a0a0b] rounded-t-xl">
+        <div className="p-4 sm:p-6 border-b border-white/10 flex flex-wrap justify-between items-center gap-2 bg-[#0a0a0b] rounded-t-xl">
           <h2 className="text-xl font-bold text-white tracking-wide">Premarket Investment Contract</h2>
           <div className="flex items-center gap-3">
             <button
@@ -288,7 +288,7 @@ export const ContractModal: React.FC<ContractModalProps> = ({
         {/* Footer */}
         <div className="p-6 border-t border-white/10 bg-[#0a0a0b] rounded-b-xl space-y-4">
           {assetPrice != null && (
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="flex flex-col px-4 py-3 rounded-xl bg-white/5 border border-white/10">
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Anzahl Aktien</span>
                 <span className="font-mono font-bold text-white text-sm">{sharesAmount ?? '—'}</span>

@@ -246,7 +246,7 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto custom-scrollbar relative">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar relative">
           <div className="min-h-full flex flex-col relative z-10">
             <div className="flex-1 w-full p-4 md:p-8">{children}</div>
             <TradingFooter />

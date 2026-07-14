@@ -121,7 +121,7 @@ export const Academy: React.FC = () => {
               </div>
             </div>
             
-            <div className="grid grid-cols-3 gap-4 mt-8 pt-8 border-t border-white/10">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8 pt-8 border-t border-white/10">
               <div className="text-center">
                 <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest mb-1">{t('hoursLearned')}</p>
                 <p className="text-xl font-bold font-mono text-white">4.5h</p>

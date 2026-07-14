@@ -66,7 +66,7 @@ export const AdminTransactions = () => {
   };
 
   return (
-    <div className="p-8 max-w-[1600px] mx-auto animate-in fade-in duration-150">
+    <div className="p-4 lg:p-8 max-w-[1600px] mx-auto animate-in fade-in duration-150">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h2 className="font-serif text-2xl font-light italic tracking-tight text-text">{t('adminTx.globalTitle')}</h2>
@@ -82,7 +82,7 @@ export const AdminTransactions = () => {
         </div>
       </div>
       
-      <div className="glass-card overflow-hidden">
+      <div className="glass-card overflow-x-auto">
         <table className="w-full text-left">
           <thead>
             <tr className="border-b border-border text-[10px] font-bold text-text-dim uppercase tracking-widest bg-surface/60">

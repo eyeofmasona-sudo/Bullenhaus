@@ -113,14 +113,14 @@ export const Markets = () => {
           </div>
           
           <div className="flex items-center gap-3">
-            <div className="relative">
+            <div className="relative flex-1 sm:flex-none">
               <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
               <input 
                 type="text" 
                 value={searchTerm}
                 onChange={handleSearchChange}
                 placeholder={t('search')} 
-                className="bg-white/5 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-accent-primary/50 transition-all w-64"
+                className="bg-white/5 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-accent-primary/50 transition-all w-full sm:w-64"
               />
             </div>
             <button className="p-2 bg-white/5 border border-white/10 rounded-xl text-slate-400 hover:text-white transition-colors">
@@ -141,7 +141,7 @@ export const Markets = () => {
           ))}
         </div>
 
-        <div className="glass-card overflow-hidden">
+        <div className="glass-card overflow-x-auto">
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-white/5 text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-white/5">

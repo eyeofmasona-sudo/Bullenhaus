@@ -112,8 +112,8 @@ export const PositionsAndOrdersPanel = () => {
     <div className="glass-card p-6 relative overflow-x-hidden flex-1 flex flex-col h-full min-h-[400px]">
       <div className="absolute top-0 right-0 w-32 h-32 bg-accent-primary/5 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="flex items-center justify-between mb-6 relative z-10 border-b border-white/5 pb-2">
-        <div className="flex space-x-6">
+      <div className="flex flex-wrap items-center justify-between gap-y-3 mb-6 relative z-10 border-b border-white/5 pb-2">
+        <div className="flex space-x-6 overflow-x-auto custom-scrollbar whitespace-nowrap max-w-full">
           <button
             className={`text-sm font-bold tracking-wide transition-colors relative pb-2 ${activeTab === 'positions' ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}
             onClick={() => setActiveTab('positions')}

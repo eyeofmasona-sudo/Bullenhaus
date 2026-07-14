@@ -110,7 +110,7 @@ export const Support = () => {
             </div>
 
             {/* Quick links */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <button
                 onClick={() => navigate('/trade/docs')}
                 className="glass-card p-6 flex items-center gap-4 hover:bg-white/[0.02] cursor-pointer transition-all text-left"
