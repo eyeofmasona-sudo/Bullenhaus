@@ -44,6 +44,7 @@ const TradeSupport = React.lazy(() => import('./app/trading/pages/dashboard/Supp
 const TradeProfileSettings = React.lazy(() => import('./app/trading/pages/dashboard/ProfileSettings').then(m => ({ default: m.ProfileSettings })));
 const TradeGamification = React.lazy(() => import('./app/trading/pages/dashboard/Gamification').then(m => ({ default: m.Gamification })));
 const TradeInstitutionalTools = React.lazy(() => import('./app/trading/pages/dashboard/InstitutionalTools').then(m => ({ default: m.InstitutionalTools })));
+const TradeDocumentation = React.lazy(() => import('./app/trading/pages/dashboard/Documentation').then(m => ({ default: m.Documentation })));
 
 // Trade Admin Components
 const TradeAdminLayout = React.lazy(() => import('./app/trading/components/admin/AdminLayout').then(m => ({ default: m.AdminLayout })));
@@ -54,6 +55,7 @@ const TradeAdminMarketControl = React.lazy(() => import('./app/trading/pages/adm
 const TradeAdminKYC = React.lazy(() => import('./app/trading/pages/admin/AdminKYC').then(m => ({ default: m.AdminKYC })));
 const TradeAdminTransactions = React.lazy(() => import('./app/trading/pages/admin/AdminTransactions').then(m => ({ default: m.AdminTransactions })));
 const TradeAdminSettings = React.lazy(() => import('./app/trading/pages/admin/AdminSettings').then(m => ({ default: m.AdminSettings })));
+const TradeAdminSupport = React.lazy(() => import('./app/trading/pages/admin/AdminSupport').then(m => ({ default: m.AdminSupport })));
 const TradeCRMSyncPanel = React.lazy(() => import('./app/trading/pages/admin/CRMSyncPanel').then(m => ({ default: m.CRMSyncPanel })));
 const TradeAdminDeposits = React.lazy(() => import('./app/trading/pages/admin/AdminDeposits').then(m => ({ default: m.AdminDeposits })));
 const TradeAdminWithdrawals = React.lazy(() => import('./app/trading/pages/admin/AdminWithdrawals').then(m => ({ default: m.AdminWithdrawals })));
@@ -187,6 +189,7 @@ const AppContent = () => {
                 <Route path="support" element={<TradeSupport />} />
                 <Route path="gamification" element={<TradeGamification />} />
                 <Route path="tools" element={<TradeInstitutionalTools />} />
+                <Route path="docs" element={<TradeDocumentation />} />
                 <Route path="settings" element={<TradeProfileSettings />} />
               </Route>
             </Route>
@@ -242,6 +245,7 @@ const AppContent = () => {
                 <Route path="market-control" element={<TradeAdminMarketControl />} />
                 <Route path="transactions" element={<TradeAdminTransactions />} />
                 <Route path="crm-sync" element={<div className="p-8"><TradeCRMSyncPanel /></div>} />
+                <Route path="support" element={<TradeAdminSupport />} />
                 <Route path="settings" element={<TradeAdminSettings />} />
               </Route>
             </Route>

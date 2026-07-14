@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { MessageSquare, Book, HelpCircle, Send, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
+import { openLiveChat } from '../../components/chat/LiveChat';
 
 const CATEGORIES = [
   'Account Issue',
@@ -16,10 +18,12 @@ const CATEGORIES = [
 
 export const Support = () => {
   const { t } = useTranslation('common');
+  const navigate = useNavigate();
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [message, setMessage] = useState('');
+  const [email, setEmail] = useState('');
   const [myTickets, setMyTickets] = useState<any[]>([]);
   const [user, setUser] = useState<any>(null);
 
@@ -31,47 +35,57 @@ export const Support = () => {
   ];
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUser(data.user));
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user);
+      if (data.user?.email) setEmail(prev => prev || data.user.email!);
+    });
   }, []);
 
   useEffect(() => {
     if (!user) return;
-    supabase.from('support_tickets').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10)
+    supabase.from('support_tickets').select('*').eq('client_id', user.id).order('created_at', { ascending: false }).limit(10)
       .then(({ data }) => setMyTickets(data || []));
   }, [user, submitted]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim()) { toast.error('Please enter your message'); return; }
+    if (!message.trim()) { toast.error(t('enterMessage', { defaultValue: 'Please enter your message' })); return; }
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      toast.error(t('enterValidEmail', { defaultValue: 'Please enter a valid email address' }));
+      return;
+    }
+    if (!user) { toast.error(t('loginFirst', { defaultValue: 'Please log in first' })); return; }
     setSubmitting(true);
     try {
       const { error } = await supabase.from('support_tickets').insert({
-        user_id:    user?.id    || null,
-        user_email: user?.email || null,
+        client_id:     user.id,
+        created_by:    user.id,
+        subject:       category,
         category,
-        message: message.trim(),
-        status: 'open',
+        contact_email: email.trim(),
+        message:       message.trim(),
+        status:        'new',
       });
       if (error) throw error;
       setSubmitted(true);
       setMessage('');
-      toast.success('Your ticket has been submitted');
+      toast.success(t('ticketSubmitted', { defaultValue: 'Your ticket has been submitted' }));
     } catch (err: any) {
-      toast.error(err.message || 'Failed to submit ticket');
+      toast.error(err.message || t('ticketFailed', { defaultValue: 'Failed to submit ticket' }));
     } finally {
       setSubmitting(false);
     }
   };
 
   const statusStyle = (s: string) =>
-    s === 'resolved' ? 'bg-emerald-500/10 text-emerald-400' :
-    s === 'open'     ? 'bg-orange-500/10 text-orange-400'   :
-                       'bg-blue-500/10 text-blue-400';
+    s === 'resolved' || s === 'closed' ? 'bg-emerald-500/10 text-emerald-400' :
+    s === 'new' || s === 'open'        ? 'bg-orange-500/10 text-orange-400'   :
+                                         'bg-blue-500/10 text-blue-400';
 
   return (
     <div className="p-4 lg:p-8 animate-in fade-in duration-500">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-white mb-2">{t('help')}</h1>
+        <h1 className="text-3xl font-bold text-white mb-2">{t('help', { defaultValue: 'Support Center' })}</h1>
         <p className="text-slate-400 mb-8">{t('helpDesc', { defaultValue: 'Our support team is available 24/7.' })}</p>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -80,7 +94,7 @@ export const Support = () => {
             <div className="glass-card p-6">
               <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                 <HelpCircle size={20} className="text-accent-primary" />
-                {t('faq')}
+                {t('faq', { defaultValue: 'Frequently Asked Questions' })}
               </h2>
               <div className="space-y-3">
                 {faqs.map((faq, i) => (
@@ -97,27 +111,33 @@ export const Support = () => {
 
             {/* Quick links */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="glass-card p-6 flex items-center gap-4 hover:bg-white/[0.02] cursor-pointer transition-all">
+              <button
+                onClick={() => navigate('/trade/docs')}
+                className="glass-card p-6 flex items-center gap-4 hover:bg-white/[0.02] cursor-pointer transition-all text-left"
+              >
                 <div className="p-3 bg-blue-500/10 text-blue-500 rounded-xl"><Book size={24} /></div>
                 <div>
-                  <p className="font-bold text-white">{t('documentation')}</p>
+                  <p className="font-bold text-white">{t('documentation', { defaultValue: 'Documentation' })}</p>
                   <p className="text-xs text-slate-500">{t('readGuides', { defaultValue: 'Read our detailed guides' })}</p>
                 </div>
-              </div>
-              <div className="glass-card p-6 flex items-center gap-4 hover:bg-white/[0.02] cursor-pointer transition-all">
+              </button>
+              <button
+                onClick={openLiveChat}
+                className="glass-card p-6 flex items-center gap-4 hover:bg-white/[0.02] cursor-pointer transition-all text-left"
+              >
                 <div className="p-3 bg-accent-secondary/10 text-accent-secondary rounded-xl"><MessageSquare size={24} /></div>
                 <div>
-                  <p className="font-bold text-white">{t('liveChat')}</p>
-                  <p className="text-xs text-slate-500">{t('speakAgent', { defaultValue: 'Speak with an agent' })}</p>
+                  <p className="font-bold text-white">{t('liveChat', { defaultValue: 'Live Chat' })}</p>
+                  <p className="text-xs text-slate-500">{t('speakAgent', { defaultValue: 'Speak with our AI assistant' })}</p>
                 </div>
-              </div>
+              </button>
             </div>
 
             {/* My tickets */}
             {myTickets.length > 0 && (
               <div className="glass-card p-6">
                 <h2 className="text-base font-bold text-white mb-4 flex items-center gap-2">
-                  <Clock size={16} className="text-accent-primary" /> My Tickets
+                  <Clock size={16} className="text-accent-primary" /> {t('myTickets', { defaultValue: 'My Tickets' })}
                 </h2>
                 <div className="space-y-2">
                   {myTickets.map(tk => (
@@ -125,7 +145,7 @@ export const Support = () => {
                       <AlertCircle size={14} className="text-text-dim mt-0.5 shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-[9px] font-bold uppercase tracking-wider text-text-dim">{tk.category}</span>
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-text-dim">{tk.category || tk.subject}</span>
                           <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${statusStyle(tk.status)}`}>{tk.status}</span>
                         </div>
                         <p className="text-xs text-text-muted truncate">{tk.message}</p>
@@ -140,7 +160,7 @@ export const Support = () => {
 
           {/* Contact form */}
           <div className="glass-card p-8 h-fit sticky top-8">
-            <h2 className="text-xl font-bold text-white mb-6">{t('contactSupport')}</h2>
+            <h2 className="text-xl font-bold text-white mb-6">{t('contactSupport', { defaultValue: 'Contact Support' })}</h2>
             <AnimatePresence mode="wait">
               {submitted ? (
                 <motion.div
@@ -151,7 +171,7 @@ export const Support = () => {
                   <div className="w-16 h-16 bg-accent-secondary/20 rounded-full flex items-center justify-center mx-auto mb-4 text-accent-secondary">
                     <CheckCircle2 size={32} />
                   </div>
-                  <h3 className="text-lg font-bold text-white mb-2">{t('messageSent')}</h3>
+                  <h3 className="text-lg font-bold text-white mb-2">{t('messageSent', { defaultValue: 'Message Sent' })}</h3>
                   <p className="text-sm text-slate-400 mb-6">{t('messageSentDesc', { defaultValue: 'Thank you. We will get back to you shortly.' })}</p>
                   <button onClick={() => setSubmitted(false)} className="text-accent-primary font-bold text-sm hover:underline">
                     {t('sendAnother', { defaultValue: 'Send another message' })}
@@ -165,7 +185,7 @@ export const Support = () => {
                   className="space-y-4"
                 >
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">{t('category')}</label>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">{t('category', { defaultValue: 'Category' })}</label>
                     <select
                       value={category}
                       onChange={e => setCategory(e.target.value)}
@@ -175,7 +195,18 @@ export const Support = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">{t('message')}</label>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">{t('emailAddress', { defaultValue: 'Email for reply' })}</label>
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-accent-primary/50 transition-colors"
+                      placeholder={t('emailPlaceholder', { defaultValue: 'you@example.com' })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">{t('message', { defaultValue: 'Message' })}</label>
                     <textarea
                       required
                       value={message}
@@ -190,7 +221,7 @@ export const Support = () => {
                     className="w-full py-4 bg-accent-primary hover:bg-accent-primary/90 text-black font-bold rounded-xl shadow-neon-gold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                   >
                     {submitting ? <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" /> : <Send size={18} />}
-                    {submitting ? 'Sending...' : t('sendRequest')}
+                    {submitting ? t('sending', { defaultValue: 'Sending...' }) : t('sendRequest', { defaultValue: 'Send Request' })}
                   </button>
                 </motion.form>
               )}

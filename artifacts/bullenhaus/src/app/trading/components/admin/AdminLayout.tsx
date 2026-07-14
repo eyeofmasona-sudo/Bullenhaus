@@ -11,7 +11,8 @@ import {
   LayoutDashboard,
   BarChart2,
   Briefcase,
-  Rocket
+  Rocket,
+  Inbox
 } from 'lucide-react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -237,6 +238,10 @@ const AdminSidebar = ({ onClose }: { onClose?: () => void }) => {
         <AdminSidebarItem
           icon={History} label={t('adminLayout.sidebar.transactions')}
           to="/admin/transactions" active={currentPath === '/admin/transactions'}
+        />
+        <AdminSidebarItem
+          icon={Inbox} label={t('adminLayout.sidebar.support', { defaultValue: 'Support Inbox' })}
+          to="/admin/support" active={currentPath === '/admin/support'}
         />
         <AdminSidebarItem
           icon={Settings} label={t('adminLayout.sidebar.systemConfig')}
