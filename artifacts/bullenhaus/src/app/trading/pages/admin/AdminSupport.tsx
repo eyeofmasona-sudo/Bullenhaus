@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Inbox, Mail, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { Inbox, Mail, RefreshCw, CheckCircle2, MessageSquare, Send } from 'lucide-react';
 import { LuxIcon } from '../../components/common/LuxIcon';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
@@ -32,11 +32,78 @@ const STATUS_STYLE: Record<string, string> = {
   closed:   'bg-white/5 text-slate-500 border-white/10',
 };
 
+interface TicketComment {
+  id: string;
+  ticket_id: string;
+  author_id: string | null;
+  body: string;
+  created_at: string;
+}
+
 export const AdminSupport: React.FC = () => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | Ticket['status']>('all');
   const [userNames, setUserNames] = useState<Record<string, string>>({});
+  const [comments, setComments] = useState<Record<string, TicketComment[]>>({});
+  const [replyOpen, setReplyOpen] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [sendingReply, setSendingReply] = useState(false);
+
+  const loadComments = async (ticketIds: string[]) => {
+    if (ticketIds.length === 0) return;
+    const { data } = await supabase
+      .from('ticket_comments')
+      .select('id, ticket_id, author_id, body, created_at')
+      .in('ticket_id', ticketIds)
+      .order('created_at', { ascending: true });
+    const map: Record<string, TicketComment[]> = {};
+    (data ?? []).forEach((c: TicketComment) => {
+      (map[c.ticket_id] ??= []).push(c);
+    });
+    setComments(map);
+  };
+
+  const sendReply = async (tk: Ticket) => {
+    const body = replyText.trim();
+    if (!body) { toast.error('Reply is empty'); return; }
+    setSendingReply(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      const { error: cErr } = await supabase.from('ticket_comments').insert({
+        ticket_id: tk.id,
+        author_id: user?.id ?? null,
+        body,
+      });
+      if (cErr) throw cErr;
+
+      // Deliver the reply into the client's notifications
+      const { error: nErr } = await supabase.from('notifications').insert({
+        user_id: tk.client_id,
+        type: 'support',
+        title: `Support reply — ${tk.category || tk.subject || 'your ticket'}`,
+        message: body,
+        data: { ticket_id: tk.id },
+      });
+      if (nErr) throw nErr;
+
+      // A freshly answered ticket moves from new -> open
+      if (tk.status === 'new') {
+        await supabase.from('support_tickets').update({ status: 'open' }).eq('id', tk.id);
+        setTickets(ts => ts.map(t => (t.id === tk.id ? { ...t, status: 'open' } : t)));
+      }
+
+      setReplyText('');
+      setReplyOpen(null);
+      await loadComments(tickets.map(t => t.id));
+      toast.success('Reply sent — the client has been notified');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to send reply');
+    } finally {
+      setSendingReply(false);
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -49,6 +116,7 @@ export const AdminSupport: React.FC = () => {
       if (error) throw error;
       const rows = (data ?? []) as Ticket[];
       setTickets(rows);
+      loadComments(rows.map(r => r.id));
 
       const ids = [...new Set(rows.map(r => r.client_id).filter(Boolean))];
       if (ids.length > 0) {
@@ -179,6 +247,60 @@ export const AdminSupport: React.FC = () => {
                     {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
+              </div>
+
+              {/* Reply thread */}
+              {(comments[tk.id]?.length ?? 0) > 0 && (
+                <div className="mt-4 pt-4 border-t border-white/5 space-y-2">
+                  {comments[tk.id].map(c => (
+                    <div key={c.id} className="flex items-start gap-2.5 p-3 bg-accent-primary/5 border border-accent-primary/15 rounded-xl">
+                      <MessageSquare size={13} className="text-accent-primary mt-0.5 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap break-words">{c.body}</p>
+                        <p className="text-[10px] text-slate-600 mt-1">
+                          {(c.author_id && userNames[c.author_id]) || 'Support'} · {new Date(c.created_at).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Reply composer */}
+              <div className="mt-4 pt-4 border-t border-white/5">
+                {replyOpen === tk.id ? (
+                  <div className="space-y-2">
+                    <textarea
+                      autoFocus
+                      value={replyText}
+                      onChange={e => setReplyText(e.target.value)}
+                      placeholder="Write a reply to the client…"
+                      className="w-full bg-[#111] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-accent-primary/50 min-h-[90px] resize-none"
+                    />
+                    <div className="flex gap-2 justify-end">
+                      <button
+                        onClick={() => { setReplyOpen(null); setReplyText(''); }}
+                        className="px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:text-white transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => sendReply(tk)}
+                        disabled={sendingReply || !replyText.trim()}
+                        className="px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest bg-accent-primary text-black hover:bg-accent-primary/90 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                      >
+                        <Send size={11} /> {sendingReply ? 'Sending…' : 'Send Reply'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => { setReplyOpen(tk.id); setReplyText(''); }}
+                    className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-accent-primary hover:text-white transition-colors"
+                  >
+                    <MessageSquare size={12} /> Reply to client
+                  </button>
+                )}
               </div>
             </div>
           ))

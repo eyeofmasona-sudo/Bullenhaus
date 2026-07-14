@@ -17,7 +17,7 @@ interface Notif {
   message: string;
   time: string;
   path: string;
-  icon: 'kyc' | 'tx';
+  icon: 'kyc' | 'tx' | 'msg';
 }
 
 export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -40,7 +40,26 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
   const isAdmin = role === 'admin' || role === 'trade_admin';
 
   const loadNotifications = useCallback(async () => {
-    if (!isAdmin) return;
+    if (!isAdmin) {
+      // Clients: unread rows from the notifications table (support replies, system alerts)
+      try {
+        const { data } = await supabase
+          .from('notifications')
+          .select('id, title, message, created_at')
+          .is('read_at', null)
+          .order('created_at', { ascending: false })
+          .limit(8);
+        setNotifications((data ?? []).map((n: any) => ({
+          id:      n.id,
+          title:   n.title || 'Notification',
+          message: n.message || '',
+          time:    n.created_at ? new Date(n.created_at).toLocaleString() : 'now',
+          path:    '/trade/notifications',
+          icon:    'msg' as const,
+        })));
+      } catch { /* silent */ }
+      return;
+    }
     try {
       const [kycRes, txRes] = await Promise.all([
         supabase.from('users').select('id', { count: 'exact', head: true }).eq('kyc_status', 'PENDING'),
@@ -79,18 +98,17 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
 
   useEffect(() => {
     loadNotifications();
-    if (!isAdmin) return;
     const iv = window.setInterval(loadNotifications, 30000);
     return () => window.clearInterval(iv);
-  }, [loadNotifications, isAdmin]);
+  }, [loadNotifications]);
 
   const displayName = profile?.display_name || profile?.full_name || profile?.username || user?.email || 'User';
   const avatarUrl   = profile?.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${displayName}`;
 
-  const NotifIcon = ({ type }: { type: 'kyc' | 'tx' }) =>
-    type === 'kyc'
-      ? <ShieldAlert size={14} className="text-orange-400" />
-      : <Zap         size={14} className="text-yellow-400" />;
+  const NotifIcon = ({ type }: { type: 'kyc' | 'tx' | 'msg' }) =>
+    type === 'kyc' ? <ShieldAlert size={14} className="text-orange-400" />
+    : type === 'msg' ? <Bell      size={14} className="text-accent-primary" />
+    : <Zap             size={14} className="text-yellow-400" />;
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-[#08080B] via-[#0A0A10] to-[#0E0E14] font-sans overflow-hidden relative">

@@ -26,6 +26,7 @@ export const Support = () => {
   const [message, setMessage] = useState('');
   const [email, setEmail] = useState('');
   const [myTickets, setMyTickets] = useState<any[]>([]);
+  const [ticketReplies, setTicketReplies] = useState<Record<string, any[]>>({});
   const [user, setUser] = useState<any>(null);
 
   const faqs = [
@@ -45,7 +46,20 @@ export const Support = () => {
   useEffect(() => {
     if (!user) return;
     supabase.from('support_tickets').select('*').eq('client_id', user.id).order('created_at', { ascending: false }).limit(10)
-      .then(({ data }) => setMyTickets(data || []));
+      .then(async ({ data }) => {
+        const tickets = data || [];
+        setMyTickets(tickets);
+        if (tickets.length > 0) {
+          const { data: replies } = await supabase
+            .from('ticket_comments')
+            .select('id, ticket_id, body, created_at')
+            .in('ticket_id', tickets.map((t: any) => t.id))
+            .order('created_at', { ascending: true });
+          const map: Record<string, any[]> = {};
+          (replies ?? []).forEach((r: any) => { (map[r.ticket_id] ??= []).push(r); });
+          setTicketReplies(map);
+        }
+      });
   }, [user, submitted]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -142,16 +156,30 @@ export const Support = () => {
                 </h2>
                 <div className="space-y-2">
                   {myTickets.map(tk => (
-                    <div key={tk.id} className="flex items-start gap-3 p-3 bg-white/5 rounded-xl border border-white/5">
-                      <AlertCircle size={14} className="text-text-dim mt-0.5 shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-[9px] font-bold uppercase tracking-wider text-text-dim">{tk.category || tk.subject}</span>
-                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${statusStyle(tk.status)}`}>{tk.status}</span>
+                    <div key={tk.id} className="p-3 bg-white/5 rounded-xl border border-white/5">
+                      <div className="flex items-start gap-3">
+                        <AlertCircle size={14} className="text-text-dim mt-0.5 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[9px] font-bold uppercase tracking-wider text-text-dim">{tk.category || tk.subject}</span>
+                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${statusStyle(tk.status)}`}>{tk.status}</span>
+                          </div>
+                          <p className="text-xs text-text-muted truncate">{tk.message}</p>
                         </div>
-                        <p className="text-xs text-text-muted truncate">{tk.message}</p>
+                        <span className="text-[10px] text-text-dim shrink-0">{new Date(tk.created_at).toLocaleDateString()}</span>
                       </div>
-                      <span className="text-[10px] text-text-dim shrink-0">{new Date(tk.created_at).toLocaleDateString()}</span>
+                      {(ticketReplies[tk.id]?.length ?? 0) > 0 && (
+                        <div className="mt-2.5 ml-7 space-y-1.5">
+                          {ticketReplies[tk.id].map(r => (
+                            <div key={r.id} className="p-2.5 bg-accent-primary/5 border border-accent-primary/15 rounded-lg">
+                              <p className="text-[9px] font-bold uppercase tracking-wider text-accent-primary mb-0.5">
+                                {t('supportReply', { defaultValue: 'Support reply' })} · {new Date(r.created_at).toLocaleString()}
+                              </p>
+                              <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap break-words">{r.body}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
