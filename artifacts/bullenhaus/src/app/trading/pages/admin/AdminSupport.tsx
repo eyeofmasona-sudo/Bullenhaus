@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Inbox, Mail, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { LuxIcon } from '../../components/common/LuxIcon';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
 
@@ -97,7 +98,7 @@ export const AdminSupport: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-white uppercase tracking-[0.15em] flex items-center gap-3">
-            <Inbox className="text-accent-primary" size={24} />
+            <LuxIcon icon={Inbox} size={24} />
             Support Inbox
           </h2>
           <p className="text-sm text-slate-400 mt-1">

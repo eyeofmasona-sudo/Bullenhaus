@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Trophy, Shield, Zap, Medal, ChevronRight, Activity, TrendingUp, Award, Crown, CheckCircle2, Lock, Coins } from 'lucide-react';
+import { LuxIcon } from '../../components/common/LuxIcon';
 import { useUserStore } from '../../stores/userStore';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
@@ -85,7 +86,7 @@ export const Gamification: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold text-white uppercase tracking-[0.2em] flex items-center gap-3">
-            <Trophy className="text-accent-primary" size={28} />
+            <LuxIcon icon={Trophy} size={28} />
             Trader Progression
           </h2>
           <p className="text-sm text-slate-400 mt-2 flex items-center gap-2">
@@ -209,7 +210,7 @@ export const Gamification: React.FC = () => {
           <div className="glass-card p-6 flex flex-col h-full min-h-[500px]">
              <div className="flex items-center justify-between mb-8">
                <div className="flex items-center gap-3">
-                 <Activity className="text-accent-primary" size={20} />
+                 <LuxIcon icon={Activity} size={20} />
                  <h3 className="text-sm font-bold text-white uppercase tracking-widest">Global Ranking</h3>
                </div>
                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-white/5 px-2 py-1 rounded">Season 1</span>

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
 import { openLiveChat } from '../../components/chat/LiveChat';
+import { LuxIcon, LuxIconTile } from '../../components/common/LuxIcon';
 
 const CATEGORIES = [
   'Account Issue',
@@ -93,7 +94,7 @@ export const Support = () => {
             {/* FAQ */}
             <div className="glass-card p-6">
               <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                <HelpCircle size={20} className="text-accent-primary" />
+                <LuxIcon icon={HelpCircle} size={20} />
                 {t('faq', { defaultValue: 'Frequently Asked Questions' })}
               </h2>
               <div className="space-y-3">
@@ -115,7 +116,7 @@ export const Support = () => {
                 onClick={() => navigate('/trade/docs')}
                 className="glass-card p-6 flex items-center gap-4 hover:bg-white/[0.02] cursor-pointer transition-all text-left"
               >
-                <div className="p-3 bg-blue-500/10 text-blue-500 rounded-xl"><Book size={24} /></div>
+                <LuxIconTile icon={Book} size={48} iconSize={24} />
                 <div>
                   <p className="font-bold text-white">{t('documentation', { defaultValue: 'Documentation' })}</p>
                   <p className="text-xs text-slate-500">{t('readGuides', { defaultValue: 'Read our detailed guides' })}</p>
@@ -125,7 +126,7 @@ export const Support = () => {
                 onClick={openLiveChat}
                 className="glass-card p-6 flex items-center gap-4 hover:bg-white/[0.02] cursor-pointer transition-all text-left"
               >
-                <div className="p-3 bg-accent-secondary/10 text-accent-secondary rounded-xl"><MessageSquare size={24} /></div>
+                <LuxIconTile icon={MessageSquare} size={48} iconSize={24} />
                 <div>
                   <p className="font-bold text-white">{t('liveChat', { defaultValue: 'Live Chat' })}</p>
                   <p className="text-xs text-slate-500">{t('speakAgent', { defaultValue: 'Speak with our AI assistant' })}</p>

@@ -2,9 +2,11 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Settings2, TrendingUp, TrendingDown, Activity, Zap, Target, BarChart3, ArrowRight, Lock, Crown } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useTradingStore } from '../../stores/tradingStore';
 import { AssetIcon } from '../../components/common/AssetIcon';
 import { useEliteStatus, ELITE_REQUIREMENT } from '../../hooks/useEliteStatus';
+import { LuxIcon, LuxIconTile } from '../../components/common/LuxIcon';
 import { useWalletSync } from '../../hooks/useWalletSync';
 import { TransferModal } from './TransferModal';
 
@@ -43,7 +45,7 @@ const SIGNAL_STYLE: Record<SignalKind, string> = {
 
 type Strategy = 'momentum' | 'gainers' | 'losers' | 'all';
 
-const STRATEGIES: { id: Strategy; name: string; description: string; icon: React.ElementType }[] = [
+const STRATEGIES: { id: Strategy; name: string; description: string; icon: LucideIcon }[] = [
   { id: 'momentum', name: 'Momentum Radar', description: 'Strongest absolute movers first — ride the wave', icon: Zap },
   { id: 'gainers', name: 'Bull Scanner', description: 'Only assets with positive 24h momentum', icon: TrendingUp },
   { id: 'losers', name: 'Dip Hunter', description: 'Oversold assets for mean-reversion entries', icon: Target },
@@ -159,7 +161,7 @@ export const InstitutionalTools: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold text-white uppercase tracking-[0.2em] flex items-center gap-3">
-            <Settings2 className="text-accent-primary" size={28} />
+            <LuxIcon icon={Settings2} size={28} />
             Institutional Tools
           </h2>
           <p className="text-sm text-slate-400 mt-2">
@@ -215,9 +217,7 @@ export const InstitutionalTools: React.FC = () => {
               }`}
             >
               <div className="flex items-center gap-3 mb-2">
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center border ${active ? 'bg-accent-primary/20 border-accent-primary/40' : 'bg-[#111] border-white/10'}`}>
-                  <Icon size={18} className={active ? 'text-accent-primary' : 'text-white'} />
-                </div>
+                <LuxIconTile icon={Icon} size={36} iconSize={18} className={active ? 'border-gold/60' : ''} />
                 <h4 className={`text-sm font-bold ${active ? 'text-accent-primary' : 'text-white'}`}>{s.name}</h4>
               </div>
               <p className="text-[10px] text-slate-500 leading-relaxed font-medium">{s.description}</p>

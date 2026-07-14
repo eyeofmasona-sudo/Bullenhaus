@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Wallet, TrendingUp, History, PieChart, Download, Upload, ShieldCheck, Activity } from 'lucide-react';
+import { LuxIcon } from '../../components/common/LuxIcon';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTradingStore } from '../../stores/tradingStore';
@@ -160,7 +161,7 @@ export const Portfolio: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold text-white uppercase tracking-[0.2em] flex items-center gap-3">
-            <Wallet className="text-accent-primary" size={28} />
+            <LuxIcon icon={Wallet} size={28} />
             Wallet & Portfolio
           </h2>
           <p className="text-sm text-slate-400 mt-2 flex items-center gap-2">
@@ -379,7 +380,7 @@ export const Portfolio: React.FC = () => {
           {/* Allocation Pie Chart */}
           <div className="glass-card p-6 text-center">
              <div className="flex items-center gap-3 mb-6">
-               <PieChart className="text-accent-primary" size={20} />
+               <LuxIcon icon={PieChart} size={20} />
                <h3 className="text-sm font-bold text-white uppercase tracking-widest">Allocation Matrix</h3>
              </div>
              

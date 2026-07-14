@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { Users2, Rocket, Settings2, Lock } from 'lucide-react';
 import { useEliteStatus } from '../../hooks/useEliteStatus';
+import { LuxIconTile } from '../common/LuxIcon';
 
 const banners = [
   { icon: Users2, title: 'Refer & Earn', subtitle: 'Invite elites and earn up to 40% Commission', color: 'from-accent-primary shadow-neon-gold', to: '/trade/referrals', eliteOnly: false },
@@ -29,8 +30,8 @@ export const UniverseBanners = () => {
         >
           <div className={`absolute top-0 left-0 w-1 h-full bg-gradient-to-b ${banner.color.split(' ')[0]} to-transparent opacity-70 group-hover:opacity-100 transition-opacity`} />
           <div className="flex items-center gap-5 relative z-10">
-             <div className={`w-14 h-14 rounded-2xl bg-[#111] flex items-center justify-center border border-white/10 group-hover:border-white/20 transition-all duration-300 group-hover:${banner.color.split(' ')[1]}`}>
-                <banner.icon size={26} className="text-white group-hover:scale-110 transition-transform duration-300" />
+             <div className="group-hover:scale-105 transition-transform duration-300">
+                <LuxIconTile icon={banner.icon} size={56} iconSize={26} className="rounded-2xl" />
              </div>
              <div>
                 <h4 className="text-sm font-bold text-white mb-1.5 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-white group-hover:to-slate-400 transition-all flex items-center gap-1.5">

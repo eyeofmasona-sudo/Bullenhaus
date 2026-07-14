@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { useTradingStore } from '../../stores/tradingStore';
 import { toast } from 'sonner';
 import { Rocket, ShieldCheck, AlertCircle, CheckCircle2, Download } from 'lucide-react';
+import { LuxIcon } from '../../components/common/LuxIcon';
 import { ContractModal } from '../../components/dashboard/ContractModal';
 import { AssetIcon } from '../../components/common/AssetIcon';
 
@@ -268,7 +269,7 @@ export const PreMarket: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold text-white uppercase tracking-[0.2em] flex items-center gap-3">
-            <Rocket className="text-accent-primary" size={28} />
+            <LuxIcon icon={Rocket} size={28} />
             {t('premarket.title')}
           </h2>
           <p className="text-sm text-slate-400 mt-2 flex items-center gap-2">
