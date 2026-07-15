@@ -102,6 +102,25 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
     return () => window.clearInterval(iv);
   }, [loadNotifications]);
 
+  // Instant delivery for clients: push a toast and refresh the bell the moment
+  // a new notification row lands (e.g. a support reply), instead of waiting
+  // for the next 30s poll.
+  useEffect(() => {
+    if (isAdmin || !user) return;
+    const sub = supabase
+      .channel(`notifications-watch-${user.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}`,
+      }, (payload: any) => {
+        toast.info(payload.new?.title || 'New notification', {
+          description: payload.new?.message || undefined,
+        });
+        loadNotifications();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(sub); };
+  }, [isAdmin, user, loadNotifications]);
+
   const displayName = profile?.display_name || profile?.full_name || profile?.username || user?.email || 'User';
   const avatarUrl   = profile?.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${displayName}`;
 

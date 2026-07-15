@@ -34,6 +34,8 @@ import { useAuth } from '../../contexts/AuthContext';
 
 interface SidebarItemProps {
   icon: React.ElementType;
+  /** 3D golden icon PNG (same art set as the trading admin panel), rendered instead of the lucide icon when set. */
+  iconSrc?: string;
   label: string;
   active?: boolean;
   alert?: number;
@@ -41,7 +43,7 @@ interface SidebarItemProps {
   onClick?: () => void;
 }
 
-const SidebarItem = ({ icon: Icon, label, active, alert, to, onClick }: SidebarItemProps) => {
+const SidebarItem = ({ icon: Icon, iconSrc, label, active, alert, to, onClick }: SidebarItemProps) => {
   const content = (
     <motion.div
       whileHover={{ 
@@ -68,18 +70,29 @@ const SidebarItem = ({ icon: Icon, label, active, alert, to, onClick }: SidebarI
       
       <div className="flex items-center gap-3 relative z-10">
         <div className={cn(
-          "p-1.5 rounded-lg bg-[#00000080] shadow-[inset_0_1px_2px_rgba(255,255,255,0.1)] border",
+          "w-7 h-7 rounded-lg bg-[#00000080] shadow-[inset_0_1px_2px_rgba(255,255,255,0.1)] border overflow-hidden flex items-center justify-center shrink-0",
           active ? "border-gold/30" : "border-white/5 group-hover:border-gold/20 transition-colors"
         )}>
-           <Icon 
-             size={16} 
-             className={cn(
-               "transition-all duration-300 shrink-0", 
-               active 
-                 ? "text-[#FFD700] drop-shadow-[0_0_8px_rgba(255,215,0,0.8)]" 
-                 : "text-[#D4AF37] opacity-80 group-hover:opacity-100 group-hover:text-[#FFD700] group-hover:drop-shadow-[0_0_6px_rgba(255,215,0,0.5)]"
-             )} 
-           />
+           {iconSrc ? (
+             <img
+               src={iconSrc}
+               alt=""
+               className={cn(
+                 "w-full h-full object-cover scale-[1.35] transition-all duration-300",
+                 active ? "drop-shadow-[0_0_6px_rgba(255,215,0,0.7)]" : "opacity-80 group-hover:opacity-100"
+               )}
+             />
+           ) : (
+             <Icon
+               size={16}
+               className={cn(
+                 "transition-all duration-300 shrink-0",
+                 active
+                   ? "text-[#FFD700] drop-shadow-[0_0_8px_rgba(255,215,0,0.8)]"
+                   : "text-[#D4AF37] opacity-80 group-hover:opacity-100 group-hover:text-[#FFD700] group-hover:drop-shadow-[0_0_6px_rgba(255,215,0,0.5)]"
+               )}
+             />
+           )}
         </div>
         <span className={cn(
            "font-bold text-xs tracking-wider uppercase",
@@ -150,27 +163,27 @@ export const Sidebar = ({ onClose }: { onClose?: () => void }) => {
       </div>
 
       <nav className="flex-1 min-h-0 space-y-1 overflow-y-auto custom-scrollbar pr-2">
-        <SidebarItem icon={LayoutDashboard} label={t('dashboard')} to="/trade/dashboard" active={currentPath === '/trade/dashboard'} onClick={onClose} />
-        <SidebarItem icon={BarChart3} label={t('markets')} to="/trade/markets" active={currentPath === '/trade/markets'} onClick={onClose} />
-        <SidebarItem icon={Repeat} label={t('trade')} to="/trade/terminal" active={currentPath === '/trade/terminal'} onClick={onClose} />
-        <SidebarItem icon={Rocket} label={t('pre_market', { defaultValue: 'Pre-Market' })} to="/trade/pre-market" active={currentPath === '/trade/pre-market'} onClick={onClose} />
-        <SidebarItem icon={Briefcase} label={t('portfolio')} to="/trade/portfolio" active={currentPath === '/trade/portfolio'} onClick={onClose} />
-        <SidebarItem icon={History} label={t('transactions')} to="/trade/transactions" active={currentPath === '/trade/transactions'} onClick={onClose} />
+        <SidebarItem icon={LayoutDashboard} iconSrc="/assets/icons/dashboard.png" label={t('dashboard')} to="/trade/dashboard" active={currentPath === '/trade/dashboard'} onClick={onClose} />
+        <SidebarItem icon={BarChart3} iconSrc="/assets/icons/admin_logo.png" label={t('markets')} to="/trade/markets" active={currentPath === '/trade/markets'} onClick={onClose} />
+        <SidebarItem icon={Repeat} iconSrc="/assets/icons/trade.png" label={t('trade')} to="/trade/terminal" active={currentPath === '/trade/terminal'} onClick={onClose} />
+        <SidebarItem icon={Rocket} iconSrc="/assets/icons/trade.png" label={t('pre_market', { defaultValue: 'Pre-Market' })} to="/trade/pre-market" active={currentPath === '/trade/pre-market'} onClick={onClose} />
+        <SidebarItem icon={Briefcase} iconSrc="/assets/icons/wallet.png" label={t('portfolio')} to="/trade/portfolio" active={currentPath === '/trade/portfolio'} onClick={onClose} />
+        <SidebarItem icon={History} iconSrc="/assets/icons/wallet.png" label={t('transactions')} to="/trade/transactions" active={currentPath === '/trade/transactions'} onClick={onClose} />
 
         <div className="pt-4 pb-2 px-4 label-eyebrow">{t('growth', { defaultValue: 'Growth' })}</div>
-        <SidebarItem icon={Trophy} label={t('rewards')} to="/trade/gamification" active={currentPath === '/trade/gamification'} onClick={onClose} />
-        <SidebarItem icon={Users2} label={t('referrals')} to="/trade/referrals" active={currentPath === '/trade/referrals'} onClick={onClose} />
-        <SidebarItem icon={Bell} label={t('notifications')} to="/trade/notifications" active={currentPath === '/trade/notifications'} onClick={onClose} />
+        <SidebarItem icon={Trophy} iconSrc="/assets/icons/role_badge.png" label={t('rewards')} to="/trade/gamification" active={currentPath === '/trade/gamification'} onClick={onClose} />
+        <SidebarItem icon={Users2} iconSrc="/assets/icons/users.png" label={t('referrals')} to="/trade/referrals" active={currentPath === '/trade/referrals'} onClick={onClose} />
+        <SidebarItem icon={Bell} iconSrc="/assets/icons/chatbot.png" label={t('notifications')} to="/trade/notifications" active={currentPath === '/trade/notifications'} onClick={onClose} />
 
         <div className="pt-4 pb-2 px-4 label-eyebrow">{t('account', { defaultValue: 'Account' })}</div>
-        <SidebarItem icon={ShieldCheck} label={t('kyc')} to="/trade/kyc" active={currentPath === '/trade/kyc'} onClick={onClose} />
-        <SidebarItem icon={Settings} label={t('settings')} to="/trade/settings" active={currentPath === '/trade/settings'} onClick={onClose} />
-        <SidebarItem icon={LifeBuoy} label={t('help')} to="/trade/support" active={currentPath === '/trade/support'} onClick={onClose} />
+        <SidebarItem icon={ShieldCheck} iconSrc="/assets/icons/shield.png" label={t('kyc')} to="/trade/kyc" active={currentPath === '/trade/kyc'} onClick={onClose} />
+        <SidebarItem icon={Settings} iconSrc="/assets/icons/settings.png" label={t('settings')} to="/trade/settings" active={currentPath === '/trade/settings'} onClick={onClose} />
+        <SidebarItem icon={LifeBuoy} iconSrc="/assets/icons/chatbot.png" label={t('help')} to="/trade/support" active={currentPath === '/trade/support'} onClick={onClose} />
 
         {(role === 'admin' || role === 'trade_admin') && (
           <>
             <div className="pt-4 pb-2 px-4 text-[10px] font-bold text-danger uppercase tracking-widest">System</div>
-            <SidebarItem icon={Terminal} label={t('admin')} to="/admin/dashboard" active={currentPath.startsWith('/admin')} onClick={onClose} />
+            <SidebarItem icon={Terminal} iconSrc="/assets/icons/admin_logo.png" label={t('admin')} to="/admin/dashboard" active={currentPath.startsWith('/admin')} onClick={onClose} />
           </>
         )}
 
