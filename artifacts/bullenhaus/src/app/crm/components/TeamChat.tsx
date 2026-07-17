@@ -123,7 +123,7 @@ export function TeamChat() {
     ;(async () => {
       try {
         // 1. Try to find existing employee by email
-        let res = await fetch(apiUrl(`/api/employees/by-email?email=${encodeURIComponent(email)}`))
+        const res = await fetch(apiUrl(`/api/employees/by-email?email=${encodeURIComponent(email)}`))
         if (res.ok) {
           const data = await res.json()
           if (cancelled) return

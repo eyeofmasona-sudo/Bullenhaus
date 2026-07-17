@@ -45,7 +45,7 @@ export function validateFile(file: File): string | null {
 
 // Sanitize a filename for use inside a storage object key.
 function safeName(name: string): string {
-  return name.replace(/[^\w.\-]+/g, '_').slice(0, 120);
+  return name.replace(/[^\w.-]+/g, '_').slice(0, 120);
 }
 
 // ── Hook ────────────────────────────────────────────────────────────────────────
