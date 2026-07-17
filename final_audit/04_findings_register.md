@@ -23,9 +23,29 @@ placeholder/demo-only behavior in the code that was read.
 | AUDIT-012 | — | — | Testing/CI | No automated tests, no ESLint config, no CI workflows exist anywhere in the repository | `find` for `*.test.*`/`*.spec.*` → 0; `find` for eslint config → 0; `.github/workflows` → does not exist | No regression safety net beyond `tsc`/`vite build`; every fix in this audit had to be verified by manual reasoning + typecheck/build rather than an automated suite | Never set up | **Not fixed this session** — scaffolding a real test suite and CI pipeline is a scope decision for the project owner (what to test, what CI provider), not a "confirmed bug" this audit can minimally patch | Flagged as a structural gap, see 06/10 |
 
 ## Findings closed this session: **6** (AUDIT-001 through AUDIT-005, plus AUDIT-006 investigated-and-cleared)
-## Findings requiring owner action (cannot be closed by an agent in this environment): AUDIT-007, AUDIT-009, AUDIT-010, AUDIT-011, AUDIT-012
+## Findings requiring owner action (cannot be closed by an agent in this environment): AUDIT-007, AUDIT-011
 ## Open P0: **0** (both P0s — AUDIT-001, AUDIT-002 — closed and re-verified)
 ## Open P1: **0** (AUDIT-003 closed and re-verified)
 ## Open blocking P2: **0** (remaining P2s are owner-action items, not blocking a merge/deploy — see 11_final_release_report.md for the reasoning)
 
 ## Interim verdict: **REPAIR_REQUIRED → executed → READY_FOR_FINAL_VERIFICATION**
+
+---
+
+## Loop 2 — structural-debt closure (follow-up pass)
+
+After the initial repair loop, a second pass drove the "requiring owner action" items down as
+far as this environment allows, and empirically verified the RLS/IDOR fixes:
+
+| ID | Prior status | Loop-2 action | New status |
+|---|---|---|---|
+| AUDIT-002 / AUDIT-003 | fixed (advisor-verified) | **Empirically verified** via SQL role impersonation: anon sees 0 rows across all 7 tables; a non-owner client sees 0 ticket_comments/tickets (IDOR closed); the ticket owner sees exactly their 1 comment/1 ticket; a staff agent retains full access (scripts=9, templates=5, messages=1, etc. — no regression) | CONFIRMED empirically |
+| AUDIT-009 (no tracked migrations) | owner-action | Committed this session's 3 security migrations as tracked SQL under `supabase/migrations/` + a README documenting the partial-backfill state and go-forward file-first workflow | CLOSED (partial backfill; full historical baseline dump still needs a networked env — documented) |
+| AUDIT-010 (unfilled docs) | owner-action | Filled `replit.md` with real stack, repo map, architecture decisions, gotchas, product scope | CLOSED |
+| AUDIT-012 (no tests/lint/CI) | owner-action | Added GitHub Actions CI (`.github/workflows/ci.yml`: typecheck + api typecheck + lint + build + test); added a real test harness (`node:test` + tsx) with 9 security-relevant KYC-sanitizer tests; added correctness-focused ESLint (0 errors, 106 advisory warnings) wired into CI; added `.vercelignore` so test files aren't deployed as functions | CLOSED |
+| AUDIT-007 (leaked-password protection) | owner-action | Confirmed this is a Supabase Auth **dashboard** setting with no API/MCP toggle available in this session | STILL owner-action (hard environmental cap) |
+| AUDIT-011 (root-level stray files) | owner-action | Left untouched deliberately (deleting files the audit didn't create needs owner confirmation) | STILL owner-decision |
+
+All Loop-2 changes verified locally: `pnpm run typecheck`, `api tsc --noEmit`, `pnpm run lint`
+(0 errors), `pnpm run test` (9/9), `pnpm run build`, and `pnpm install --frozen-lockfile` all
+pass. Commits: `a546650` (CI/tests/migrations/docs), `8515f0e` (ESLint).

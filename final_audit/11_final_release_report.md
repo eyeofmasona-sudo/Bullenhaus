@@ -140,6 +140,37 @@ EVIDENCE LEVEL: PARTIAL
 OPEN P0: 0
 OPEN P1: 0
 BLOCKING P2: 0
-BROWSER VERIFICATION: NOT_AVAILABLE
+BROWSER VERIFICATION: NOT_AVAILABLE (DB-layer authorization empirically substituted via SQL role impersonation — see Loop 2)
 DEPLOYMENT VERIFICATION: PARTIAL (build+deploy confirmed via Vercel; live smoke test NOT_AVAILABLE)
 HANDOVER PACKAGE: COMPLETE
+
+---
+
+## 11. Loop 2 — structural-debt closure (addendum)
+
+A follow-up pass drove the owner-action technical debt down as far as this environment allows,
+and empirically verified the security fixes. See `04_findings_register.md` → "Loop 2" for the
+per-finding table. Summary of what changed after the first sign-off:
+
+- **RLS/IDOR empirically verified** (not just advisor-verified) via SQL role impersonation:
+  anon = 0 rows across all 7 formerly-open tables; non-owner client = 0 ticket comments (IDOR
+  closed); owner = their own 1 comment/ticket; staff agent = full access retained (no regression).
+  This is the data-layer equivalent of the browser test that the sandbox couldn't run.
+- **CI added** (`.github/workflows/ci.yml`): typecheck + api typecheck + lint + build + test.
+- **Test harness added** (`node:test` + tsx, no new third-party test runner): 9 tests locking in
+  the fail-safe behavior of the KYC AI-output sanitizer.
+- **ESLint added** (correctness-focused): 0 errors, 106 advisory warnings; wired into CI.
+- **Migrations backfilled into git** (this session's 3 security migrations) + workflow README.
+- **Docs**: `replit.md` filled with real content.
+- **`.vercelignore`** so `*.test.ts` isn't deployed as a serverless function.
+
+Remaining hard caps (genuinely cannot be closed from this sandbox):
+- Live browser/mobile rendering verification — no outbound network to the deployed app.
+- Supabase Auth leaked-password protection — dashboard-only toggle, no API/MCP path.
+- Full historical migration baseline — needs a networked env with DB access to `db dump`.
+- Frontend component test coverage — only the api KYC sanitizer is covered so far; broad UI
+  coverage is a larger build-out, not a minimal patch.
+
+Loop-2 verification: `pnpm run typecheck`, `api tsc --noEmit`, `pnpm run lint` (0 errors),
+`pnpm run test` (9/9), `pnpm run build`, `pnpm install --frozen-lockfile` — all pass locally.
+Commits: `a546650`, `8515f0e`.
