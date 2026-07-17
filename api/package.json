@@ -2,10 +2,14 @@
   "name": "@workspace/api-functions",
   "version": "0.0.0",
   "private": true,
+  "scripts": {
+    "test": "node --import tsx --test \"**/*.test.ts\""
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.1"
   },
   "devDependencies": {
-    "@types/node": "catalog:"
+    "@types/node": "catalog:",
+    "tsx": "catalog:"
   }
 }

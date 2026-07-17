@@ -63,7 +63,7 @@ function fetchWithTimeout(url: string, init: RequestInit) {
   return fetch(url, { ...init, signal: controller.signal }).finally(() => clearTimeout(timer));
 }
 
-function normalizeResult(raw: unknown, fallbackDocs: KycDocPayload[]): BotResult {
+export function normalizeResult(raw: unknown, fallbackDocs: KycDocPayload[]): BotResult {
   const value = raw && typeof raw === "object" ? raw as Partial<BotResult> : {};
   const decision = value.decision === "approve" || value.decision === "reject" || value.decision === "escalate"
     ? value.decision
@@ -95,7 +95,7 @@ function normalizeResult(raw: unknown, fallbackDocs: KycDocPayload[]): BotResult
   };
 }
 
-function parseJsonObject(text: string): unknown {
+export function parseJsonObject(text: string): unknown {
   try {
     return JSON.parse(text);
   } catch {
