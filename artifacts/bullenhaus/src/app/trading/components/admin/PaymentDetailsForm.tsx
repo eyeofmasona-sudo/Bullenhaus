@@ -33,6 +33,13 @@ interface Props {
 
 type TabId = 'card' | 'iban' | 'link';
 
+// payment_details is client-submitted at deposit time (RLS only checks row
+// ownership, not JSON shape), so explorerUrl must be validated as a genuine
+// Etherscan tx link before ever being used as a clickable href -- otherwise
+// a crafted value could redirect a staff member reviewing deposits to an
+// arbitrary attacker-chosen destination.
+const isTrustedExplorerUrl = (url: string) => /^https:\/\/etherscan\.io\/tx\/0x[a-fA-F0-9]{64}$/.test(url);
+
 const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <div>
     <label className="block text-[10px] font-bold uppercase tracking-widest text-text-dim mb-1.5">{label}</label>
@@ -277,6 +284,21 @@ export const PaymentDetailsSentBadge: React.FC<{
   const { t } = useTranslation(['common']);
 
   if (details.type === 'crypto') {
+    const label = (
+      <>
+        <Wallet2 size={9} /> {details.tokenSymbol} · {details.txHash.slice(0, 6)}…{details.txHash.slice(-4)}
+      </>
+    );
+    if (!isTrustedExplorerUrl(details.explorerUrl)) {
+      return (
+        <span
+          title="Explorer link withheld: unrecognized format"
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-white/5 text-text-dim"
+        >
+          {label}
+        </span>
+      );
+    }
     return (
       <a
         href={details.explorerUrl}
@@ -286,7 +308,7 @@ export const PaymentDetailsSentBadge: React.FC<{
         className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-accent-primary/10 text-accent-primary hover:bg-accent-primary/20 transition-colors"
         title={details.txHash}
       >
-        <Wallet2 size={9} /> {details.tokenSymbol} · {details.txHash.slice(0, 6)}…{details.txHash.slice(-4)}
+        {label}
       </a>
     );
   }

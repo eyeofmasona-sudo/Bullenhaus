@@ -3,6 +3,13 @@ import { motion } from 'motion/react';
 import { Copy, CheckCheck, ExternalLink, CreditCard, Building2, Link2, Wallet2 } from 'lucide-react';
 import type { PaymentDetails } from '../admin/PaymentDetailsForm';
 
+// payment_details is client-submitted at deposit time (RLS only checks row
+// ownership, not JSON shape), so explorerUrl must be validated as a genuine
+// Etherscan tx link before ever being used as a clickable href -- otherwise
+// a crafted value could redirect a staff member reviewing deposits to an
+// arbitrary attacker-chosen destination.
+const isTrustedExplorerUrl = (url: string) => /^https:\/\/etherscan\.io\/tx\/0x[a-fA-F0-9]{64}$/.test(url);
+
 const CopyField: React.FC<{ label: string; value: string; mono?: boolean }> = ({ label, value, mono }) => {
   const [copied, setCopied] = useState(false);
   const copy = () => {
@@ -134,18 +141,27 @@ export const PaymentDetailsDisplay: React.FC<{
           <CopyField label="To (platform wallet)" value={details.toAddress} mono />
         </div>
         <div className="px-4 pb-4 pt-2">
-          <a
-            href={details.explorerUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`flex items-center justify-center gap-2 w-full py-3 rounded-xl font-bold text-sm transition-all ${
-              isDeposit
-                ? 'bg-accent-secondary text-black hover:brightness-110 shadow-neon-emerald'
-                : 'bg-orange-500 text-black hover:brightness-110'
-            }`}
-          >
-            <ExternalLink size={15} /> View on Block Explorer
-          </a>
+          {isTrustedExplorerUrl(details.explorerUrl) ? (
+            <a
+              href={details.explorerUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`flex items-center justify-center gap-2 w-full py-3 rounded-xl font-bold text-sm transition-all ${
+                isDeposit
+                  ? 'bg-accent-secondary text-black hover:brightness-110 shadow-neon-emerald'
+                  : 'bg-orange-500 text-black hover:brightness-110'
+              }`}
+            >
+              <ExternalLink size={15} /> View on Block Explorer
+            </a>
+          ) : (
+            <div
+              title="Explorer link withheld: unrecognized format"
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl font-bold text-sm bg-white/5 text-text-dim cursor-not-allowed"
+            >
+              <ExternalLink size={15} /> Explorer link unavailable
+            </div>
+          )}
         </div>
       </motion.div>
     );
