@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
+import { UserRound, LineChart } from 'lucide-react';
 import { DashboardStats } from './DashboardStats';
 import { GamificationWidget } from './GamificationWidget';
 import { TradingChart } from './TradingChart';
@@ -59,17 +60,34 @@ const DashboardContent = () => {
         </div>
         
         <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-          <div className="flex -space-x-2">
-            {[1, 2, 3, 4, 5].map(i => (
-              <div key={i} className="w-8 h-8 rounded-full border-2 border-surface-bg bg-slate-800 overflow-hidden ring-1 ring-accent-primary/30">
-                <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=user${i}`} alt="user" />
+          <div className="flex items-center -space-x-3">
+            {[0, 1, 2].map(i => (
+              <div
+                key={i}
+                className="relative w-9 h-9 rounded-full border-2 border-[#0A0A0E] bg-gradient-to-br from-[#1E1E26] to-[#0A0A0E] flex items-center justify-center shadow-[0_2px_10px_rgba(0,0,0,0.6)]"
+                style={{ zIndex: 3 - i }}
+              >
+                <div className="absolute inset-0 rounded-full border border-accent-primary/25" />
+                <UserRound size={15} className="text-accent-primary/70" strokeWidth={2} />
               </div>
             ))}
-            <div className="w-8 h-8 rounded-full border-2 border-surface-bg bg-gradient-to-br from-accent-primary to-yellow-600 flex items-center justify-center text-[10px] font-bold text-black shadow-neon-gold leading-none">
+            <div className="relative w-9 h-9 rounded-full border-2 border-[#0A0A0E] bg-gradient-to-br from-accent-primary to-yellow-600 flex items-center justify-center text-[10px] font-black text-black shadow-neon-gold leading-none">
               +128
             </div>
           </div>
-          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-white/5 px-2 py-1 rounded">{t('liveAnalysts', { defaultValue: 'Live Analysts' })}</span>
+          <div className="flex flex-col gap-1">
+            <span className="flex items-center gap-1.5 text-[10px] font-bold text-accent-primary uppercase tracking-widest">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-secondary opacity-75" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-accent-secondary" />
+              </span>
+              {t('liveAnalysts', { defaultValue: 'Live Analysts' })}
+            </span>
+            <span className="flex items-center gap-1 text-[9px] font-medium text-slate-500 tracking-wide">
+              <LineChart size={10} className="text-slate-600" />
+              {t('liveAnalystsDesc', { defaultValue: 'Monitoring markets in real time' })}
+            </span>
+          </div>
         </div>
       </motion.div>
 
