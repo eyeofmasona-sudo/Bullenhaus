@@ -146,7 +146,7 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
         <Sidebar onClose={() => setIsMobileMenuOpen(false)} />
       </div>
 
-      <div className="flex-1 flex flex-col relative min-h-0">
+      <div className="flex-1 flex flex-col relative min-h-0 min-w-0">
         {/* Header — premium with bottom gold hairline */}
         <header className="relative h-16 flex items-center justify-between px-4 md:px-8 border-b border-border-glass bg-[#0A0A0E]/60 backdrop-blur-xl z-20">
           {/* Bottom gold hairline — luxury signature */}
@@ -283,7 +283,7 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar relative">
+        <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden custom-scrollbar relative">
           <div className="min-h-full flex flex-col relative z-10">
             <div className="flex-1 w-full p-4 md:p-8">{children}</div>
             <TradingFooter />
