@@ -2,14 +2,62 @@ import React, { useState, useRef, useEffect } from "react";
 import { Phone, Clock, FileText, PlayCircle, Plus, ChevronRight, MoreHorizontal, Loader2, AlertCircle, ChevronDown, Upload } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
-import { useLeads, updateLeadStage, LEAD_STAGES, type LeadStage } from "../hooks/useLeads";
+import { useLeads, LEAD_STAGES, type LeadStage } from "../hooks/useLeads";
 import { useI18n } from "../lib/i18n";
 import { usePhoneDialer } from "../contexts/PhoneDialerContext";
 import { useAuth } from "../../trading/contexts/AuthContext";
 import { supabase } from "../../../lib/supabase/browserClient";
 import { toast } from "sonner";
 
-const VISIBLE_PER_STAGE = 25;
+const VISIBLE_PER_STAGE = 30;
+
+const STAGE_DOT_COLOR: Record<string, string> = {
+  Deposited:         'bg-aura-emerald shadow-[0_0_8px_rgba(16,185,129,0.5)]',
+  'Awaiting Deposit': 'bg-aura-warning shadow-[0_0_8px_rgba(234,179,8,0.5)]',
+  New:               'bg-aura-platinum shadow-[0_0_8px_rgba(255,255,255,0.4)]',
+  Approved:          'bg-aura-emerald shadow-[0_0_8px_rgba(16,185,129,0.5)]',
+  'Pending KYC':     'bg-aura-warning shadow-[0_0_8px_rgba(234,179,8,0.5)]',
+  'New Inquiries':   'bg-aura-platinum shadow-[0_0_8px_rgba(255,255,255,0.4)]',
+};
+
+const STAGE_CARD_BORDER: Record<string, string> = {
+  DEPOSITED:         'border-aura-emerald/30 hover:border-aura-emerald/50',
+  AWAITING_DEPOSIT:  'border-aura-warning/30 hover:border-aura-warning/50',
+  LOST:              'border-aura-ruby/30 hover:border-aura-ruby/50',
+  PENDING_KYC:       'border-aura-warning/30 hover:border-aura-warning/50',
+};
+
+const STAGE_SELECT_STYLE: Record<string, string> = {
+  DEPOSITED:         'bg-aura-emerald/10 border-aura-emerald/30 text-aura-emerald',
+  APPROVED:          'bg-aura-emerald/10 border-aura-emerald/30 text-aura-emerald',
+  AWAITING_DEPOSIT:  'bg-aura-warning/10 border-aura-warning/30 text-aura-warning',
+  REJECTED:          'bg-aura-ruby/10 border-aura-ruby/30 text-aura-ruby',
+  LOST:              'bg-aura-ruby/10 border-aura-ruby/30 text-aura-ruby',
+  PENDING_KYC:       'bg-aura-warning/10 border-aura-warning/30 text-aura-warning',
+  IN_PROGRESS:       'bg-aura-gold/10 border-aura-gold/30 text-aura-gold',
+};
+
+const STAGE_DISPLAY_LABEL: Record<string, string> = {
+  NEW: 'New', NO_ANSWER: 'No Answer', IN_PROGRESS: 'In Progress',
+  AWAITING_DEPOSIT: 'Awaiting Deposit', DEPOSITED: 'Deposited — FTD', CLOSED: 'Closed', LOST: 'Lost',
+  NEW_INQUIRY: 'New Inquiry', IN_DISCUSSION: 'In Discussion', PENDING_KYC: 'Pending KYC',
+  APPROVED: 'Approved', REJECTED: 'Rejected',
+};
+
+const STAGE_NEXT_ACTION: Record<string, (name: string) => string> = {
+  NEW: (name) => `${name} just joined. Begin with an introduction call to understand their investment goals. Do not push for a deposit yet.`,
+  NO_ANSWER: (name) => `${name} didn't pick up last time. Try a different time of day or a different number before writing them off.`,
+  IN_PROGRESS: (name) => `${name} is engaged. Focus on objection handling and present the platform's risk management tools.`,
+  AWAITING_DEPOSIT: (name) => `${name} is ready to fund. Remind them of the deposit steps and answer any last questions.`,
+  DEPOSITED: (name) => `${name} has funded. Congratulate them and introduce them to their dedicated account manager.`,
+  CLOSED: (name) => `${name}'s case is closed. No further outreach needed unless they re-engage.`,
+  LOST: (name) => `${name} was marked as lost. Review the notes before any further outreach.`,
+  NEW_INQUIRY: (name) => `${name} just joined. Begin with an introduction call to understand their investment goals. Do not push for a deposit yet.`,
+  IN_DISCUSSION: (name) => `${name} is engaged. Focus on objection handling and present the platform's risk management tools.`,
+  PENDING_KYC: (name) => `${name} is awaiting KYC. Remind them to upload their ID and proof of address.`,
+  APPROVED: (name) => `${name} is approved. Review their account and choose the next compliant follow-up.`,
+  REJECTED: (name) => `${name} was rejected in KYC. Review the compliance notes before any outreach.`,
+};
 
 const DERIVED_STAGE_OPTIONS = [
   { value: 'NEW_INQUIRY', label: 'New Inquiry' },
@@ -32,7 +80,7 @@ function LeadPipeline({ leads, meta, loading, error, onRetry, onCall, onStageCha
   error: string | null;
   onRetry: () => void;
   onCall: (phone: string, name: string) => void;
-  onStageChange: (leadId: string, stage: LeadStage) => void;
+  onStageChange: (leadId: string, fromStage: string, stage: LeadStage) => void;
   onOpen: (lead: any) => void;
   selectable: boolean;
   selectedIds: Set<string>;
@@ -87,12 +135,7 @@ function LeadPipeline({ leads, meta, loading, error, onRetry, onCall, onStageCha
               <div key={stage}>
                  <div className="flex items-center justify-between mb-4 px-1">
                    <div className="flex items-center gap-2">
-                     <div className={`w-2 h-2 rounded-full ${
-                       stage === 'Funded (FTD)' ? 'bg-aura-emerald shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
-                       stage === 'Pending KYC' ? 'bg-aura-warning shadow-[0_0_8px_rgba(234,179,8,0.5)]' :
-                       stage === 'New Inquiries' ? 'bg-aura-platinum shadow-[0_0_8px_rgba(255,255,255,0.4)]' :
-                       'bg-aura-gold shadow-[0_0_8px_rgba(212,175,55,0.5)]'
-                     }`} />
+                     <div className={`w-2 h-2 rounded-full ${STAGE_DOT_COLOR[stage] ?? 'bg-aura-gold shadow-[0_0_8px_rgba(212,175,55,0.5)]'}`} />
                      <h4 className="text-[10px] font-bold uppercase tracking-widest text-aura-platinum/60">{stage}</h4>
                    </div>
                    <div className="flex items-center gap-2">
@@ -114,9 +157,7 @@ function LeadPipeline({ leads, meta, loading, error, onRetry, onCall, onStageCha
                        key={lead.id} 
                        onClick={() => selectable ? onToggleSelect(lead.id) : onOpen(lead)}
                        className={`p-4 rounded-xl border glass-card hover:-translate-y-1 transition-transform cursor-pointer group shadow-sm hover:shadow-md ${selectedIds.has(lead.id) ? 'ring-2 ring-aura-gold border-aura-gold/60' : ''}
-                         ${lead.stage === 'FUNDED' ? 'border-aura-emerald/30 hover:border-aura-emerald/50' :
-                         lead.stage === 'PENDING_KYC' ? 'border-aura-warning/30 hover:border-aura-warning/50' :
-                         'border-glass-border hover:border-aura-platinum/30'}
+                         ${STAGE_CARD_BORDER[lead.stage] ?? 'border-glass-border hover:border-aura-platinum/30'}
                        `}
                      >
                        <div className="flex items-start justify-between mb-3">
@@ -137,7 +178,7 @@ function LeadPipeline({ leads, meta, loading, error, onRetry, onCall, onStageCha
                        <div className="grid grid-cols-2 gap-2 mb-4 text-xs font-mono">
                           <div>
                             <div className="text-[8px] uppercase tracking-widest text-aura-platinum/40 mb-0.5 font-sans">Capacity</div>
-                            <div className={lead.stage === 'FUNDED' ? 'text-aura-emerald' : 'text-aura-platinum'}>{lead.capacity || 'TBD'}</div>
+                            <div className={lead.stage === 'DEPOSITED' ? 'text-aura-emerald' : 'text-aura-platinum'}>{lead.capacity || 'TBD'}</div>
                           </div>
                           <div>
                             <div className="text-[8px] uppercase tracking-widest text-aura-platinum/40 mb-0.5 font-sans">Added</div>
@@ -157,14 +198,9 @@ function LeadPipeline({ leads, meta, loading, error, onRetry, onCall, onStageCha
                              value={lead.stage}
                              disabled={!canMoveStage}
                              title={canMoveStage ? "Move stage" : "Pipeline stage storage is not configured yet"}
-                             onChange={e => onStageChange(lead.id, e.target.value as LeadStage)}
+                             onChange={e => onStageChange(lead.id, lead.stage, e.target.value as LeadStage)}
                              className={`w-full appearance-none rounded-lg px-3 py-1.5 pr-7 text-[10px] font-bold uppercase tracking-widest border outline-none cursor-pointer transition-colors ${
-                               lead.stage === 'FUNDED'       ? 'bg-aura-emerald/10 border-aura-emerald/30 text-aura-emerald' :
-                               lead.stage === 'APPROVED'     ? 'bg-aura-emerald/10 border-aura-emerald/30 text-aura-emerald' :
-                               lead.stage === 'REJECTED'     ? 'bg-aura-ruby/10 border-aura-ruby/30 text-aura-ruby' :
-                               lead.stage === 'PENDING_KYC' ? 'bg-aura-warning/10 border-aura-warning/30 text-aura-warning' :
-                               lead.stage === 'IN_DISCUSSION'? 'bg-aura-gold/10 border-aura-gold/30 text-aura-gold' :
-                               'bg-white/5 border-glass-border text-aura-platinum/60'
+                               STAGE_SELECT_STYLE[lead.stage] ?? 'bg-white/5 border-glass-border text-aura-platinum/60'
                              } ${!canMoveStage ? 'cursor-not-allowed opacity-60' : ''}`}
                            >
                              {stageOptions.map(s => (
@@ -313,7 +349,7 @@ function LeadUploadButton({ onDone, role }: { onDone: () => void; role?: string 
           email,
           phone,
           country,
-          stage: 'NEW_INQUIRY',
+          stage: 'NEW',
           acquisition_source: { source, country, imported_from: file.name },
         };
       }).filter(r => r.email);
@@ -510,16 +546,15 @@ export function AgentWorkspace() {
   const [taskType, setTaskType] = useState('Call');
   const [taskTime, setTaskTime] = useState('Next 1 Hour');
 
-  const { leads, meta, loading, error, refetch, loadMoreStage } = useLeads(1, VISIBLE_PER_STAGE);
+  const { leads, meta, loading, error, refetch, loadMoreStage, moveLeadStage } = useLeads(1, VISIBLE_PER_STAGE);
 
-  const handleStageChange = async (leadId: string, stage: LeadStage) => {
+  const handleStageChange = async (leadId: string, fromStage: string, stage: LeadStage) => {
     if (!meta?.stageWritable) {
       toast.error('Pipeline stage storage is not configured yet');
       return;
     }
     try {
-      await updateLeadStage(leadId, stage);
-      await refetch();
+      await moveLeadStage(leadId, fromStage, stage);
     } catch (e) {
       console.error('[AgentWorkspace] Stage update failed', e);
       toast.error('Unable to update lead stage');
@@ -531,7 +566,7 @@ export function AgentWorkspace() {
   todayStart.setHours(0, 0, 0, 0);
 
   const ftdToday = leads.filter(
-    (l) => l.stage === 'FUNDED' && new Date(l.created_at) >= todayStart
+    (l) => l.stage === 'DEPOSITED' && new Date(l.created_at) >= todayStart
   ).length;
 
   const callsToday = leads.filter(
@@ -548,8 +583,8 @@ export function AgentWorkspace() {
     : '—';
 
   // Task queue: auto-generated from leads + user-added tasks
-  const urgentLeads = leads.filter((l) => l.stage === 'NEW_INQUIRY').slice(0, 2);
-  const followUpLeads = leads.filter((l) => l.stage === 'IN_DISCUSSION').slice(0, 2);
+  const urgentLeads = leads.filter((l) => l.stage === 'NEW' || l.stage === 'NEW_INQUIRY').slice(0, 2);
+  const followUpLeads = leads.filter((l) => l.stage === 'IN_PROGRESS' || l.stage === 'IN_DISCUSSION').slice(0, 2);
   const autoTasks: LocalTask[] = [
     ...urgentLeads.map((l) => ({
       name: `${l.firstName ?? ''} ${l.lastName ?? ''}`.trim(),
@@ -635,17 +670,12 @@ export function AgentWorkspace() {
                      <div>
                        <h3 className="text-lg font-medium text-aura-platinum">{featuredName}</h3>
                        <div className={`text-[10px] uppercase tracking-widest mt-1 ${
-                         featuredLead.stage === 'FUNDED' ? 'text-aura-emerald' :
-                         featuredLead.stage === 'PENDING_KYC' ? 'text-aura-warning' :
+                         featuredLead.stage === 'DEPOSITED' ? 'text-aura-emerald' :
+                         featuredLead.stage === 'AWAITING_DEPOSIT' || featuredLead.stage === 'PENDING_KYC' ? 'text-aura-warning' :
+                         featuredLead.stage === 'LOST' || featuredLead.stage === 'REJECTED' ? 'text-aura-ruby' :
                          'text-aura-gold'
                        }`}>
-                         {featuredLead.stage === 'NEW_INQUIRY' ? 'New Inquiry' :
-                          featuredLead.stage === 'IN_DISCUSSION' ? 'In Discussion' :
-                          featuredLead.stage === 'PENDING_KYC' ? 'Pending KYC' :
-                          featuredLead.stage === 'APPROVED' ? 'Approved' :
-                          featuredLead.stage === 'REJECTED' ? 'Rejected' :
-                          featuredLead.stage === 'FUNDED' ? 'Funded — FTD' :
-                          featuredLead.stage}
+                         {STAGE_DISPLAY_LABEL[featuredLead.stage] ?? featuredLead.stage}
                        </div>
                      </div>
                   </div>
@@ -697,18 +727,7 @@ export function AgentWorkspace() {
                   </div>
                   <div className="rounded bg-black/40 p-4 border border-glass-border border-l-2 border-l-aura-gold">
                     <p className="text-aura-platinum/90 text-xs leading-relaxed">
-                      {featuredLead.stage === 'NEW_INQUIRY'
-                        ? `${featuredName} just joined. Begin with an introduction call to understand their investment goals. Do not push for a deposit yet.`
-                        : featuredLead.stage === 'IN_DISCUSSION'
-                        ? `${featuredName} is engaged. Focus on objection handling and present the platform's risk management tools.`
-                        : featuredLead.stage === 'PENDING_KYC'
-                        ? `${featuredName} is awaiting KYC. Remind them to upload their ID and proof of address.`
-                        : featuredLead.stage === 'APPROVED'
-                        ? `${featuredName} is approved. Review their account and choose the next compliant follow-up.`
-                        : featuredLead.stage === 'REJECTED'
-                        ? `${featuredName} was rejected in KYC. Review the compliance notes before any outreach.`
-                        : `${featuredName} has funded. Congratulate them and introduce them to their dedicated account manager.`
-                      }
+                      {(STAGE_NEXT_ACTION[featuredLead.stage] ?? STAGE_NEXT_ACTION.DEPOSITED)(featuredName ?? 'This lead')}
                     </p>
                   </div>
                 </div>

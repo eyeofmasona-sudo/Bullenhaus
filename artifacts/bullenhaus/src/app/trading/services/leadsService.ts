@@ -1,6 +1,6 @@
 import { supabase } from "../../../lib/supabase/browserClient";
 
-export const LEAD_PAGE_SIZE = 25;
+export const LEAD_PAGE_SIZE = 30;
 const REQUEST_TIMEOUT_MS = 12_000;
 const USER_FALLBACK_PAGE_SIZE = 100;
 
@@ -147,6 +147,25 @@ export async function getLeadsPage(params: LeadPageParams = {}) {
   const { data, count, error } = await withTimeout(q, "Lead request timed out");
   if (error) throw normalizeDbError("Unable to load leads");
   return { rows: (data ?? []).map(mapLead), count: count ?? 0, page, pageSize };
+}
+
+// Fetches an arbitrary row range (not tied to a fixed page size) so callers can
+// top up a stage back to a fixed visible count after a row leaves it, without
+// the offset drifting off a page boundary.
+export async function getLeadsRange(params: LeadPageParams & { from: number; count: number }) {
+  const from = Math.max(0, Math.floor(params.from));
+  const to = from + Math.max(1, Math.floor(params.count)) - 1;
+
+  let q = supabase
+    .from("leads")
+    .select(LEADS_SELECT, { count: "exact" })
+    .order(params.sort ?? "created_at", { ascending: (params.direction ?? "desc") === "asc" })
+    .range(from, to);
+
+  q = applyLeadFilters(q, params);
+  const { data, count, error } = await withTimeout(q, "Lead request timed out");
+  if (error) throw normalizeDbError("Unable to load leads");
+  return { rows: (data ?? []).map(mapLead), count: count ?? 0 };
 }
 
 function isCrmClientCandidate(row: any) {
