@@ -1,9 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { Save, Server, Shield, Bot, CheckCircle2 } from 'lucide-react';
+import { Save, Server, Shield, Bot, CheckCircle2, Wallet2, Loader2, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { aiStatus } from '../../../../lib/ai/aiClient';
 import { AI_MODEL_OPTIONS, AI_PRIMARY_MODEL } from '../../../../lib/ai/aiConfig';
 import { useTranslation } from 'react-i18next';
+import { supabase } from '../../lib/supabase';
+import { isMetaMaskAvailable, connectMetaMask, ensureEthereumMainnet } from '../../lib/web3/metamask';
+
+interface PlatformWallet {
+  chain: string;
+  address: string | null;
+  token_symbol: string;
+  token_contract: string;
+  token_decimals: number;
+  updated_at: string | null;
+}
 
 export const AdminSettings = () => {
   const { t } = useTranslation(['common']);
@@ -14,9 +25,68 @@ export const AdminSettings = () => {
   const [aiModel,   setAiModel]   = useState(AI_PRIMARY_MODEL);
   const [aiSaving,  setAiSaving]  = useState(false);
 
+  const [wallet,        setWallet]        = useState<PlatformWallet | null>(null);
+  const [walletLoading,  setWalletLoading]  = useState(true);
+  const [connecting,    setConnecting]    = useState(false);
+  const [pendingAddress, setPendingAddress] = useState<string | null>(null);
+  const [saving,        setSaving]        = useState(false);
+
   useEffect(() => {
     aiStatus().then(d => setAiOnline(d.configured)).catch(() => setAiOnline(false));
   }, []);
+
+  const loadWallet = async () => {
+    setWalletLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('platform_wallet_settings')
+        .select('chain, address, token_symbol, token_contract, token_decimals, updated_at')
+        .eq('id', 1)
+        .single();
+      if (!error) setWallet(data as PlatformWallet);
+    } finally {
+      setWalletLoading(false);
+    }
+  };
+
+  useEffect(() => { loadWallet(); }, []);
+
+  const handleConnectWallet = async () => {
+    if (!isMetaMaskAvailable()) {
+      toast.error('MetaMask is not installed. Install the MetaMask browser extension on this machine.');
+      return;
+    }
+    setConnecting(true);
+    try {
+      const account = await connectMetaMask();
+      await ensureEthereumMainnet();
+      setPendingAddress(account);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not connect MetaMask.');
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  const handleSaveWallet = async () => {
+    if (!pendingAddress) return;
+    setSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { error } = await supabase
+        .from('platform_wallet_settings')
+        .update({ address: pendingAddress, updated_by: user?.id, updated_at: new Date().toISOString() })
+        .eq('id', 1);
+      if (error) throw error;
+      toast.success('Platform deposit wallet updated. Clients will now see this address.');
+      setPendingAddress(null);
+      loadWallet();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not save the wallet address.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const saveAiModel = async () => {
     setAiSaving(true);
@@ -141,6 +211,82 @@ export const AdminSettings = () => {
                 </button>
               </div>
             </div>
+          </div>
+
+          {/* Crypto Deposit Wallet */}
+          <div className="glass-card p-6">
+            <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2 mb-2">
+              <Wallet2 size={18} className="text-accent-primary" /> Crypto Deposit Wallet
+            </h3>
+            <p className="text-[11px] text-slate-500 mb-5 leading-relaxed">
+              Connect the platform's MetaMask wallet to set the USDT (Ethereum) address clients deposit to.
+              Client deposits still require manual review — connecting a wallet here only configures the
+              receiving address, it does not grant this app any spending access to the wallet.
+            </p>
+
+            {walletLoading ? (
+              <div className="flex items-center gap-2 text-xs text-slate-500 p-4">
+                <Loader2 size={14} className="animate-spin" /> Loading…
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current deposit address</p>
+                  {wallet?.address ? (
+                    <>
+                      <p className="text-xs font-mono text-white break-all">{wallet.address}</p>
+                      <p className="text-[10px] text-slate-600 mt-1">
+                        {wallet.token_symbol} · {wallet.chain} · last updated{' '}
+                        {wallet.updated_at ? new Date(wallet.updated_at).toLocaleString() : '—'}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-xs text-orange-400">Not configured — clients cannot deposit with crypto yet.</p>
+                  )}
+                </div>
+
+                {pendingAddress && pendingAddress !== wallet?.address && (
+                  <div className="p-3 rounded-xl bg-accent-primary/10 border border-accent-primary/30">
+                    <p className="text-[10px] font-bold text-accent-primary uppercase tracking-widest mb-1">Connected — not yet saved</p>
+                    <p className="text-xs font-mono text-white break-all">{pendingAddress}</p>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleConnectWallet}
+                    disabled={connecting}
+                    className="flex-1 py-3 bg-accent-primary/10 hover:bg-accent-primary text-accent-primary hover:text-black font-bold rounded-xl border border-accent-primary/30 hover:border-accent-primary transition-all text-xs uppercase tracking-wider disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {connecting
+                      ? <><Loader2 size={14} className="animate-spin" /> Connecting…</>
+                      : <><Wallet2 size={14} /> Connect MetaMask</>}
+                  </button>
+                  {pendingAddress && pendingAddress !== wallet?.address && (
+                    <button
+                      onClick={handleSaveWallet}
+                      disabled={saving}
+                      className="flex-1 py-3 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-black font-bold rounded-xl border border-emerald-500/20 hover:border-emerald-500 transition-all text-xs uppercase tracking-wider disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {saving
+                        ? <><Loader2 size={14} className="animate-spin" /> Saving…</>
+                        : <><Save size={14} /> Save as Deposit Address</>}
+                    </button>
+                  )}
+                </div>
+
+                {wallet?.address && (
+                  <a
+                    href={`https://etherscan.io/address/${wallet.address}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 hover:text-accent-primary uppercase tracking-wider transition-colors"
+                  >
+                    <ExternalLink size={10} /> View on Etherscan
+                  </a>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

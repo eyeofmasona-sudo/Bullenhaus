@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Wallet, TrendingUp, History, PieChart, Download, Upload, ShieldCheck, Activity } from 'lucide-react';
+import { Wallet, TrendingUp, History, PieChart, Download, Upload, ShieldCheck, Activity, Wallet2 } from 'lucide-react';
 import { LuxIcon } from '../../components/common/LuxIcon';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -13,12 +13,14 @@ import { useWalletSync } from '../../hooks/useWalletSync';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 
 import { TransferModal } from './TransferModal';
+import { CryptoDepositModal } from '../../components/dashboard/CryptoDepositModal';
 
 export const Portfolio: React.FC = () => {
   const { t } = useTranslation('common');
   const navigate = useNavigate();
   const [transferModalOpen, setTransferModalOpen] = useState(false);
   const [transferType, setTransferType] = useState<'deposit' | 'withdraw'>('deposit');
+  const [cryptoModalOpen, setCryptoModalOpen] = useState(false);
   const [serverRequests, setServerRequests] = useState<any[]>([]);
   useWalletSync();
   const wallet = useTradingStore(s => s.wallet);
@@ -152,10 +154,14 @@ export const Portfolio: React.FC = () => {
 
   return (
     <div className="max-w-[1400px] mx-auto space-y-8 animate-in fade-in duration-500 relative">
-      <TransferModal 
-        isOpen={transferModalOpen} 
-        onClose={() => setTransferModalOpen(false)} 
-        type={transferType} 
+      <TransferModal
+        isOpen={transferModalOpen}
+        onClose={() => setTransferModalOpen(false)}
+        type={transferType}
+      />
+      <CryptoDepositModal
+        isOpen={cryptoModalOpen}
+        onClose={() => setCryptoModalOpen(false)}
       />
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -170,13 +176,19 @@ export const Portfolio: React.FC = () => {
           </p>
         </div>
         <div className="flex gap-3 relative z-10">
-          <button 
+          <button
             onClick={() => openTransferModal('deposit')}
             className="px-6 py-2.5 bg-accent-secondary/10 border border-accent-secondary/30 rounded-xl text-xs font-bold text-accent-secondary flex items-center gap-2 hover:bg-accent-secondary hover:text-black transition-all shadow-neon-emerald"
           >
             <Download size={14} /> Deposit
           </button>
-          <button 
+          <button
+            onClick={() => setCryptoModalOpen(true)}
+            className="px-6 py-2.5 bg-accent-primary/10 border border-accent-primary/30 rounded-xl text-xs font-bold text-accent-primary flex items-center gap-2 hover:bg-accent-primary hover:text-black transition-all shadow-neon-gold"
+          >
+            <Wallet2 size={14} /> Deposit with Crypto
+          </button>
+          <button
             onClick={() => openTransferModal('withdraw')}
             className="px-6 py-2.5 bg-white/5 border border-white/10 rounded-xl text-xs font-bold text-white flex items-center gap-2 hover:bg-white/10 transition-all"
           >

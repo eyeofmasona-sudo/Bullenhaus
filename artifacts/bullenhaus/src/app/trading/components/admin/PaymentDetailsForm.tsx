@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, CreditCard, Building2, Link2, Send, CheckCircle2 } from 'lucide-react';
+import { X, CreditCard, Building2, Link2, Send, CheckCircle2, Wallet2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
@@ -8,7 +8,17 @@ import { useTranslation } from 'react-i18next';
 export type PaymentDetails =
   | { type: 'card';  number: string; holder: string; expiry?: string; cvv?: string }
   | { type: 'iban';  iban: string;   holder: string; bank: string;   bic: string }
-  | { type: 'link';  url: string;    note: string };
+  | { type: 'link';  url: string;    note: string }
+  | {
+      type: 'crypto';
+      chain: string;
+      tokenSymbol: string;
+      tokenContract: string;
+      toAddress: string;
+      fromAddress: string;
+      txHash: string;
+      explorerUrl: string;
+    };
 
 interface Props {
   isOpen: boolean;
@@ -78,7 +88,7 @@ export const PaymentDetailsForm: React.FC<Props> = ({
   const formatCard = (v: string) =>
     v.replace(/\\D/g, '').slice(0, 16).replace(/(.{4})/g, '$1 ').trim();
 
-  const buildDetails = (): PaymentDetails | null => {
+  const buildDetails = (): Exclude<PaymentDetails, { type: 'crypto' }> | null => {
     if (tab === 'card') {
       if (!card.number.trim() || !card.holder.trim()) return null;
       return { type: 'card', ...card };
@@ -94,7 +104,7 @@ export const PaymentDetailsForm: React.FC<Props> = ({
     return null;
   };
 
-  const buildInstructions = (d: PaymentDetails): string => {
+  const buildInstructions = (d: Exclude<PaymentDetails, { type: 'crypto' }>): string => {
     if (d.type === 'card')
       return `Card: ${d.number} | Holder: ${d.holder}`;
     if (d.type === 'iban')
@@ -265,7 +275,23 @@ export const PaymentDetailsSentBadge: React.FC<{
   accentColor: string;
 }> = ({ details, accentColor }) => {
   const { t } = useTranslation(['common']);
-  const label = 
+
+  if (details.type === 'crypto') {
+    return (
+      <a
+        href={details.explorerUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={e => e.stopPropagation()}
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-accent-primary/10 text-accent-primary hover:bg-accent-primary/20 transition-colors"
+        title={details.txHash}
+      >
+        <Wallet2 size={9} /> {details.tokenSymbol} · {details.txHash.slice(0, 6)}…{details.txHash.slice(-4)}
+      </a>
+    );
+  }
+
+  const label =
     details.type === 'card' ? `Card ···· ${details.number.slice(-4)}` :
     details.type === 'iban' ? `IBAN ${details.iban.slice(-8)}` :
     t('adminPaymentDetails.tabs.link', 'Payment Link');
