@@ -100,7 +100,7 @@ importers:
   api:
     dependencies:
       '@supabase/supabase-js':
-        specifier: ^2.106.1
+        specifier: 2.106.1
         version: 2.106.1
     devDependencies:
       '@types/node':
@@ -113,7 +113,7 @@ importers:
   artifacts/api-server:
     dependencies:
       '@supabase/supabase-js':
-        specifier: ^2.106.1
+        specifier: 2.106.1
         version: 2.106.1
       '@workspace/api-zod':
         specifier: workspace:*
@@ -274,7 +274,7 @@ importers:
         specifier: 'catalog:'
         version: 0.0.6
       '@supabase/supabase-js':
-        specifier: ^2.106.1
+        specifier: 2.106.1
         version: 2.106.1
       '@tailwindcss/typography':
         specifier: ^0.5.15
