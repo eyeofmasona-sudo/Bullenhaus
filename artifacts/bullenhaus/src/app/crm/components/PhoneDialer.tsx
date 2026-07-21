@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Phone, PhoneOff, PhoneMissed, X, Minimize2, Maximize2, Delete, Clock, User } from "lucide-react";
+import { Phone, PhoneOff, PhoneMissed, X, Minimize2, Maximize2, Delete, Clock, User, Sparkles, Loader2, AlertTriangle, Copy, CheckCheck } from "lucide-react";
 import { supabase } from "../../../lib/supabase/browserClient";
 import { logCall, updateCallLog } from "../hooks/useCallLogs";
+import { generateCallBrief, CALL_GOALS, type CallGoal, type CallBrief } from "../lib/callCopilot";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -61,7 +62,14 @@ interface PhoneDialerProps {
 export function PhoneDialer({ prefill, onClearPrefill }: PhoneDialerProps) {
   const [open, setOpen]           = useState(false);
   const [minimized, setMinimized] = useState(false);
-  const [tab, setTab]             = useState<'dialpad' | 'recent'>('dialpad');
+  const [tab, setTab]             = useState<'dialpad' | 'recent' | 'copilot'>('dialpad');
+
+  const [briefGoal, setBriefGoal]       = useState<CallGoal>('cold_call');
+  const [briefContext, setBriefContext] = useState('');
+  const [briefLoading, setBriefLoading] = useState(false);
+  const [briefError, setBriefError]     = useState<string | null>(null);
+  const [brief, setBrief]               = useState<CallBrief | null>(null);
+  const [copied, setCopied]             = useState(false);
 
   const [number, setNumber]       = useState('');
   const [callState, setCallState] = useState<CallState>('idle');
@@ -85,8 +93,39 @@ export function PhoneDialer({ prefill, onClearPrefill }: PhoneDialerProps) {
       setOpen(true);
       setMinimized(false);
       setTab('dialpad');
+      setBrief(null);
+      setBriefError(null);
+      setBriefContext('');
     }
   }, [prefill]);
+
+  const handleGenerateBrief = async () => {
+    setBriefLoading(true);
+    setBriefError(null);
+    try {
+      const result = await generateCallBrief({ clientName: currentName, goal: briefGoal, context: briefContext });
+      setBrief(result);
+    } catch (err) {
+      setBriefError(err instanceof Error ? err.message : 'Could not generate a call brief.');
+    } finally {
+      setBriefLoading(false);
+    }
+  };
+
+  const copyBrief = () => {
+    if (!brief) return;
+    const text = [
+      `Opening: ${brief.opening}`,
+      brief.discoveryQuestions.length ? `\nQuestions:\n${brief.discoveryQuestions.map(q => `- ${q}`).join('\n')}` : '',
+      brief.keyPoints.length ? `\nKey points:\n${brief.keyPoints.map(p => `- ${p}`).join('\n')}` : '',
+      brief.anticipatedObjections.length ? `\nObjections:\n${brief.anticipatedObjections.map(o => `- "${o.objection}" -> ${o.response}`).join('\n')}` : '',
+      `\nRisk reminder: ${brief.riskReminder}`,
+      `\nSoft close: ${brief.softClose}`,
+    ].join('\n');
+    navigator.clipboard.writeText(text.trim());
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   // Load recent calls when tab switches
   const loadRecent = useCallback(async () => {
@@ -245,15 +284,16 @@ export function PhoneDialer({ prefill, onClearPrefill }: PhoneDialerProps) {
 
       {/* Tabs */}
       <div className="flex border-b border-glass-border">
-        {(['dialpad', 'recent'] as const).map(t => (
+        {(['dialpad', 'recent', 'copilot'] as const).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest transition-colors ${
+            className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-1 ${
               tab === t ? 'text-aura-gold border-b-2 border-aura-gold -mb-px bg-aura-gold/5' : 'text-aura-platinum/40 hover:text-aura-platinum'
             }`}
           >
-            {t === 'dialpad' ? 'Dialpad' : 'History'}
+            {t === 'copilot' && <Sparkles className="w-2.5 h-2.5" />}
+            {t === 'dialpad' ? 'Dialpad' : t === 'recent' ? 'History' : 'AI Brief'}
           </button>
         ))}
       </div>
@@ -384,6 +424,121 @@ export function PhoneDialer({ prefill, onClearPrefill }: PhoneDialerProps) {
                   </button>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'copilot' && (
+        <div className="p-4 space-y-3 max-h-[420px] overflow-y-auto custom-scrollbar">
+          <p className="text-[9px] text-aura-platinum/40 leading-relaxed">
+            Generates talking points for YOU to use on your own call. It never contacts the client and never guarantees any outcome — always state risk clearly and let the client decide.
+          </p>
+
+          {currentName && (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-aura-gold/10 border border-aura-gold/20">
+              <User className="w-3 h-3 text-aura-gold" />
+              <span className="text-[11px] text-aura-gold truncate">{currentName}</span>
+            </div>
+          )}
+
+          <div>
+            <label className="text-[9px] font-bold uppercase tracking-widest text-aura-platinum/50 mb-1 block">Call Type</label>
+            <select
+              value={briefGoal}
+              onChange={e => setBriefGoal(e.target.value as CallGoal)}
+              className="w-full rounded-lg border border-glass-border bg-black/30 px-2.5 py-2 text-[11px] text-aura-platinum focus:border-aura-gold/40 focus:outline-none"
+            >
+              {CALL_GOALS.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="text-[9px] font-bold uppercase tracking-widest text-aura-platinum/50 mb-1 block">Context (optional)</label>
+            <textarea
+              value={briefContext}
+              onChange={e => setBriefContext(e.target.value)}
+              rows={2}
+              placeholder="e.g. Client asked about KYC status last time; wants to know minimum deposit"
+              className="w-full rounded-lg border border-glass-border bg-black/30 px-2.5 py-2 text-[11px] text-aura-platinum placeholder:text-aura-platinum/20 focus:border-aura-gold/40 focus:outline-none resize-none"
+            />
+          </div>
+
+          <button
+            onClick={handleGenerateBrief}
+            disabled={briefLoading}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-aura-gold/10 hover:bg-aura-gold text-aura-gold hover:text-black border border-aura-gold/30 hover:border-aura-gold font-bold text-[10px] uppercase tracking-wider transition-all disabled:opacity-50"
+          >
+            {briefLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+            {briefLoading ? 'Generating…' : brief ? 'Regenerate Brief' : 'Generate Call Brief'}
+          </button>
+
+          {briefError && (
+            <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-aura-ruby/10 border border-aura-ruby/20 text-aura-ruby text-[10px]">
+              <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" /> {briefError}
+            </div>
+          )}
+
+          {brief && (
+            <div className="space-y-3 pt-1">
+              <div>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-aura-gold/70 mb-1">Opening</p>
+                <p className="text-[11px] text-aura-platinum/80 leading-relaxed">{brief.opening}</p>
+              </div>
+
+              {brief.discoveryQuestions.length > 0 && (
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-aura-gold/70 mb-1">Ask</p>
+                  <ul className="space-y-1">
+                    {brief.discoveryQuestions.map((q, i) => (
+                      <li key={i} className="text-[11px] text-aura-platinum/80 leading-relaxed">• {q}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {brief.keyPoints.length > 0 && (
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-aura-gold/70 mb-1">Key Points</p>
+                  <ul className="space-y-1">
+                    {brief.keyPoints.map((p, i) => (
+                      <li key={i} className="text-[11px] text-aura-platinum/80 leading-relaxed">• {p}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {brief.anticipatedObjections.length > 0 && (
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-aura-gold/70 mb-1">If They Say…</p>
+                  <div className="space-y-2">
+                    {brief.anticipatedObjections.map((o, i) => (
+                      <div key={i} className="rounded-lg bg-black/30 border border-glass-border p-2">
+                        <p className="text-[10px] text-aura-platinum/50 italic">"{o.objection}"</p>
+                        <p className="text-[11px] text-aura-platinum/80 mt-1">{o.response}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/20 p-2 flex items-start gap-2">
+                <AlertTriangle className="w-3 h-3 text-yellow-500 shrink-0 mt-0.5" />
+                <p className="text-[10px] text-yellow-400 leading-relaxed">{brief.riskReminder}</p>
+              </div>
+
+              <div>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-aura-gold/70 mb-1">Soft Close</p>
+                <p className="text-[11px] text-aura-platinum/80 leading-relaxed">{brief.softClose}</p>
+              </div>
+
+              <button
+                onClick={copyBrief}
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-glass-border text-aura-platinum/60 hover:text-aura-platinum hover:border-aura-gold/30 text-[10px] font-bold uppercase tracking-wider transition-all"
+              >
+                {copied ? <CheckCheck className="w-3 h-3 text-aura-emerald" /> : <Copy className="w-3 h-3" />}
+                {copied ? 'Copied' : 'Copy Brief'}
+              </button>
             </div>
           )}
         </div>
