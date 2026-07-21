@@ -1,13 +1,23 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getLeadCounts, getLeadsPage, getUsersLeadPage, searchLeads, updateLeadStatus, LEAD_PAGE_SIZE } from '../../trading/services/leadsService';
+import { getLeadCounts, getLeadsPage, getLeadsRange, getUsersLeadPage, searchLeads, updateLeadStatus, LEAD_PAGE_SIZE } from '../../trading/services/leadsService';
 
+// Matches the live `leads.stage` CHECK constraint (7-stage pipeline).
 const LEAD_STAGE_DEFS = [
-  ['New Inquiries', 'NEW_INQUIRY'],
-  ['In Discussion', 'IN_DISCUSSION'],
-  ['Pending KYC', 'PENDING_KYC'],
-  ['Funded (FTD)', 'FUNDED'],
+  ['New', 'NEW'],
+  ['No Answer', 'NO_ANSWER'],
+  ['In Progress', 'IN_PROGRESS'],
+  ['Awaiting Deposit', 'AWAITING_DEPOSIT'],
+  ['Deposited', 'DEPOSITED'],
+  ['Closed', 'CLOSED'],
+  ['Lost', 'LOST'],
 ] as const;
 
+const STAGE_LABEL_BY_VALUE: Record<string, string> = Object.fromEntries(
+  LEAD_STAGE_DEFS.map(([label, stage]) => [stage, label])
+);
+
+// Fallback vocabulary, used only when the `leads` table itself is empty and we
+// derive a pseudo-pipeline from the `users` table's kyc_status instead.
 const USER_STAGE_DEFS = [
   ['New Inquiries', 'NEW_INQUIRY'],
   ['Pending KYC', 'PENDING_KYC'],
@@ -23,7 +33,7 @@ function countsFromGroups(grouped: Record<string, any[]>) {
   return Object.fromEntries(Object.entries(grouped).map(([label, rows]) => [label, rows.length]));
 }
 
-export function useLeads(page = 1, limit = 50, search = '') {
+export function useLeads(page = 1, limit = LEAD_PAGE_SIZE, search = '') {
   const [data, setData]       = useState<any[]>([]);
   const [meta, setMeta]       = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -61,16 +71,16 @@ export function useLeads(page = 1, limit = 50, search = '') {
 
       const pages = pageResults.map((result) => result.status === 'fulfilled' ? result.value : null);
       const allLeadQueriesFailed = pages.every(pageResult => !pageResult);
-      const leadRows = pages.flatMap(pageResult => pageResult?.rows ?? []);
+      const totalRealLeads = countResults.reduce((sum, result) => sum + (result.status === 'fulfilled' ? result.value : 0), 0);
 
-      if (allLeadQueriesFailed || leadRows.length === 0) {
-        const fallback = await getUsersLeadPage({ page: 0, pageSize: 100 });
+      if (allLeadQueriesFailed || totalRealLeads === 0) {
+        const fallback = await getUsersLeadPage({ page: 0, pageSize: LEAD_PAGE_SIZE });
         const grouped = groupRows(fallback.rows, USER_STAGE_DEFS);
         setData(fallback.rows);
         setStagePages({ users: 0 });
         setMeta({
           page: 1,
-          limit: 100,
+          limit: LEAD_PAGE_SIZE,
           total: fallback.count,
           grouped,
           stageCounts: countsFromGroups(grouped),
@@ -114,7 +124,7 @@ export function useLeads(page = 1, limit = 50, search = '') {
     if (!meta || meta.searchMode) return;
     if (meta.derivedMode) {
       const nextPage = (stagePages.users ?? 0) + 1;
-      const res = await getUsersLeadPage({ page: nextPage, pageSize: 100 });
+      const res = await getUsersLeadPage({ page: nextPage, pageSize: LEAD_PAGE_SIZE });
       const nextGrouped = groupRows(res.rows, USER_STAGE_DEFS);
       setMeta((prev: any) => {
         const grouped = { ...(prev?.grouped ?? {}) };
@@ -133,40 +143,83 @@ export function useLeads(page = 1, limit = 50, search = '') {
       return;
     }
 
-    const stageMap: Record<string, string> = {
-      'New Inquiries': 'NEW_INQUIRY',
-      'In Discussion': 'IN_DISCUSSION',
-      'Pending KYC': 'PENDING_KYC',
-      'Funded (FTD)': 'FUNDED',
-    };
+    const stageMap: Record<string, string> = Object.fromEntries(LEAD_STAGE_DEFS.map(([label, stage]) => [label, stage]));
     const stage = stageMap[stageLabel];
     if (!stage) return;
-    const nextPage = (stagePages[stageLabel] ?? 0) + 1;
-    const res = await getLeadsPage({ stage, page: nextPage, pageSize: LEAD_PAGE_SIZE });
+    const currentlyLoaded = (meta.grouped?.[stageLabel] ?? []).length;
+    const res = await getLeadsRange({ stage, from: currentlyLoaded, count: LEAD_PAGE_SIZE });
     setMeta((prev: any) => {
       const grouped = { ...(prev?.grouped ?? {}) };
       grouped[stageLabel] = [...(grouped[stageLabel] ?? []), ...res.rows];
       return { ...prev, grouped };
     });
     setData((prev) => [...prev, ...res.rows]);
-    setStagePages(prev => ({ ...prev, [stageLabel]: nextPage }));
   }, [meta, stagePages]);
+
+  // Called when an agent processes a lead (changes its stage). Moves the lead
+  // between the in-memory stage groups and, if that leaves its old group
+  // under LEAD_PAGE_SIZE while more rows exist in the database, immediately
+  // fetches one more row from the database to backfill it -- so a stage
+  // column visually always holds LEAD_PAGE_SIZE leads whenever the database
+  // has that many left to show.
+  const moveLeadStage = useCallback(async (leadId: string, fromStage: string, toStage: LeadStage) => {
+    if (!meta || meta.searchMode || meta.derivedMode) {
+      await updateLeadStatus(leadId, toStage);
+      await fetchLeads();
+      return;
+    }
+
+    const fromLabel = STAGE_LABEL_BY_VALUE[fromStage];
+    const toLabel = STAGE_LABEL_BY_VALUE[toStage];
+    if (!fromLabel || !toLabel || fromLabel === toLabel) return;
+
+    await updateLeadStatus(leadId, toStage);
+
+    const fromRows = meta.grouped[fromLabel] ?? [];
+    const movedLead = fromRows.find((l: any) => l.id === leadId) ?? { id: leadId };
+    const remaining = fromRows.filter((l: any) => l.id !== leadId);
+    const toRows = meta.grouped[toLabel] ?? [];
+
+    const stageCountsAfter = {
+      ...meta.stageCounts,
+      [fromLabel]: Math.max(0, (meta.stageCounts[fromLabel] ?? fromRows.length) - 1),
+      [toLabel]: (meta.stageCounts[toLabel] ?? toRows.length) + 1,
+    };
+
+    let fromRowsAfter = remaining;
+    if (remaining.length < LEAD_PAGE_SIZE && stageCountsAfter[fromLabel] > remaining.length) {
+      try {
+        const res = await getLeadsRange({ stage: fromStage, from: remaining.length, count: 1 });
+        if (res.rows.length) fromRowsAfter = [...remaining, ...res.rows];
+      } catch (e) {
+        console.error('[useLeads] Auto-replenish failed', e);
+      }
+    }
+
+    const groupedAfter = {
+      ...meta.grouped,
+      [fromLabel]: fromRowsAfter,
+      [toLabel]: [{ ...movedLead, stage: toStage }, ...toRows],
+    };
+
+    setData(prev => {
+      const withoutMoved = prev.filter(l => l.id !== leadId);
+      return [...withoutMoved, { ...movedLead, stage: toStage }];
+    });
+    setMeta((prev: any) => prev ? { ...prev, grouped: groupedAfter, stageCounts: stageCountsAfter } : prev);
+  }, [meta, fetchLeads]);
 
   useEffect(() => {
     fetchLeads().catch(() => {});
   }, [fetchLeads]);
 
-  return { leads: data, meta, loading, error, refetch: fetchLeads, loadMoreStage };
+  return { leads: data, meta, loading, error, refetch: fetchLeads, loadMoreStage, moveLeadStage };
 }
 
-export const LEAD_STAGES = [
-  { value: 'NEW_INQUIRY',   label: 'New Inquiry'   },
-  { value: 'IN_DISCUSSION', label: 'In Discussion' },
-  { value: 'PENDING_KYC',   label: 'Pending KYC'   },
-  { value: 'FUNDED',        label: 'Funded (FTD)'  },
-] as const;
+export const LEAD_STAGES = LEAD_STAGE_DEFS.map(([label, value]) => ({ value, label })) as
+  { value: typeof LEAD_STAGE_DEFS[number][1]; label: string }[];
 
-export type LeadStage = typeof LEAD_STAGES[number]['value'];
+export type LeadStage = typeof LEAD_STAGE_DEFS[number][1];
 
 export async function updateLeadStage(leadId: string, stage: LeadStage): Promise<void> {
   await updateLeadStatus(leadId, stage);

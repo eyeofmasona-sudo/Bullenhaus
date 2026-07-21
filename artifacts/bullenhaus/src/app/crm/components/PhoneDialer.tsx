@@ -1,8 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Phone, PhoneOff, PhoneMissed, X, Minimize2, Maximize2, Delete, Clock, User, Sparkles, Loader2, AlertTriangle, Copy, CheckCheck } from "lucide-react";
+import { Phone, PhoneOff, PhoneMissed, X, Minimize2, Maximize2, Delete, Clock, User, Sparkles, Loader2, AlertTriangle, Copy, CheckCheck, Bot, Send, LogOut, CheckCircle2 } from "lucide-react";
 import { supabase } from "../../../lib/supabase/browserClient";
 import { logCall, updateCallLog } from "../hooks/useCallLogs";
 import { generateCallBrief, CALL_GOALS, type CallGoal, type CallBrief } from "../lib/callCopilot";
+import {
+  generateNextScenarioStep, createScenarioSession, appendScenarioTurns, closeScenarioSession,
+  CALL_OBJECTIVES, SCENARIO_STAGES, type CallObjective, type ScenarioStage, type ScenarioTurn, type ScenarioOutcome,
+} from "../lib/callScenario";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -40,6 +44,14 @@ const DIALPAD = [
   ['*', ''],  ['0', '+'],   ['#', ''],
 ] as const;
 
+const OUTCOME_META: Record<ScenarioOutcome, { label: string; color: string }> = {
+  deposit_interest:   { label: 'Deposit interest', color: 'text-aura-emerald border-aura-emerald/30 bg-aura-emerald/10' },
+  callback_requested: { label: 'Callback requested', color: 'text-aura-gold border-aura-gold/30 bg-aura-gold/10' },
+  no_interest:        { label: 'No interest', color: 'text-aura-platinum/60 border-glass-border bg-white/5' },
+  opted_out:          { label: 'Opted out — do not call again', color: 'text-aura-ruby border-aura-ruby/30 bg-aura-ruby/10' },
+  escalated:          { label: 'Escalated to specialist', color: 'text-yellow-400 border-yellow-500/30 bg-yellow-500/10' },
+};
+
 // Status colour map
 const statusColor: Record<string, string> = {
   completed: 'text-aura-emerald',
@@ -62,7 +74,7 @@ interface PhoneDialerProps {
 export function PhoneDialer({ prefill, onClearPrefill }: PhoneDialerProps) {
   const [open, setOpen]           = useState(false);
   const [minimized, setMinimized] = useState(false);
-  const [tab, setTab]             = useState<'dialpad' | 'recent' | 'copilot'>('dialpad');
+  const [tab, setTab]             = useState<'dialpad' | 'recent' | 'copilot' | 'scenario'>('dialpad');
 
   const [briefGoal, setBriefGoal]       = useState<CallGoal>('cold_call');
   const [briefContext, setBriefContext] = useState('');
@@ -70,6 +82,18 @@ export function PhoneDialer({ prefill, onClearPrefill }: PhoneDialerProps) {
   const [briefError, setBriefError]     = useState<string | null>(null);
   const [brief, setBrief]               = useState<CallBrief | null>(null);
   const [copied, setCopied]             = useState(false);
+
+  // AI Scenario (multi-turn planning, up to the point of telephony connection —
+  // see TelephonySettings, no provider is wired up, so the agent relays every line)
+  const [scenarioObjective, setScenarioObjective] = useState<CallObjective>('deposit_push');
+  const [scenarioSessionId, setScenarioSessionId] = useState<string | null>(null);
+  const [scenarioTranscript, setScenarioTranscript] = useState<ScenarioTurn[]>([]);
+  const [scenarioStage, setScenarioStage] = useState<ScenarioStage>('opening');
+  const [scenarioReply, setScenarioReply] = useState('');
+  const [scenarioLoading, setScenarioLoading] = useState(false);
+  const [scenarioError, setScenarioError] = useState<string | null>(null);
+  const [scenarioDone, setScenarioDone] = useState(false);
+  const [scenarioOutcome, setScenarioOutcome] = useState<ScenarioOutcome | null>(null);
 
   const [number, setNumber]       = useState('');
   const [callState, setCallState] = useState<CallState>('idle');
@@ -96,6 +120,13 @@ export function PhoneDialer({ prefill, onClearPrefill }: PhoneDialerProps) {
       setBrief(null);
       setBriefError(null);
       setBriefContext('');
+      setScenarioSessionId(null);
+      setScenarioTranscript([]);
+      setScenarioStage('opening');
+      setScenarioReply('');
+      setScenarioError(null);
+      setScenarioDone(false);
+      setScenarioOutcome(null);
     }
   }, [prefill]);
 
@@ -125,6 +156,75 @@ export function PhoneDialer({ prefill, onClearPrefill }: PhoneDialerProps) {
     navigator.clipboard.writeText(text.trim());
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const startScenario = async () => {
+    setScenarioLoading(true);
+    setScenarioError(null);
+    try {
+      const session = await createScenarioSession({
+        leadId: currentClientId,
+        callLogId: currentCallId,
+        objective: scenarioObjective,
+      });
+      const step = await generateNextScenarioStep({ objective: scenarioObjective, clientName: currentName, transcript: [] });
+      const turns: ScenarioTurn[] = [{ speaker: 'ai', text: step.aiLine, stage: step.stage, at: new Date().toISOString() }];
+      setScenarioSessionId(session?.id ?? null);
+      setScenarioTranscript(turns);
+      setScenarioStage(step.stage);
+      setScenarioDone(step.done);
+      setScenarioOutcome(step.outcome);
+      if (session?.id) await appendScenarioTurns(session.id, turns, step.stage);
+      if (session?.id && step.done) await closeScenarioSession(session.id, step.outcome === 'opted_out' ? 'opted_out' : 'completed', step.outcome);
+    } catch (err) {
+      setScenarioError(err instanceof Error ? err.message : 'Could not start the scenario.');
+    } finally {
+      setScenarioLoading(false);
+    }
+  };
+
+  const continueScenario = async () => {
+    if (!scenarioReply.trim()) return;
+    setScenarioLoading(true);
+    setScenarioError(null);
+    try {
+      const withReply: ScenarioTurn[] = [
+        ...scenarioTranscript,
+        { speaker: 'client', text: scenarioReply.trim(), stage: scenarioStage, at: new Date().toISOString() },
+      ];
+      const step = await generateNextScenarioStep({ objective: scenarioObjective, clientName: currentName, transcript: withReply });
+      const nextTurns: ScenarioTurn[] = [...withReply, { speaker: 'ai', text: step.aiLine, stage: step.stage, at: new Date().toISOString() }];
+      setScenarioTranscript(nextTurns);
+      setScenarioStage(step.stage);
+      setScenarioDone(step.done);
+      setScenarioOutcome(step.outcome);
+      setScenarioReply('');
+      if (scenarioSessionId) {
+        await appendScenarioTurns(scenarioSessionId, nextTurns, step.stage);
+        if (step.done) await closeScenarioSession(scenarioSessionId, step.outcome === 'opted_out' ? 'opted_out' : 'completed', step.outcome);
+      }
+    } catch (err) {
+      setScenarioError(err instanceof Error ? err.message : 'Could not continue the scenario.');
+    } finally {
+      setScenarioLoading(false);
+    }
+  };
+
+  const optOutScenario = async () => {
+    setScenarioStage('outcome');
+    setScenarioDone(true);
+    setScenarioOutcome('opted_out');
+    if (scenarioSessionId) await closeScenarioSession(scenarioSessionId, 'opted_out', 'opted_out');
+  };
+
+  const resetScenario = () => {
+    setScenarioSessionId(null);
+    setScenarioTranscript([]);
+    setScenarioStage('opening');
+    setScenarioReply('');
+    setScenarioError(null);
+    setScenarioDone(false);
+    setScenarioOutcome(null);
   };
 
   // Load recent calls when tab switches
@@ -284,16 +384,17 @@ export function PhoneDialer({ prefill, onClearPrefill }: PhoneDialerProps) {
 
       {/* Tabs */}
       <div className="flex border-b border-glass-border">
-        {(['dialpad', 'recent', 'copilot'] as const).map(t => (
+        {(['dialpad', 'recent', 'copilot', 'scenario'] as const).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-1 ${
+            className={`flex-1 py-2 text-[9px] font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-1 ${
               tab === t ? 'text-aura-gold border-b-2 border-aura-gold -mb-px bg-aura-gold/5' : 'text-aura-platinum/40 hover:text-aura-platinum'
             }`}
           >
             {t === 'copilot' && <Sparkles className="w-2.5 h-2.5" />}
-            {t === 'dialpad' ? 'Dialpad' : t === 'recent' ? 'History' : 'AI Brief'}
+            {t === 'scenario' && <Bot className="w-2.5 h-2.5" />}
+            {t === 'dialpad' ? 'Dialpad' : t === 'recent' ? 'History' : t === 'copilot' ? 'AI Brief' : 'Scenario'}
           </button>
         ))}
       </div>
@@ -540,6 +641,123 @@ export function PhoneDialer({ prefill, onClearPrefill }: PhoneDialerProps) {
                 {copied ? 'Copied' : 'Copy Brief'}
               </button>
             </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'scenario' && (
+        <div className="p-4 space-y-3 max-h-[420px] overflow-y-auto custom-scrollbar">
+          <p className="text-[9px] text-aura-platinum/40 leading-relaxed">
+            Plans the call turn by turn. No telephony provider is connected (see Telephony Settings) — YOU place the call, read each suggested line, and type back what the client actually said.
+          </p>
+
+          {currentName && (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-aura-gold/10 border border-aura-gold/20">
+              <User className="w-3 h-3 text-aura-gold" />
+              <span className="text-[11px] text-aura-gold truncate">{currentName}</span>
+            </div>
+          )}
+
+          {scenarioTranscript.length === 0 ? (
+            <>
+              <div>
+                <label className="text-[9px] font-bold uppercase tracking-widest text-aura-platinum/50 mb-1 block">Objective</label>
+                <select
+                  value={scenarioObjective}
+                  onChange={e => setScenarioObjective(e.target.value as CallObjective)}
+                  className="w-full rounded-lg border border-glass-border bg-black/30 px-2.5 py-2 text-[11px] text-aura-platinum focus:border-aura-gold/40 focus:outline-none"
+                >
+                  {CALL_OBJECTIVES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+                <p className="text-[9px] text-aura-platinum/30 mt-1">{CALL_OBJECTIVES.find(o => o.value === scenarioObjective)?.description}</p>
+              </div>
+              <button
+                onClick={startScenario}
+                disabled={scenarioLoading}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-aura-gold/10 hover:bg-aura-gold text-aura-gold hover:text-black border border-aura-gold/30 hover:border-aura-gold font-bold text-[10px] uppercase tracking-wider transition-all disabled:opacity-50"
+              >
+                {scenarioLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Bot className="w-3 h-3" />}
+                {scenarioLoading ? 'Starting…' : 'Start Scenario'}
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center justify-between px-1">
+                <span className="text-[9px] uppercase tracking-widest text-aura-platinum/40">
+                  {CALL_OBJECTIVES.find(o => o.value === scenarioObjective)?.label}
+                </span>
+                <span className="text-[9px] uppercase tracking-widest text-aura-gold/70">
+                  {SCENARIO_STAGES.find(s => s.value === scenarioStage)?.label}
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                {scenarioTranscript.map((turn, i) => (
+                  <div
+                    key={i}
+                    className={`rounded-lg p-2 text-[11px] leading-relaxed border ${
+                      turn.speaker === 'ai'
+                        ? 'bg-aura-gold/10 border-aura-gold/20 text-aura-platinum/90'
+                        : 'bg-black/30 border-glass-border text-aura-platinum/60 ml-3'
+                    }`}
+                  >
+                    <span className="block text-[8px] font-bold uppercase tracking-widest mb-0.5 opacity-50">
+                      {turn.speaker === 'ai' ? 'Say' : 'Client said'}
+                    </span>
+                    {turn.text}
+                  </div>
+                ))}
+              </div>
+
+              {scenarioError && (
+                <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-aura-ruby/10 border border-aura-ruby/20 text-aura-ruby text-[10px]">
+                  <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" /> {scenarioError}
+                </div>
+              )}
+
+              {scenarioDone ? (
+                <>
+                  {scenarioOutcome && (
+                    <div className={`rounded-lg px-3 py-2 border text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 ${OUTCOME_META[scenarioOutcome].color}`}>
+                      <CheckCircle2 className="w-3.5 h-3.5" /> {OUTCOME_META[scenarioOutcome].label}
+                    </div>
+                  )}
+                  <button
+                    onClick={resetScenario}
+                    className="w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-glass-border text-aura-platinum/60 hover:text-aura-platinum hover:border-aura-gold/30 text-[10px] font-bold uppercase tracking-wider transition-all"
+                  >
+                    <Bot className="w-3 h-3" /> New Scenario
+                  </button>
+                </>
+              ) : (
+                <>
+                  <textarea
+                    value={scenarioReply}
+                    onChange={e => setScenarioReply(e.target.value)}
+                    rows={2}
+                    placeholder="What did the client just say?"
+                    className="w-full rounded-lg border border-glass-border bg-black/30 px-2.5 py-2 text-[11px] text-aura-platinum placeholder:text-aura-platinum/20 focus:border-aura-gold/40 focus:outline-none resize-none"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={continueScenario}
+                      disabled={scenarioLoading || !scenarioReply.trim()}
+                      className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-aura-gold/10 hover:bg-aura-gold text-aura-gold hover:text-black border border-aura-gold/30 hover:border-aura-gold font-bold text-[10px] uppercase tracking-wider transition-all disabled:opacity-50"
+                    >
+                      {scenarioLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                      Continue
+                    </button>
+                    <button
+                      onClick={optOutScenario}
+                      title="Client asked to stop being contacted"
+                      className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-aura-ruby/30 text-aura-ruby hover:bg-aura-ruby/10 text-[10px] font-bold uppercase tracking-wider transition-all"
+                    >
+                      <LogOut className="w-3 h-3" /> Opt-out
+                    </button>
+                  </div>
+                </>
+              )}
+            </>
           )}
         </div>
       )}

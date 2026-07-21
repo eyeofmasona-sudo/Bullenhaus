@@ -79,9 +79,10 @@ function LeadCardOverlay({ lead }: { lead: any }) {
 // ---------------------------------------------------------------------------
 // Kanban Column
 // ---------------------------------------------------------------------------
-const KanbanColumn = memo(function KanbanColumn({ stage, leads, movingId }: { stage: typeof KANBAN_STAGES[number], leads: any[], movingId: string | null }) {
+const KanbanColumn = memo(function KanbanColumn({ stage, leads, total, movingId, onLoadMore }: { stage: typeof KANBAN_STAGES[number], leads: any[], total: number, movingId: string | null, onLoadMore: () => void }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage.value });
-  
+  const hasMore = total > leads.length;
+
   return (
     <div className={`flex flex-1 min-w-[150px] flex-col glass-card transition-colors duration-200 rounded-xl overflow-hidden ${isOver ? 'border-gold/30 bg-gold/5' : 'border-white/5'}`}>
       <div className="flex items-center justify-between px-3 py-2 border-b border-white/5" style={{ borderTopColor: stage.color, borderTopWidth: '2px' }}>
@@ -89,7 +90,7 @@ const KanbanColumn = memo(function KanbanColumn({ stage, leads, movingId }: { st
           <span className="h-2 w-2 rounded-full" style={{ backgroundColor: stage.color }} />
           <span className="text-[10px] font-bold uppercase tracking-widest text-aura-platinum">{stage.label}</span>
         </div>
-        <span className="text-[10px] font-mono font-bold text-aura-platinum/60 px-1.5 py-0.5 rounded bg-white/5">{leads.length}</span>
+        <span className="text-[10px] font-mono font-bold text-aura-platinum/60 px-1.5 py-0.5 rounded bg-white/5">{total}</span>
       </div>
       <SortableContext items={leads.map((l) => l.id)} strategy={verticalListSortingStrategy}>
         <div ref={setNodeRef} className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2 min-h-[200px]">
@@ -100,6 +101,14 @@ const KanbanColumn = memo(function KanbanColumn({ stage, leads, movingId }: { st
           ) : leads.map((lead) => (
             <SortableLeadCard key={lead.id} lead={lead} isMoving={movingId === lead.id} />
           ))}
+          {hasMore && (
+            <button
+              onClick={onLoadMore}
+              className="w-full rounded-lg border border-white/5 bg-black/20 py-1.5 text-[9px] font-bold uppercase tracking-widest text-gold/70 hover:border-gold/30 hover:bg-gold/5"
+            >
+              Load 30 more ({total - leads.length})
+            </button>
+          )}
         </div>
       </SortableContext>
     </div>
@@ -114,7 +123,7 @@ export const LeadKanban = () => {
   const [activeLead, setActiveLead] = useState<any | null>(null);
   const [agents, setAgents] = useState<any[]>([]);
 
-  const { grouped, counts, loading, error, moving, refetch, moveLead } = useKanban({
+  const { grouped, counts, loading, error, moving, refetch, moveLead, loadMoreStage } = useKanban({
     search: filters.search || undefined,
     agentId: filters.agentId || undefined,
     source: filters.source || undefined,
@@ -227,7 +236,9 @@ export const LeadKanban = () => {
                   key={stage.value}
                   stage={stage}
                   leads={grouped[stage.value] || []}
+                  total={counts[stage.value] ?? (grouped[stage.value]?.length || 0)}
                   movingId={moving}
+                  onLoadMore={() => loadMoreStage(stage.value)}
                 />
               ))}
             </div>
