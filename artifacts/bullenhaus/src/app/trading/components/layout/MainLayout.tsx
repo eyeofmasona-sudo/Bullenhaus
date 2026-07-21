@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Sidebar } from './Sidebar';
 import { TradingFooter } from './TradingFooter';
 import { LiveChat } from '../chat/LiveChat';
-import { Bell, Search, Globe, ArrowRight, Menu, ShieldAlert, Zap } from 'lucide-react';
+import { Bell, Search, Globe, ArrowRight, Menu, ShieldAlert, Zap, Crown, LineChart, Building2, Award, Users, Headset, UserRound } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +11,17 @@ import { toast } from 'sonner';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUserStore } from '../../stores/userStore';
 import { supabase } from '../../lib/supabase';
+import { UserAvatar } from '../common/UserAvatar';
+
+const ROLE_META: Record<string, { icon: LucideIcon; label: string }> = {
+  client: { icon: UserRound, label: 'Client' },
+  agent: { icon: Headset, label: 'Agent' },
+  manager: { icon: Users, label: 'Manager' },
+  director: { icon: Award, label: 'Director' },
+  crm_admin: { icon: Building2, label: 'CRM Admin' },
+  trade_admin: { icon: LineChart, label: 'Trade Admin' },
+  admin: { icon: Crown, label: 'Admin' },
+};
 
 interface Notif {
   id: string;
@@ -122,7 +134,8 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
   }, [isAdmin, user, loadNotifications]);
 
   const displayName = profile?.display_name || profile?.full_name || profile?.username || user?.email || 'User';
-  const avatarUrl   = profile?.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${displayName}`;
+  const roleMeta = ROLE_META[role || 'client'] || ROLE_META.client;
+  const RoleIcon = roleMeta.icon;
 
   const NotifIcon = ({ type }: { type: 'kyc' | 'tx' | 'msg' }) =>
     type === 'kyc' ? <ShieldAlert size={14} className="text-orange-400" />
@@ -269,15 +282,20 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
             <div onClick={() => navigate('/trade/settings')} className="flex items-center gap-3 pl-2 cursor-pointer group">
               <div className="text-right hidden sm:block">
                 <p className="text-xs font-bold text-white leading-none mb-1 group-hover:text-gold transition-colors">{displayName}</p>
-                <div className="flex items-center justify-end gap-1">
+                <div className="flex items-center justify-end gap-1.5">
+                  <RoleIcon size={11} className="text-gold shrink-0" strokeWidth={2.25} />
                   <span className={`w-1.5 h-1.5 rounded-full ${kycStatus === 'VERIFIED' ? 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]' : 'bg-orange-500 shadow-[0_0_6px_rgba(244,63,94,0.5)]'}`} />
                   <p className="text-[9px] font-bold text-gold uppercase tracking-tighter">
-                    {role?.toUpperCase() || 'CLIENT'} • {kycStatus || 'UNVERIFIED'}
+                    {roleMeta.label} • {kycStatus || 'UNVERIFIED'}
                   </p>
                 </div>
               </div>
               <div className="w-10 h-10 rounded-xl border border-white/10 p-0.5 overflow-hidden group-hover:border-gold/50 group-hover:shadow-[0_0_16px_rgba(212,175,55,0.3)] transition-all">
-                <img src={avatarUrl} alt="avatar" className="w-full h-full rounded-lg bg-[#111]" />
+                {profile?.avatar_url ? (
+                  <img src={profile.avatar_url} alt="avatar" className="w-full h-full rounded-lg bg-[#111] object-cover" />
+                ) : (
+                  <UserAvatar name={displayName} size={36} className="w-full h-full" />
+                )}
               </div>
             </div>
           </div>
