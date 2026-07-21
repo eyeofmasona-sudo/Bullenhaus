@@ -1,0 +1,5 @@
+# Keep test files out of the Vercel deployment: anything under api/**/*.test.ts
+# would otherwise be picked up by Vercel's zero-config function detection and
+# published as a bogus serverless endpoint (e.g. /api/kyc/analyze-external.test).
+**/*.test.ts
+**/*.test.tsx

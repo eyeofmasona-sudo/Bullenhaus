@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { TrendingUp, TrendingDown, Activity } from 'lucide-react';
+import { TrendingUp, TrendingDown, Activity, Headset } from 'lucide-react';
 import { useTradingStore } from '../../stores/tradingStore';
 
 export const ProTraderCard = () => (
@@ -28,6 +28,7 @@ export const SentimentGauge = () => {
   const [simUp, setSimUp] = useState(12);
   const [simDown, setSimDown] = useState(5);
   const [simAvg, setSimAvg] = useState(1.24);
+  const [analystsOnline, setAnalystsOnline] = useState(9);
 
   useEffect(() => {
     const iv = setInterval(() => {
@@ -39,6 +40,13 @@ export const SentimentGauge = () => {
       setSimDown(Math.floor(Math.random() * 15) + 5);
       setSimAvg((Math.random() * 4) - 1.5);
     }, 3000);
+    return () => clearInterval(iv);
+  }, []);
+
+  useEffect(() => {
+    const iv = setInterval(() => {
+      setAnalystsOnline(prev => Math.max(6, Math.min(14, prev + (Math.random() > 0.5 ? 1 : -1))));
+    }, 8000);
     return () => clearInterval(iv);
   }, []);
 
@@ -143,17 +151,28 @@ export const SentimentGauge = () => {
         </div>
       </motion.div>
 
-      {/* Live Analysts Strip */}
-      <motion.div 
+      {/* Trading Desk — live analyst coverage */}
+      <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
         className="flex items-center justify-between mt-5 pt-4 border-t border-white/5 relative z-10"
       >
-        <div className="h-8 flex-1 flex justify-start pl-2">
-          <img src="/assets/icons/live_analysts.png" alt="Live Analysts" className="h-full object-contain filter drop-shadow-[0_0_8px_rgba(255,215,0,0.3)]" />
+        <div className="flex items-center gap-2.5">
+          <div className="relative w-8 h-8 rounded-full bg-gradient-to-b from-[#1A1A20] to-[#0A0A0E] border border-gold/30 flex items-center justify-center shadow-[0_0_10px_rgba(212,175,55,0.15)] shrink-0">
+            <Headset size={14} className="text-gold" />
+            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-[#0A0A0E]" />
+          </div>
+          <div>
+            <p className="text-[11px] font-bold text-white leading-none font-mono">{analystsOnline} Analysts</p>
+            <p className="text-[9px] text-slate-500 uppercase tracking-widest mt-1">Trading Desk</p>
+          </div>
         </div>
-        <div className="px-4 py-1.5 rounded-full bg-[#1A1A24] text-[10px] font-bold tracking-widest text-[#5C8AE6] uppercase border border-[#5C8AE6]/20 shadow-[0_0_12px_rgba(92,138,230,0.15)] ml-2 whitespace-nowrap">
-          Live Analysts
-        </div>
+        <span className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded shadow-[0_0_8px_rgba(16,185,129,0.4)] border border-emerald-500/20 whitespace-nowrap">
+          <span className="relative flex h-1.5 w-1.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+          </span>
+          Online
+        </span>
       </motion.div>
     </div>
   );

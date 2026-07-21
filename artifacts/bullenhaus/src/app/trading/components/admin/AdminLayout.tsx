@@ -19,19 +19,21 @@ import { useAuth } from '../../contexts/AuthContext';
 import { cn } from '../../lib/utils';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 
 // ── Notification counts ────────────────────────────────────────────────────────
 interface AdminCounts {
   kyc:         number;
   deposits:    number;
   withdrawals: number;
+  support:     number;
 }
 
 function useAdminNotifications(): AdminCounts {
-  const [counts, setCounts] = useState<AdminCounts>({ kyc: 0, deposits: 0, withdrawals: 0 });
+  const [counts, setCounts] = useState<AdminCounts>({ kyc: 0, deposits: 0, withdrawals: 0, support: 0 });
 
   const fetch = async () => {
-    const [kycRes, txRes] = await Promise.all([
+    const [kycRes, txRes, supportRes] = await Promise.all([
       supabase
         .from('users')
         .select('id', { count: 'exact', head: true })
@@ -40,14 +42,19 @@ function useAdminNotifications(): AdminCounts {
         .from('transactions')
         .select('type')
         .eq('status', 'Pending'),
+      supabase
+        .from('support_tickets')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'new'),
     ]);
 
     const kycCount = kycRes.count ?? 0;
     const txRows   = txRes.data ?? [];
     const deposits    = txRows.filter(r => r.type === 'Deposit').length;
     const withdrawals = txRows.filter(r => r.type === 'Withdrawal').length;
+    const support = supportRes.count ?? 0;
 
-    setCounts({ kyc: kycCount, deposits, withdrawals });
+    setCounts({ kyc: kycCount, deposits, withdrawals, support });
   };
 
   useEffect(() => {
@@ -63,9 +70,22 @@ function useAdminNotifications(): AdminCounts {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, fetch)
       .subscribe();
 
+    const supportSub = supabase
+      .channel(`admin-support-watch-${Math.random().toString(36).substring(2, 9)}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'support_tickets' }, (payload: any) => {
+        if (payload.eventType === 'INSERT') {
+          toast.info('New support ticket', {
+            description: payload.new?.category || payload.new?.subject || payload.new?.message || 'A client submitted a new request',
+          });
+        }
+        fetch();
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(usersSub);
       supabase.removeChannel(txSub);
+      supabase.removeChannel(supportSub);
     };
   }, []);
 
@@ -81,7 +101,8 @@ const iconMap: Record<string, string> = {
   'market control': '/assets/icons/trade.png',
   'pre-market control': '/assets/icons/trade.png',
   'transactions': '/assets/icons/trade.png',
-  'system config': '/assets/icons/settings.png'
+  'system config': '/assets/icons/settings.png',
+  'support inbox': '/assets/icons/chatbot.png'
 };
 
 const AdminSidebarItem = ({
@@ -242,6 +263,7 @@ const AdminSidebar = ({ onClose }: { onClose?: () => void }) => {
         <AdminSidebarItem
           icon={Inbox} label={t('adminLayout.sidebar.support', { defaultValue: 'Support Inbox' })}
           to="/admin/support" active={currentPath === '/admin/support'}
+          badge={counts.support}
         />
         <AdminSidebarItem
           icon={Settings} label={t('adminLayout.sidebar.systemConfig')}

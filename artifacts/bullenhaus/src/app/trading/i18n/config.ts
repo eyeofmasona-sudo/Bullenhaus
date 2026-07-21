@@ -20,7 +20,36 @@ i18n
     resources: {
       en: {
         common: {
+          legal: {
+            backToPlatform: "Back to Platform",
+            documentation: "Legal Documentation",
+            lastUpdated: "Last updated",
+            allRightsReserved: "All rights reserved.",
+            nav: {
+              contact: "Contact & Compliance",
+              terms: "Terms of Service",
+              privacy: "Privacy Policy",
+              aml: "AML Policy",
+              corporate: "Corporate Data",
+            },
+          },
           auth: {
+            forgotPassword: {
+              title: "Reset Password",
+              subtitle: "Enter your email and we'll send you a link to reset your passphrase.",
+              emailLabel: "Email Address",
+              emailPlaceholder: "name@example.com",
+              sendLinkBtn: "Send Reset Link",
+              backToLogin: "Back to Login",
+              successTitle: "Check Your Email",
+              successSubtitle1: "If an account exists for that address, a password reset link is on its way.",
+              successSubtitle2: "The link expires in 60 minutes. Check your spam folder if you don't see it.",
+              errors: {
+                tooManyRequests: "Too many requests. Please wait a moment and try again.",
+                invalidEmail: "Please enter a valid email address.",
+                default: "Could not send the reset link. Please try again.",
+              },
+            },
             register: {
               title: "Create Account",
               subtitle: "Start your trading journey with Bullenhaus",
@@ -596,7 +625,36 @@ i18n
     },
     de: {
         common: {
+          legal: {
+            backToPlatform: "Zurück zur Plattform",
+            documentation: "Rechtliche Dokumentation",
+            lastUpdated: "Zuletzt aktualisiert",
+            allRightsReserved: "Alle Rechte vorbehalten.",
+            nav: {
+              contact: "Kontakt & Compliance",
+              terms: "Nutzungsbedingungen",
+              privacy: "Datenschutzrichtlinie",
+              aml: "AML-Richtlinie",
+              corporate: "Unternehmensdaten",
+            },
+          },
           auth: {
+            forgotPassword: {
+              title: "Passwort zurücksetzen",
+              subtitle: "Geben Sie Ihre E-Mail-Adresse ein und wir senden Ihnen einen Link zum Zurücksetzen Ihres Passworts.",
+              emailLabel: "E-Mail-Adresse",
+              emailPlaceholder: "name@example.com",
+              sendLinkBtn: "Link senden",
+              backToLogin: "Zurück zur Anmeldung",
+              successTitle: "Überprüfen Sie Ihre E-Mails",
+              successSubtitle1: "Falls ein Konto für diese Adresse existiert, ist ein Link zum Zurücksetzen des Passworts unterwegs.",
+              successSubtitle2: "Der Link läuft in 60 Minuten ab. Überprüfen Sie Ihren Spam-Ordner, falls Sie ihn nicht sehen.",
+              errors: {
+                tooManyRequests: "Zu viele Anfragen. Bitte warten Sie einen Moment und versuchen Sie es erneut.",
+                invalidEmail: "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
+                default: "Der Reset-Link konnte nicht gesendet werden. Bitte versuchen Sie es erneut.",
+              },
+            },
             register: {
               title: "Konto erstellen",
               subtitle: "Beginnen Sie Ihre Handelsreise mit Bullenhaus",

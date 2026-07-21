@@ -181,54 +181,132 @@ export const MarketSentimentWidget = () => {
   }, []);
 
   const isBearish = sentiment < 50;
+  const glowColor = isBearish ? '#FB7185' : '#10B981';
   // Map sentiment (0-100) to rotation (-90 to 90 degrees) for the needle
   const needleRotation = (sentiment / 100) * 180 - 90;
+  // Arc geometry: semicircle from (30,120) to (190,120), radius 80, centered at (110,120)
+  const CX = 110, CY = 120, R = 80;
+  const arcPath = `M ${CX - R} ${CY} A ${R} ${R} 0 0 1 ${CX + R} ${CY}`;
 
   return (
-    <motion.div 
-      whileHover={{ scale: 1.02 }}
-      className={`glass-card p-6 border-accent-primary/20 relative overflow-hidden transition-colors duration-1000 holo-border`}
+    <motion.div
+      whileHover={{ scale: 1.015 }}
+      className="glass-card p-6 border-accent-primary/20 relative overflow-hidden transition-colors duration-1000 holo-border"
     >
-      <div className={`absolute -top-10 -right-10 w-32 h-32 rounded-full blur-3xl pointer-events-none transition-colors duration-1000 ${isBearish ? 'bg-accent-quaternary/20' : 'bg-accent-secondary/20'}`} />
+      {/* Ambient breathing glow, color-locked to sentiment */}
+      <motion.div
+        className="absolute -top-10 -right-10 w-40 h-40 rounded-full blur-3xl pointer-events-none"
+        animate={{ opacity: [0.15, 0.3, 0.15] }}
+        transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
+        style={{ backgroundColor: glowColor, transition: 'background-color 1s ease' }}
+      />
 
-      <div className="flex items-center justify-between mb-4 relative z-10">
-         <h3 className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.2em]">Market Sentiment</h3>
-         <div className={`w-2 h-2 rounded-full animate-pulse transition-colors duration-1000 ${isBearish ? 'bg-accent-quaternary shadow-neon-rose' : 'bg-accent-secondary shadow-neon-emerald'}`} />
+      <div className="flex items-center justify-between mb-2 relative z-10">
+        <h3 className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.2em]">Market Sentiment</h3>
+        <span
+          className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded"
+          style={{ color: glowColor, backgroundColor: `${glowColor}1A`, transition: 'color 1s ease, background-color 1s ease' }}
+        >
+          <span className="relative flex h-1.5 w-1.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: glowColor }} />
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full" style={{ backgroundColor: glowColor }} />
+          </span>
+          Live
+        </span>
       </div>
 
-      <div className="relative flex flex-col items-center justify-center pt-8 pb-4 z-10">
-        {/* Gauge Background */}
-        <div className="relative w-48 h-24 overflow-hidden">
-          <div className="absolute top-0 left-0 w-48 h-48 rounded-full border-[12px] border-slate-800" />
-          <div className="absolute top-0 left-0 w-48 h-48 rounded-full border-[12px] border-transparent border-t-accent-quaternary border-l-accent-quaternary opacity-80" style={{ transform: 'rotate(-45deg)' }} />
-          <div className="absolute top-0 left-0 w-48 h-48 rounded-full border-[12px] border-transparent border-t-accent-secondary border-r-accent-secondary opacity-80" style={{ transform: 'rotate(45deg)' }} />
-          
-          {/* Animated Needle */}
-          <motion.div 
-            className="absolute bottom-0 left-1/2 w-1 h-24 origin-bottom bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)] z-20"
-            animate={{ rotate: needleRotation }}
-            transition={{ type: "spring", stiffness: 40, damping: 15 }}
-            style={{ x: "-50%" }}
-          >
-             {/* Needle base */}
-             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-4 h-4 rounded-full bg-white shadow-[0_0_15px_rgba(255,255,255,1)]" />
-          </motion.div>
+      <div className="relative flex flex-col items-center justify-center pt-4 pb-2 z-10">
+        {/* 3D instrument bezel: layered dark rings simulating a brushed-metal dial housing */}
+        <div className="relative w-[220px] h-[132px] overflow-hidden">
+          <div
+            className="absolute top-0 left-0 w-[220px] h-[220px] rounded-full"
+            style={{
+              background: 'radial-gradient(circle at 35% 30%, #26262e 0%, #101014 55%, #050506 100%)',
+              boxShadow: 'inset 0 2px 6px rgba(255,255,255,0.08), inset 0 -6px 16px rgba(0,0,0,0.9), 0 8px 24px rgba(0,0,0,0.6)',
+            }}
+          />
+          <div
+            className="absolute top-[10px] left-[10px] w-[200px] h-[200px] rounded-full"
+            style={{
+              background: 'radial-gradient(circle at 50% 15%, #0d0d10 0%, #08080a 70%)',
+              boxShadow: 'inset 0 3px 10px rgba(0,0,0,0.95)',
+            }}
+          />
+
+          <svg width="220" height="132" viewBox="0 0 220 132" className="relative z-10 overflow-visible">
+            <defs>
+              <linearGradient id="sentimentTrackGrad" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="#FB7185" />
+                <stop offset="50%" stopColor="#F5E1A4" />
+                <stop offset="100%" stopColor="#10B981" />
+              </linearGradient>
+              <filter id="sentimentGlow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="3.5" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+              <radialGradient id="hubGrad" cx="35%" cy="30%" r="70%">
+                <stop offset="0%" stopColor="#F5E1A4" />
+                <stop offset="55%" stopColor="#D4AF37" />
+                <stop offset="100%" stopColor="#8a6d1f" />
+              </radialGradient>
+            </defs>
+
+            {/* Recessed track groove */}
+            <path d={arcPath} fill="none" stroke="#000000" strokeWidth="15" strokeLinecap="round" opacity="0.6" />
+            {/* Gradient arc, always fully visible for a rich "alive" instrument look */}
+            <path d={arcPath} fill="none" stroke="url(#sentimentTrackGrad)" strokeWidth="10" strokeLinecap="round" opacity="0.85" filter="url(#sentimentGlow)" />
+            {/* Tick marks */}
+            {[0, 25, 50, 75, 100].map((tick) => {
+              const angle = (tick / 100) * 180;
+              const rad = (angle * Math.PI) / 180;
+              const x1 = CX - Math.cos(rad) * (R - 12);
+              const y1 = CY - Math.sin(rad) * (R - 12);
+              const x2 = CX - Math.cos(rad) * (R - 4);
+              const y2 = CY - Math.sin(rad) * (R - 4);
+              return <line key={tick} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#ffffff" strokeOpacity="0.25" strokeWidth="1.5" />;
+            })}
+
+            {/* Needle, spring-animated, pivoted at the dial center */}
+            <motion.g
+              animate={{ rotate: needleRotation }}
+              transition={{ type: 'spring', stiffness: 40, damping: 15 }}
+              style={{ originX: `${CX}px`, originY: `${CY}px`, transformBox: 'view-box' }}
+            >
+              <polygon points={`${CX - 3},${CY} ${CX + 3},${CY} ${CX},${CY - R + 16}`} fill="url(#hubGrad)" filter="url(#sentimentGlow)" />
+              <circle cx={CX} cy={CY - R + 16} r="2.5" fill="#FFFDF5" />
+            </motion.g>
+
+            {/* Center hub dome */}
+            <circle cx={CX} cy={CY} r="9" fill="url(#hubGrad)" stroke="#050506" strokeWidth="2" />
+            <circle cx={CX - 2.5} cy={CY - 2.5} r="2.5" fill="#FFFDF5" opacity="0.7" />
+          </svg>
         </div>
 
-        <div className="absolute bottom-0 flex flex-col items-center w-full">
-          <motion.h2 
-             key={Math.round(sentiment)}
-             initial={{ scale: 1.1, opacity: 0.8 }}
-             animate={{ scale: 1, opacity: 1 }}
-             className={`text-3xl font-bold tracking-tighter drop-shadow-md transition-colors duration-1000 ${isBearish ? 'text-accent-quaternary' : 'text-accent-secondary'}`}
+        <div className="flex flex-col items-center -mt-1">
+          <motion.h2
+            key={Math.round(sentiment)}
+            initial={{ scale: 1.1, opacity: 0.8 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="text-3xl font-bold tracking-tighter"
+            style={{ color: glowColor, textShadow: `0 0 18px ${glowColor}80`, transition: 'color 1s ease' }}
           >
-             {Math.round(sentiment)}%
+            {Math.round(sentiment)}%
           </motion.h2>
           <div className="flex items-center gap-1.5 mt-1">
-             <TrendingDown size={14} className={isBearish ? "text-accent-quaternary" : "text-accent-secondary rotate-180"} />
-             <span className={`text-[10px] font-bold uppercase tracking-widest transition-colors duration-1000 ${isBearish ? "text-accent-quaternary shadow-neon-rose" : "text-accent-secondary shadow-neon-emerald"}`}>
-               {isBearish ? 'Bearish' : 'Bullish'}
-             </span>
+            <TrendingDown
+              size={14}
+              className={isBearish ? undefined : 'rotate-180'}
+              style={{ color: glowColor, transition: 'color 1s ease' }}
+            />
+            <span
+              className="text-[10px] font-bold uppercase tracking-widest"
+              style={{ color: glowColor, transition: 'color 1s ease' }}
+            >
+              {isBearish ? 'Bearish' : 'Bullish'}
+            </span>
           </div>
         </div>
       </div>

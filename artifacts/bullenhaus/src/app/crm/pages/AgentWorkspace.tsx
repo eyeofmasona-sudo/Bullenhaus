@@ -290,6 +290,8 @@ function LeadUploadButton({ onDone, role }: { onDone: () => void; role?: string 
     try {
       let text = await file.text();
       // Guard against Excel / binary files: they corrupt into garbage when read as text.
+      // The control chars below are the intentional ZIP/xlsx magic-number signature.
+      // eslint-disable-next-line no-control-regex
       if (/^PK\x03\x04/.test(text) || /\.xlsx?$/i.test(file.name) || text.includes("\u0000")) {
         setResult({ parsed: 0, inserted: 0, skipped: 0, error: "Please upload a CSV file (UTF-8). In Excel: Save As \u2192 CSV UTF-8." });
         setBusy(false);
