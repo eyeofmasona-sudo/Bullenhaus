@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Copy, CheckCheck, ExternalLink, CreditCard, Building2, Link2 } from 'lucide-react';
+import { Copy, CheckCheck, ExternalLink, CreditCard, Building2, Link2, Wallet2 } from 'lucide-react';
 import type { PaymentDetails } from '../admin/PaymentDetailsForm';
 
 const CopyField: React.FC<{ label: string; value: string; mono?: boolean }> = ({ label, value, mono }) => {
@@ -110,6 +110,42 @@ export const PaymentDetailsDisplay: React.FC<{
             <span className="text-[10px] text-text-dim font-mono break-all flex-1">{details.url}</span>
             <CopyButton value={details.url} />
           </div>
+        </div>
+      </motion.div>
+    );
+  }
+
+  if (details.type === 'crypto') {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={`w-full rounded-xl border ${accentBg} overflow-hidden`}
+      >
+        <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/5">
+          <Wallet2 size={14} className={accent} />
+          <span className={`text-[10px] font-bold uppercase tracking-widest ${accent}`}>
+            {details.tokenSymbol} Deposit Submitted
+          </span>
+        </div>
+        <div className="px-4 py-1">
+          <CopyField label="Transaction Hash" value={details.txHash} mono />
+          <CopyField label="From (your wallet)" value={details.fromAddress} mono />
+          <CopyField label="To (platform wallet)" value={details.toAddress} mono />
+        </div>
+        <div className="px-4 pb-4 pt-2">
+          <a
+            href={details.explorerUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`flex items-center justify-center gap-2 w-full py-3 rounded-xl font-bold text-sm transition-all ${
+              isDeposit
+                ? 'bg-accent-secondary text-black hover:brightness-110 shadow-neon-emerald'
+                : 'bg-orange-500 text-black hover:brightness-110'
+            }`}
+          >
+            <ExternalLink size={15} /> View on Block Explorer
+          </a>
         </div>
       </motion.div>
     );

@@ -3,7 +3,7 @@ import { create } from 'zustand';
 export type TxStatus = 'Pending' | 'Approved' | 'Rejected' | 'Processing' | 'Completed';
 export type TxType = 'Deposit' | 'Withdrawal';
 
-export type TxMethod = 'Credit Card' | 'IBAN Transfer' | 'Payment Link' | 'Other';
+export type TxMethod = 'Credit Card' | 'IBAN Transfer' | 'Payment Link' | 'Crypto (USDT)' | 'Other';
 
 export const TX_METHODS: TxMethod[] = ['Credit Card', 'IBAN Transfer', 'Payment Link', 'Other'];
 

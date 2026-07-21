@@ -10,7 +10,7 @@ export const WORKFLOW_TRIGGERS = [
   { value: 'deposit_received',     label: 'Deposit Received',     color: '#10b981' },
 ] as const;
 
-const WORKFLOWS_SELECT = 'id, name, description, trigger, conditions, actions, is_active, priority, created_at, updated_at';
+const WORKFLOWS_SELECT = 'id, name, description, trigger, conditions, actions, status, priority, created_at, updated_at';
 
 export function useWorkflows() {
   const [workflows, setWorkflows] = useState<any[]>([]);
@@ -37,8 +37,9 @@ export function useWorkflows() {
   useEffect(() => { fetchWorkflows(); }, [fetchWorkflows]);
 
   const toggleActive = useCallback(async (id: string, isActive: boolean) => {
-    setWorkflows((prev) => prev.map((w) => w.id === id ? { ...w, is_active: isActive } : w));
-    const { error } = await supabase.from('workflows').update({ is_active: isActive }).eq('id', id);
+    const status = isActive ? 'active' : 'disabled';
+    setWorkflows((prev) => prev.map((w) => w.id === id ? { ...w, status } : w));
+    const { error } = await supabase.from('workflows').update({ status }).eq('id', id);
     if (error) { fetchWorkflows(); throw new Error(error.message); }
   }, [fetchWorkflows]);
 
@@ -57,7 +58,7 @@ export function useWorkflows() {
       trigger: payload.trigger,
       conditions: payload.conditions || {},
       actions: payload.actions || [],
-      is_active: true,
+      status: 'active',
       priority: payload.priority || 50,
       created_by: user?.id || null,
     }).select(WORKFLOWS_SELECT).single();

@@ -28,6 +28,7 @@ function WorkflowRow({ workflow, onToggle, onRun, onDelete, expanded, onExpand }
 }) {
   const trigger = WORKFLOW_TRIGGERS.find((t) => t.value === workflow.trigger);
   const actions = Array.isArray(workflow.actions) ? workflow.actions : [];
+  const isActive = workflow.status === 'active';
 
   return (
     <motion.div
@@ -35,7 +36,7 @@ function WorkflowRow({ workflow, onToggle, onRun, onDelete, expanded, onExpand }
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       className={`rounded-lg border p-3 transition-all ${
-        workflow.is_active ? 'border-gold/20 glass-card/80' : 'border-white/5 glass-card/60 opacity-60'
+        isActive ? 'border-gold/20 glass-card/80' : 'border-white/5 glass-card/60 opacity-60'
       }`}
     >
       <div className="flex items-center gap-3">
@@ -59,7 +60,7 @@ function WorkflowRow({ workflow, onToggle, onRun, onDelete, expanded, onExpand }
         <div className="flex items-center gap-1">
           <button
             onClick={onRun}
-            disabled={!workflow.is_active}
+            disabled={!isActive}
             className="p-1.5 rounded text-emerald-400 hover:bg-emerald-500/10 disabled:opacity-30"
             title="Run now"
           >
@@ -67,10 +68,10 @@ function WorkflowRow({ workflow, onToggle, onRun, onDelete, expanded, onExpand }
           </button>
           <button
             onClick={onToggle}
-            className={`p-1.5 rounded transition ${workflow.is_active ? 'text-gold' : 'text-aura-platinum/40 hover:text-aura-platinum'}`}
-            title={workflow.is_active ? 'Disable' : 'Enable'}
+            className={`p-1.5 rounded transition ${isActive ? 'text-gold' : 'text-aura-platinum/40 hover:text-aura-platinum'}`}
+            title={isActive ? 'Disable' : 'Enable'}
           >
-            {workflow.is_active ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+            {isActive ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
           </button>
           <button
             onClick={onDelete}
@@ -212,7 +213,7 @@ export const WorkflowRules = () => {
   const { workflows, loading, error, refetch, toggleActive, deleteWorkflow, runWorkflow } = useWorkflows();
   const { executions, loading: logLoading, refetch: refetchLog } = useWorkflowExecutions(30);
 
-  const activeCount = workflows.filter((w) => w.is_active).length;
+  const activeCount = workflows.filter((w) => w.status === 'active').length;
 
   return (
     <div className="space-y-4">
@@ -290,8 +291,9 @@ export const WorkflowRules = () => {
               onExpand={() => setExpandedId(expandedId === w.id ? null : w.id)}
               onToggle={async () => {
                 try {
-                  await toggleActive(w.id, !w.is_active);
-                  toast.success(w.is_active ? 'Disabled' : 'Enabled');
+                  const wasActive = w.status === 'active';
+                  await toggleActive(w.id, !wasActive);
+                  toast.success(wasActive ? 'Disabled' : 'Enabled');
                 } catch (e: any) {
                   toast.error(e.message);
                 }
