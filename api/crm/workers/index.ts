@@ -1,12 +1,12 @@
-import { getAdminClient, requireAdmin } from "../../_lib/supabase.js";
+import { getAdminClient, requireAdmin, canAssignRole } from "../../_lib/supabase.js";
 
 const CRM_ROLES = ["agent", "manager", "director", "admin"] as const;
 type CrmRole = (typeof CRM_ROLES)[number];
 
 export default async function handler(req: any, res: any) {
   if (req.method === "GET") {
-    const callerId = await requireAdmin(req, res);
-    if (!callerId) return;
+    const caller = await requireAdmin(req, res);
+    if (!caller) return;
 
     const supabase = getAdminClient();
     const { data, error } = await supabase
@@ -24,8 +24,8 @@ export default async function handler(req: any, res: any) {
   }
 
   if (req.method === "POST") {
-    const callerId = await requireAdmin(req, res);
-    if (!callerId) return;
+    const caller = await requireAdmin(req, res);
+    if (!caller) return;
 
     const { email, password, full_name, role } = req.body ?? {};
 
@@ -35,6 +35,10 @@ export default async function handler(req: any, res: any) {
     }
     if (!CRM_ROLES.includes(role as CrmRole)) {
       res.status(400).json({ error: `role must be one of: ${CRM_ROLES.join(", ")}` });
+      return;
+    }
+    if (!canAssignRole(caller.role, role)) {
+      res.status(403).json({ error: "Cannot create a user with a role at or above your own" });
       return;
     }
     if (password.length < 8) {

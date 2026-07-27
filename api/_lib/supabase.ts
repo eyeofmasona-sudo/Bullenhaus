@@ -7,7 +7,34 @@ export function getAdminClient() {
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
 }
 
-export async function requireAdmin(req: any, res: any): Promise<string | null> {
+// Privilege ranking used to stop a staff account from creating, promoting to,
+// or acting on a role at or above its own tier (horizontal/vertical escalation).
+// Unknown roles rank 0 (lowest). 'admin' is the top staff tier.
+export const ROLE_RANK: Readonly<Record<string, number>> = {
+  agent: 1,
+  manager: 2,
+  director: 3,
+  crm_admin: 3,
+  trade_admin: 3,
+  admin: 4,
+  superadmin: 5,
+};
+
+export function rankOf(role: string | null | undefined): number {
+  return (role && ROLE_RANK[role]) || 0;
+}
+
+/** True if a caller of `callerRole` may assign/create the role `targetRole`. */
+export function canAssignRole(callerRole: string | undefined, targetRole: string): boolean {
+  return rankOf(targetRole) <= rankOf(callerRole);
+}
+
+/** True if a caller of `callerRole` may mutate an existing user of `targetRole`. */
+export function canManageTarget(callerRole: string | undefined, targetRole: string | null | undefined): boolean {
+  return rankOf(targetRole) <= rankOf(callerRole);
+}
+
+export async function requireAdmin(req: any, res: any): Promise<{ id: string; role: string } | null> {
   const auth = req.headers["authorization"] as string | undefined;
   if (!auth?.startsWith("Bearer ")) {
     res.status(401).json({ error: "Missing authorization header" });
@@ -25,12 +52,12 @@ export async function requireAdmin(req: any, res: any): Promise<string | null> {
     .select("role")
     .eq("id", user.id)
     .single();
-  const role = profile?.role || user.user_metadata?.role;
+  const role = (profile?.role || user.user_metadata?.role) as string | undefined;
   if (role !== "admin" && role !== "director") {
     res.status(403).json({ error: "Insufficient permissions" });
     return null;
   }
-  return user.id;
+  return { id: user.id, role };
 }
 
 export async function requireCrmAdmin(req: any, res: any): Promise<string | null> {

@@ -9,8 +9,22 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const CRM_ROLES = ["agent", "manager", "director", "admin"];
 const ADMIN_ROLES = ["admin", "crm_admin", "director", "super-admin", "superadmin"];
 
+// Privilege ranking: a caller may not create, promote to, or act on a role at
+// or above its own tier. Unknown roles rank 0. Mirrors api/_lib/supabase.ts.
+const ROLE_RANK: Record<string, number> = {
+  agent: 1,
+  manager: 2,
+  director: 3,
+  crm_admin: 3,
+  trade_admin: 3,
+  admin: 4,
+  "super-admin": 5,
+  superadmin: 5,
+};
+const rankOf = (role: string | null | undefined): number => (role ? ROLE_RANK[role] ?? 0 : 0);
+
 const CORS = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": Deno.env.get("ALLOWED_ORIGIN") ?? "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
@@ -43,6 +57,7 @@ Deno.serve(async (req) => {
       const { email, password, full_name, role: newRole } = body;
       if (!email || !password || !newRole) return json(400, { error: "email, password and role are required" });
       if (!CRM_ROLES.includes(newRole)) return json(400, { error: `role must be one of: ${CRM_ROLES.join(", ")}` });
+      if (rankOf(newRole) > rankOf(role)) return json(403, { error: "Cannot create a user with a role at or above your own" });
       if (String(password).length < 8) return json(400, { error: "Password must be at least 8 characters" });
       const { data: created, error } = await admin.auth.admin.createUser({
         email, password, email_confirm: true, user_metadata: { full_name: full_name || "", role: newRole },
@@ -60,6 +75,8 @@ Deno.serve(async (req) => {
       const { id } = body;
       if (!id) return json(400, { error: "id required" });
       if (id === user.id) return json(400, { error: "Cannot delete your own account" });
+      const { data: target } = await admin.from("users").select("role").eq("id", id).single();
+      if (rankOf(target?.role) > rankOf(role)) return json(403, { error: "Cannot delete a user at or above your own role" });
       const { error } = await admin.auth.admin.deleteUser(id);
       if (error) return json(500, { error: error.message });
       return json(200, { deleted: true });
@@ -69,6 +86,8 @@ Deno.serve(async (req) => {
       const { id, password } = body;
       if (!id || !password) return json(400, { error: "id and password are required" });
       if (String(password).length < 8) return json(400, { error: "Password must be at least 8 characters" });
+      const { data: target } = await admin.from("users").select("role").eq("id", id).single();
+      if (rankOf(target?.role) > rankOf(role)) return json(403, { error: "Cannot reset the password of a user at or above your own role" });
       const { error } = await admin.auth.admin.updateUserById(id, { password });
       if (error) return json(500, { error: error.message });
       return json(200, { reset: true });
