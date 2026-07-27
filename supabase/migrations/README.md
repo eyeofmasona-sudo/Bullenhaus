@@ -17,6 +17,7 @@ and revertible from git:
 | `20260717184443_enable_rls_on_exposed_tables_and_fix_ticket_comments_idor.sql` | Enables RLS on 7 tables that had policies but RLS disabled (P0), and closes an IDOR in `ticket_comments` (P1) |
 | `20260717184539_pin_search_path_on_definer_and_trigger_functions.sql` | Pins `search_path` on 6 functions (hardening) |
 | `20260717184621_restrict_premarket_contracts_bucket_listing.sql` | Restricts the `premarket_contracts` storage bucket listing policy to admin roles |
+| `20260727171500_enforce_users_role_kyc_privilege_boundary.sql` | BEFORE UPDATE trigger on `public.users` blocking client self-escalation of `role`/`kyc_status` (P0) and rank-bounding staff role changes on the RLS path (F1); leaves client-authoritative balance columns untouched |
 
 ## Going forward
 
