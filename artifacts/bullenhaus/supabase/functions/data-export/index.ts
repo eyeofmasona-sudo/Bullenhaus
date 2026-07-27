@@ -74,8 +74,8 @@ Deno.serve(async (req) => {
     .eq("id", user.id)
     .single();
 
-  if (!profile?.role || !["admin", "manager"].includes(profile.role)) {
-    return jsonError("Forbidden — requires admin or manager role", 403);
+  if (!profile?.role || !["admin", "director"].includes(profile.role)) {
+    return jsonError("Forbidden — requires admin or director role", 403);
   }
 
   // ── 3. Parse and validate query params ────────────────────────────────────
