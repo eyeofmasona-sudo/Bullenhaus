@@ -497,4 +497,24 @@
   .animate-pulse-gold {
     animation: pulse-gold 2s var(--ease-premium) infinite;
   }
+
+  /* Seamless marquee ticker — two identical tracks translated by -50%.
+     Modern replacement for <marquee>; pauses on hover, respects reduced motion. */
+  @keyframes ticker-scroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+  .animate-ticker {
+    animation: ticker-scroll var(--ticker-duration, 40s) linear infinite;
+    will-change: transform;
+  }
+  .ticker-group:hover .animate-ticker {
+    animation-play-state: paused;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .animate-ticker {
+      animation: none;
+      transform: none;
+    }
+  }
 }
