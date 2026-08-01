@@ -6,6 +6,22 @@ export const config = {
 };
 
 export default async function middleware(request: Request) {
+  // TEMPORARY HARD STOP (requested 2026-07-22): block everyone, including
+  // anyone who already holds the site_gate_passed cookie or knows
+  // SITE_PASSWORD. Remove this block to reopen the site -- everything below
+  // it is untouched and resumes working immediately once this is removed.
+  return new Response(
+    '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Site Temporarily Unavailable</title>' +
+    '<style>body{margin:0;display:flex;justify-content:center;align-items:center;height:100vh;' +
+    'background:#0f172a;color:#f8fafc;font-family:ui-sans-serif,system-ui,sans-serif;text-align:center}' +
+    '.box{padding:2.5rem;max-width:420px}h1{font-size:1.5rem;margin-bottom:.75rem}' +
+    'p{color:#94a3b8;font-size:.95rem;line-height:1.5}</style></head><body>' +
+    '<div class="box"><h1>Site Temporarily Unavailable</h1>' +
+    '<p>The platform is offline for maintenance. Please check back shortly.</p></div>' +
+    '</body></html>',
+    { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Retry-After': '3600' } }
+  );
+
   const url = new URL(request.url);
   const gateCookie = request.headers.get('cookie')?.includes('site_gate_passed=1');
   const SITE_PASSWORD = process.env.SITE_PASSWORD || '';
